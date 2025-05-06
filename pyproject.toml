@@ -1,0 +1,62 @@
+[project]
+name = "mayutils"
+version = "0.1.3"
+description = "Utilities for Python from Mayuran Visakan"
+authors = [
+    {name = "Mayuran Visakan",email = "mayuran.k.v@gmail.com"}
+]
+readme = "README.md"
+packages = [{ include = "mayutils", from="src" }]
+
+[tool.poetry.scripts]
+clear_cache = "mayutils.scripts.clear_cache:app "
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.dependencies]
+python = ">3.10,<4.0"
+numpy = "^1.26.4"
+pandas = "^2.2.2"
+python-dotenv = "^1.0.1"
+scikit-learn = "^1.4.2"
+jupyter = "^1.0.0"
+plotly = "^5.24.1"
+snowflake-connector-python = {extras = ["pandas", "secure-local-storage"], version = "^3.13.2"}
+pathlib = "^1.0.1"
+asyncer = "^0.0.8"
+pydantic = "^2.10.6"
+pydantic-settings = "^2.7.1"
+nbconvert = "^7.16.6"
+kaleido = "0.2.1"
+pillow = "^11.1.0"
+pymupdf = "^1.25.3"
+matplotlib = "^3.10.1"
+html2image = "^2.0.5"
+chromedriver-autoinstaller = "^0.6.4"
+selenium = "^4.29.0"
+playwright = "^1.50.0"
+dataframe-image = "^0.2.7"
+gitpython = "^3.1.44"
+numpy-financial = "^1.0.0"
+typer = {extras = ["all"], version = "^0.15.2"}
+rich = "^14.0.0"
+unicodeit = "^0.7.5"
+modin = {extras = ["all"], version = "^0.32.0"}
+pyarrow = "^20.0.0"
+great-tables = "^0.17.0"
+numba = "^0.61.2"
+sqlalchemy = "^2.0.40"
+snowflake-sqlalchemy = "^1.7.3"
+
+
+[tool.ruff.format]
+quote-style = "double"
+
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.9.6"
+mypy = "^1.15.0"
+pytest = "^8.3.4"
+hatch = "^1.14.0"
