@@ -25,7 +25,7 @@ class LiveData(object):
         index_column: str,
         start_timestamp: datetime,
         rolling: bool = True,
-        aggregation: Callable[[DataFrame], DataFrame] = lambda df: df,
+        aggregations: dict[str, Callable[[DataFrame], DataFrame]] = {},
         update_frequency: Optional[timedelta] = None,
         **format_kwargs,
     ) -> None:
@@ -38,7 +38,7 @@ class LiveData(object):
         self.format_kwargs = format_kwargs
 
         self.rolling = rolling
-        self.aggregation = aggregation
+        self.aggregations = aggregations
 
         self.initialisation_timestamp = datetime.now()
 
@@ -98,8 +98,11 @@ class LiveData(object):
 
     def _get_aggregated_data(
         self,
-    ) -> DataFrame:
-        self.aggregated_data = self.aggregation(self.data)
+    ) -> dict[str, DataFrame]:
+        self.aggregated_data = {
+            aggregation_name: aggregation(self.data)
+            for aggregation_name, aggregation in self.aggregations.items()
+        }
 
         return self.aggregated_data
 
@@ -113,7 +116,7 @@ class LiveData(object):
             index_column=self.index_column,
             start_timestamp=start_timestamp or self.period[0],
             rolling=self.rolling,
-            aggregation=self.aggregation,
+            aggregations=self.aggregations,
             update_frequency=self.update_frequency,
             **self.format_kwargs,
         )
