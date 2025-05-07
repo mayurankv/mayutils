@@ -55,22 +55,19 @@ Tooling:
 			☐ https://plotly.com/python/density-heatmaps/
 			☐ https://plotly.com/python/choropleth-maps/
 
-	Logging:
-		☐ Why is more logger giving way too many lines compared to default rich?
+	Logging: @critical
+		☐ Why is my logger giving way too many lines compared to default rich?
 		☐ Add logger.name to rich handler output
 
 	Decorators:
-		☐ DataFrame ensuring types
-		☐ https://www.geeksforgeeks.org/function-overloading-with-singledispatch-functools/
-		☐ Cache:
-			- parquet based for dfs
-			- https://stackoverflow.com/questions/6394511/python-functools-wraps-equivalent-for-classes
+		☐ See if any other good decorators to implement
 
 	Classes:
 		☐ Add default class methods
 
 	Tables:
 		☐ Great Tables Theming @low
+			- https://posit-dev.github.io/great-tables/get-started/table-theme-options.html
 
 	DataFrames:
 		☐ Polars functionality (wait till more familiar) @low
@@ -85,6 +82,11 @@ Tooling:
 			☐ Fix Firefox @hard
 	Apps:
 		☐ https://typer.tiangolo.com
+		☐ streamlit
+
+	Package: @medium
+		☐ Set `[tool.poetry.optional-dependencies]`
+			- Ensure safe to use without additional dependencies though or when using in python, not IPython
 
 Productivity:
 	Assistive AI:
@@ -117,10 +119,5 @@ Tools:
 	Writing:
 		- https://stackedit.io/
 
-Long Term:
-	@low
-	☐ Add to Lentils
-	☐ Split module into smaller submodules that can be installed with `utilites[]`
-	☐ Split into personal and work utilities
 
 https://github.com/scottgasch/pyutils

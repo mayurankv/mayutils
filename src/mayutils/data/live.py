@@ -5,7 +5,8 @@ from typing import Callable, Optional
 import pandas as pd
 from pandas import DataFrame
 
-from mayutils.data.read import QUERIES_FOLDERS, get_query_data
+from mayutils.data.queries import QUERIES_FOLDERS
+from mayutils.data.read import get_query_data
 
 
 class LiveData(object):

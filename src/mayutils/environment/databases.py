@@ -1,8 +1,8 @@
 from typing import Self
+
 from pandas import DataFrame, read_sql
-from sqlalchemy import create_engine
-from sqlalchemy import Engine
 from snowflake.sqlalchemy import URL
+from sqlalchemy import Engine, create_engine
 
 
 class EngineWrapper(object):

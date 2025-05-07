@@ -8,6 +8,7 @@ from pandas import (
     MultiIndex,
     Series,
     to_datetime,
+    to_numeric,
 )
 from pandas.io.formats.style import Styler as Style
 from pandas.api.extensions import (
@@ -101,21 +102,21 @@ class Styler(Style):
 
     def save(
         self,
-        filename: Path | str,
+        path: Path | str,
         dark: bool = False,
         fontsize: int = 14,
         dpi: int = 200,
         max_rows: Optional[int] = None,
         max_cols: Optional[int] = None,
     ) -> None:
-        path = Path(filename)
+        path = Path(path)
         table_conversion = "selenium"
         chrome_path = None
         use_mathjax = True
         crop_top = True
 
         converter = prepare_converter(
-            filename=filename,
+            filename=path,
             fontsize=fontsize,
             max_rows=max_rows,
             max_cols=max_cols,
@@ -204,15 +205,15 @@ class DataframeUtilsAccessor(object):
 
     def save(
         self,
-        filename: Path | str,
+        path: Path | str,
         *args,
         **kwargs,
     ) -> None:
-        path = Path(filename)
+        path = Path(path)
 
         if path.suffix in [".png", ".jpeg", ".jpg", ".pdf", ".svg", ".eps"]:
             return self.styler.save(
-                filename=path,
+                path=path,
                 *args,
                 **kwargs,
             )
@@ -305,12 +306,14 @@ class DataframeUtilsAccessor(object):
         for col, dtype in mapper.items():
             try:
                 self.df[col] = (
-                    self.df[col].astype(dtype)  # type: ignore
-                    if dtype not in ["datetime", "date", "time"]
-                    else convert_datetime(
+                    convert_datetime(
                         series=self.df[col],
                         datetime_type=dtype,  # type: ignore
                     )
+                    if dtype in ["datetime", "date", "time"]
+                    else to_numeric(self.df[col])
+                    if dtype == "numeric"
+                    else self.df[col].astype(dtype)  # type: ignore
                 )
             except (
                 KeyError,
@@ -331,7 +334,7 @@ class SeriesUtilsAccessor(object):
 
     def save(
         self,
-        filename: Path | str,
+        path: Path | str,
     ) -> None:
         # TODO: Finish
         raise NotImplementedError(

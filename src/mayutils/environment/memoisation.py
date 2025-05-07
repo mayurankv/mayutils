@@ -1,17 +1,22 @@
-from functools import update_wrapper, wraps, lru_cache
+from functools import update_wrapper, lru_cache
 from functools import _CacheInfo as CacheInfo
-from hashlib import sha256
-import os
 from pathlib import Path
 import pickle
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Literal, Optional, TypeVar
 from collections import OrderedDict
 
+from pandas import DataFrame
 
+
+from mayutils.data import CACHE_FOLDER
+from mayutils.data.local import DataFile
 from mayutils.objects.decorators import flexwrap
+from mayutils.objects.hashing import hash_inputs
+
+T = TypeVar("T", bound=Callable[..., Any])
 
 
-# @flexwrap
+@flexwrap
 class cache(object):
     """
     Needs to be used with `cache: bool = True,` at the bottom of the kwargs to prevent type errors
@@ -19,14 +24,16 @@ class cache(object):
 
     def __init__(
         self,
-        func: Callable,
+        func: Optional[Callable] = None,
         *,
         path: Optional[Path | str] = None,
         maxsize: Optional[int] = None,
         typed: bool = False,
     ) -> None:
+        if func is None:
+            raise ValueError("No function provided")
         self.func = func
-        self.path = path
+        self.path = Path(path) if path is not None else None
         self.maxsize = maxsize
         self.typed = typed
         self.cached_func = lru_cache(
@@ -37,7 +44,7 @@ class cache(object):
         self.misses = 0
 
         if self.path is not None:
-            if os.path.exists(path=self.path):
+            if self.path.exists() and self.path.is_file():
                 with open(
                     file=self.path,
                     mode="rb",
@@ -80,18 +87,11 @@ class cache(object):
         cache: bool = True,
         **kwargs,
     ) -> Any:
-        # @wraps(wrapped=func)
-        # # def wrapper(
-        #     *args,
-        #     cache: bool = True,
-        #     **kwargs,
-        # ) -> Any:
         if cache:
             if self.path is not None:
-                key = sha256(
-                    string=(self.func.__name__ + str(args) + str(kwargs)).encode(),
-                ).hexdigest()
-
+                key = hash_inputs(
+                    func=self.func, paramers=dict(args=args, kwargs=kwargs)
+                )
                 if key in self.persistent_cache:
                     self.persistent_cache.move_to_end(key)
                     self.hits += 1
@@ -128,79 +128,93 @@ class cache(object):
 
 
 @flexwrap
-def _cache(
-    func: Callable,
-    *,
-    path: Optional[Path | str] = None,
-    maxsize: Optional[int] = None,
-    typed: bool = False,
-):
+class cache_df(object):
     """
-    Needs to be used with `cache: bool = True,` at the bottom of the kwargs to prevent type errors
+    Needs to be used with `refresh: bool = False,` at the bottom of the kwargs to prevent type errors
     """
-    cached_func = lru_cache(
-        maxsize=maxsize,
-        typed=typed,
-    )(func)
 
-    if path is not None:
-        if os.path.exists(path=path):
-            with open(
-                file=path,
-                mode="rb",
-            ) as file:
-                persistent_cache = pickle.load(file=file)
-        else:
-            persistent_cache = OrderedDict()
+    def __init__(
+        self,
+        func: Optional[Callable[..., DataFrame]] = None,
+        *,
+        format: Literal["parquet", "csv", "feather", "xlsx"] = "parquet",
+        cache_folder: Path | str = CACHE_FOLDER,
+        dataframe_backend: Literal["pandas", "polars"] = "pandas",
+    ) -> None:
+        if func is None:
+            raise ValueError("No function provided")
+        self.func = func
+        self.format = format
+        self.cache_path = Path(cache_folder)
 
-    @wraps(wrapped=func)
-    def wrapper(
+        self.dataframe_backend = dataframe_backend
+        if self.dataframe_backend != "pandas":
+            raise NotImplementedError("Only pandas dataframes are supported currently")
+
+        return
+
+    def get_path(
+        self,
         *args,
-        cache: bool = True,
+        refresh: bool = False,
         **kwargs,
-    ) -> Any:
-        if cache:
-            if path is not None:
-                key = sha256(
-                    string=(func.__name__ + str(args) + str(kwargs)).encode(),
-                ).hexdigest()
+    ) -> Path:
+        key = hash_inputs(
+            func=self.func.__name__,
+            paramers=dict(
+                args=args,
+                kwargs=kwargs,
+            ),
+        )
 
-                if key in persistent_cache:
-                    persistent_cache.move_to_end(key)
-                    return persistent_cache[key]
+        return self.cache_path / f"{key}.{self.format}"
 
-                result = func(
-                    *args,
-                    **kwargs,
-                )
+    def update(
+        self,
+        *args,
+        refresh=None,
+        **kwargs,
+    ) -> DataFrame:
+        if refresh is not None:
+            raise KeyError("Keyword refresh incorrectly provided")
 
-                if maxsize is not None and len(persistent_cache) >= maxsize:
-                    persistent_cache.popitem(last=False)
+        return self.__call__(
+            *args,
+            refresh=True,
+            **kwargs,
+        )
 
-                persistent_cache[key] = result
+    def delete_cache(
+        self,
+        *args,
+        refresh: bool = False,
+        **kwargs,
+    ) -> bool:
+        try:
+            file = DataFile(self.get_path(*args, refresh=refresh, **kwargs))
+            file.path.unlink()
+            return True
+        except ValueError:
+            return False
 
-                with open(file=path, mode="wb") as file:
-                    pickle.dump(obj=persistent_cache, file=file)
-
-            else:
-                return cached_func(
-                    *args,
-                    **kwargs,
-                )
-
-        else:
-            return func(
+    def __call__(
+        self,
+        *args,
+        refresh: bool = False,
+        **kwargs,
+    ) -> DataFrame:
+        file = DataFile(
+            path=self.get_path(*args, refresh=refresh, **kwargs),
+            validate=False,
+        )
+        if refresh or not file.exists():
+            df = self.func(
                 *args,
                 **kwargs,
             )
 
-    wrapper.cache_clear = cached_func.cache_clear  # type: ignore
-    wrapper.cache_info = cached_func.cache_info  # type: ignore
-    wrapper.cache_parameters = cached_func.cache_parameters  # type: ignore
+            df.utils.save(path=file.path)
 
-    return wrapper
+            return df
 
-    # wrapper.cache_clear = cached_func.cache_clear  # type: ignore
-    # wrapper.cache_info = cached_func.cache_info  # type: ignore
-
-    # return wrapper
+        return file.to_pandas()

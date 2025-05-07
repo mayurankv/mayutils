@@ -1,62 +1,47 @@
-from functools import update_wrapper, wraps
-from inspect import isclass
-from typing import Any, Callable
+from functools import wraps, update_wrapper
+from typing import Any, Callable, TypeVar
+
+
+D = TypeVar("D", bound=Callable[..., Any])
+T = TypeVar("T", bound=Callable[..., Any])
 
 
 def flexwrap(
-    decorator: Callable | None = None,
-    *,
-    keyword_only=True,
-) -> Callable:
-    def make_wrapper(
-        deco: Callable,
-    ) -> Callable:
-        @wraps(wrapped=deco)
-        def outer(
-            *args,
-            **kwargs,
-        ) -> Any:
-            # Case 1: Used as @deco (no args, gets func directly)
-            if len(args) == 1 and callable(args[0]) and not kwargs:
-                return deco(args[0])  # Call with no args
+    deco: D,
+) -> D:
+    @wraps(wrapped=deco)
+    def deco_wrapper(
+        *args,
+        **kwargs,
+    ):
+        if len(args) == 1 and callable(args[0]) and not kwargs:
+            func = args[0]
 
-            # Case 2: Used as @deco(...) (with args)
-            if keyword_only and args:
-                raise TypeError("This decorator only supports keyword arguments.")
+            return update_wrapper(
+                wrapped=func,
+                wrapper=deco(func),
+            )
+        else:
+            # if args:
+            #     raise TypeError("This decorator only supports keyword arguments.")
 
             def true_deco(
-                func: Callable,
-            ) -> Callable:
-                # @wraps()
-                return deco(
-                    func,
-                    *args,
-                    **kwargs,
+                func: T,
+            ) -> T:
+                decorated_func = update_wrapper(
+                    wrapped=func,
+                    wrapper=deco(
+                        func,
+                        *args,
+                        **kwargs,
+                    ),
                 )
 
-            return true_deco
+                return decorated_func
 
-        return outer
+            return update_wrapper(
+                wrapped=deco,
+                wrapper=true_deco,
+            )
 
-    if decorator is not None and callable(decorator):
-        if isclass(object=decorator):
-            pass
-            # setattr(
-            #     decorator,
-            #     "__annotations__",
-            #     getattr(
-            #         decorator.__init__,
-            #         "__annotations__",
-            #         {},
-            #     ),
-            # )
-
-            # update_wrapper(
-            #     wrapper=self,
-            #     wrapped=func,
-            # )
-
-        return make_wrapper(deco=decorator)
-
-    else:
-        return make_wrapper
+    return deco_wrapper  # type: ignore

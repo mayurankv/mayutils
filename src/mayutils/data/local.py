@@ -6,18 +6,24 @@ from pandas import DataFrame, read_csv, read_excel, read_parquet
 class DataFile(object):
     def __init__(
         self,
-        filename: Path | str,
+        path: Path | str,
+        validate: bool = True,
         *args,
         **kwargs,
     ) -> None:
-        self.path = Path(filename)
-        if not (self.path.exists() and self.path.is_file()):
+        self.path = Path(path)
+        if validate and not self.exists():
             raise ValueError("No such file exists")
 
         return super().__init__(
             *args,
             **kwargs,
         )
+
+    def exists(
+        self,
+    ) -> bool:
+        return self.path.exists() and self.path.is_file()
 
     def to_pandas(
         self,

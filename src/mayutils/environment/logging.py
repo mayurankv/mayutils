@@ -234,10 +234,12 @@ def _log_class(
 
 @flexwrap
 def log(
-    target,
+    target: Optional[Callable] = None,
     *args,
     **kwargs,
 ):
+    if target is None:
+        raise ValueError("No target provided")
     if isinstance(target, type):
         return _log_class(
             cls=target,

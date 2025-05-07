@@ -2,6 +2,7 @@ import os
 import inspect
 from git import Repo, InvalidGitRepositoryError
 from pathlib import Path
+import urllib.parse
 
 
 def get_root() -> Path:
@@ -37,3 +38,15 @@ def read_file(
             return file.read()
 
     raise ValueError(f"File {path} could not be found")
+
+
+def encode_path(
+    path: Path | str,
+) -> str:
+    return urllib.parse.quote(string=str(path).replace("/", "#"))
+
+
+def decode_path(
+    encoded_path: str,
+) -> Path:
+    return Path(urllib.parse.unquote(string=encoded_path).replace("#", "/"))

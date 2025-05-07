@@ -5,6 +5,7 @@ description = "Utilities for Python from Mayuran Visakan"
 authors = [
     {name = "Mayuran Visakan",email = "mayuran.k.v@gmail.com"}
 ]
+license = { file = "LICENSE" }
 readme = "README.md"
 packages = [{ include = "mayutils", from="src" }]
 
@@ -51,12 +52,12 @@ sqlalchemy = "^2.0.40"
 snowflake-sqlalchemy = "^1.7.3"
 
 
-[tool.ruff.format]
-quote-style = "double"
-
-
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.9.6"
 mypy = "^1.15.0"
 pytest = "^8.3.4"
 hatch = "^1.14.0"
+
+
+[tool.ruff.format]
+quote-style = "double"
