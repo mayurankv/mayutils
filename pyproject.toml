@@ -1,6 +1,6 @@
 [project]
 name = "mayutils"
-version = "1.0.5"
+version = "1.0.6"
 description = "Utilities for Python from Mayuran Visakan"
 authors = [
     {name = "Mayuran Visakan",email = "mayuran.k.v@gmail.com"}
@@ -50,6 +50,7 @@ great-tables = "^0.17.0"
 numba = "^0.61.2"
 sqlalchemy = "^2.0.40"
 snowflake-sqlalchemy = "^1.7.3"
+streamlit = "^1.45.0"
 
 
 [tool.poetry.group.dev.dependencies]
