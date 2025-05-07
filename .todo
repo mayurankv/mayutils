@@ -55,9 +55,10 @@ Tooling:
 			☐ https://plotly.com/python/density-heatmaps/
 			☐ https://plotly.com/python/choropleth-maps/
 
-	Logging: @critical
-		☐ Why is my logger giving way too many lines compared to default rich?
+	Logging: @medium
+		☐ Readd logging file handler to logger
 		☐ Add logger.name to rich handler output
+			- https://github.com/Textualize/rich/issues/850
 
 	Decorators:
 		☐ See if any other good decorators to implement

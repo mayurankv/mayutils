@@ -1,10 +1,10 @@
 import logging
-from logging.handlers import RotatingFileHandler
+# from logging.handlers import RotatingFileHandler
+# from datetime import datetime
 from pathlib import Path
 import time
-from typing import Any, Callable, Optional, Self
 from rich.logging import RichHandler
-from datetime import datetime
+from typing import Any, Callable, Optional, Self
 from inspect import getmodule, currentframe
 from functools import wraps
 
@@ -37,21 +37,21 @@ def setup_logging(
             show_time=True,
             show_path=True,
         ),
-        file=RotatingFileHandler(
-            filename=log_dir / f"{datetime.now():%Y-%m-%d_%H-%M-%S}.log",
-            maxBytes=10_485_760,
-            backupCount=5,
-            encoding="utf-8",
-        ),
+        # file=RotatingFileHandler(
+        #     filename=log_dir / f"{datetime.now():%Y-%m-%d}.log",
+        #     maxBytes=10_485_760,
+        #     backupCount=5,
+        #     encoding="utf-8",
+        # ),
     )
     handlers["console"].setFormatter(fmt=logging.Formatter(fmt=CONSOLE_FORMAT))
-    handlers["file"].setFormatter(fmt=logging.Formatter(fmt=FILE_FORMAT))
-    handlers["file"].setLevel(level=file_level)
+    # handlers["file"].setFormatter(fmt=logging.Formatter(fmt=FILE_FORMAT))
+    # handlers["file"].setLevel(level=file_level)
 
-    root_logger.setLevel(level=logging.DEBUG)
     root_logger.handlers.clear()
     for handler in handlers.values():
         root_logger.addHandler(hdlr=handler)
+    root_logger.setLevel(level=logging.DEBUG)
 
     # module = sys.modules[__name__]
 
