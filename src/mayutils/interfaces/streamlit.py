@@ -1,8 +1,9 @@
 from streamlit import session_state as ss
 
 
-class StreamlitState(object):
-    def __init__(
+class SessionState(object):
+    @staticmethod
+    def initialise(
         **kwargs,
     ) -> None:
         for key, value in kwargs.items():
