@@ -8,21 +8,12 @@ from mayutils.objects.dataframes import (
 )
 
 
-class Setup(object):
-    initialised: bool = False
-
-    @staticmethod
-    def initialise() -> None:
-        if Setup.initialised:
-            return
-
-        setup_logging()
-        setup_notebooks()
-        setup_dataframes()
-
-        Setup.initialised = True
+def setup():
+    setup_logging()
+    setup_notebooks()
+    setup_dataframes()
 
 
-Setup.initialise()
+setup()
 
-__version__ = 1.0.3
+__version__ = "1.0.4"
