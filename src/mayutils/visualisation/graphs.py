@@ -1152,6 +1152,11 @@ class Plot(go.Figure):
             plot_config=PlotConfig.empty(),
         )
 
+    def to_figure(
+        self,
+    ) -> go.Figure:
+        return go.Figure(data=self)
+
     def add_trace(
         self,
         trace,

@@ -25,6 +25,4 @@ class Setup(object):
 
 Setup.initialise()
 
-__version__ = tomllib.loads(
-    Path(__file__).parents[2].joinpath("pyproject.toml").read_text()
-)["project"]["version"]
+__version__ = 1.0.3
