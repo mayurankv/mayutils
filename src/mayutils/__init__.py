@@ -1,11 +1,8 @@
-import tomllib
-from pathlib import Path
-
 from mayutils.environment.logging import setup_logging
-from mayutils.visualisation.notebook import setup_notebooks
 from mayutils.objects.dataframes import (
     setup_dataframes,
 )
+from mayutils.visualisation.notebook import setup_notebooks
 
 
 def setup():
@@ -16,4 +13,4 @@ def setup():
 
 setup()
 
-__version__ = "1.0.4"
+__version__ = "1.0.5"
