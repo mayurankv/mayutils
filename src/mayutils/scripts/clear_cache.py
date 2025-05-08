@@ -174,10 +174,6 @@ def clear_cache() -> None:
         print(f"No cache found at '{CACHE_FOLDER}'.")
 
 
-def main() -> None:
-    app()
-
-
 if __name__ == "__main__":
     app()
     # clear_cache()

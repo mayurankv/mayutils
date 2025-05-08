@@ -55,6 +55,9 @@ Tooling:
 			☐ https://plotly.com/python/density-heatmaps/
 			☐ https://plotly.com/python/choropleth-maps/
 
+	Scripts:
+		☐ Script to bump version major, minor, patch
+
 	Logging: @medium
 		☐ Readd logging file handler to logger
 		☐ Add logger.name to rich handler output

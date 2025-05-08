@@ -345,7 +345,7 @@ pio.templates["base"] = go.layout.Template(
             "colorway": shuffled_colourscale,
             "font": {
                 "color": "#f2f5fa",
-                "family": '"SF Pro Rounded", "CMU Serif", "Monaspace Neon", "Open Sans", verdana, arial, sans-serif',
+                "family": '"SF Pro Rounded", "Mona Sans", "CMU Serif", "Monaspace Neon", "Open Sans", verdana, arial, sans-serif',
                 "weight": 200,
             },
             "geo": {
