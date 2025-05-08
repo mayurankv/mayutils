@@ -4,16 +4,16 @@ from streamlit import session_state as ss
 
 
 class StreamlitManager(object):
-    def __init__(
-        self,
+    @staticmethod
+    def initialise(
         **kwargs,
     ) -> None:
         for key, value in kwargs.items():
             if key not in ss:
                 setattr(ss, key, value)
 
+    @staticmethod
     def add_style(
-        self,
         css: str,
     ) -> None:
         st.markdown(
@@ -21,10 +21,10 @@ class StreamlitManager(object):
             unsafe_allow_html=True,
         )
 
+    @staticmethod
     def add_css(
-        self,
         path: Path | str,
     ) -> None:
         path = Path(path)
         css = Path(path).read_text()
-        self.add_style(css=css)
+        StreamlitManager.add_style(css=css)
