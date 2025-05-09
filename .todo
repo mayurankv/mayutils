@@ -26,6 +26,8 @@ Tooling:
 			☐ 1D: Histogram
 		☐ ECDF Trace type (reverse and complementary)
 			- https://plotly.com/python/ecdf-plots/
+		☐ 3D Histogram
+			☐ Heatmap/contour alternative
 		☐ Subplot enlargement
 			☐ Plot from subplot axis and traces
 				- https://community.plotly.com/t/how-to-remove-subplots-or-create-new-plot-from-a-subplot/72117/2
@@ -57,6 +59,7 @@ Tooling:
 
 	Scripts:
 		☐ Script to bump version major, minor, patch
+			- `scripts.versioning`
 
 	Logging: @medium
 		☐ Readd logging file handler to logger

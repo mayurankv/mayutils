@@ -21,3 +21,12 @@ fmt:
 .phony: clean
 clean:
 	find . -type d \( -name "__pycache__" -o -name ".ruff_cache" -o -name ".mypy_cache" -o -name ".pytest_cache" \) -exec rm -rf {} +
+
+.phony: bump
+bump:
+	poetry run bump $$(echo $$BUMP || echo patch)
+
+.phony: publish
+publish:
+	poetry build
+	poetry publish

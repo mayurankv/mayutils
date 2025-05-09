@@ -27,10 +27,11 @@ class LiveData(object):
         rolling: bool = True,
         aggregations: dict[str, Callable[[DataFrame], DataFrame]] = {},
         update_frequency: Optional[timedelta] = None,
+        time_format: str = "%Y-%m-%d",
         **format_kwargs,
     ) -> None:
         # TODO: Second tier updates for stuff up to yesterday from old db and stuff from yday being from redash - timepoint cutoff for most recent pull
-        self.time_format = "%Y-%m-%d"
+        self.time_format = time_format
 
         self.query_string = query_string
         self.engine = engine

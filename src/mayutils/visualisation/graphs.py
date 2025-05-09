@@ -1171,6 +1171,15 @@ class Plot(go.Figure):
 
         return self
 
+    def empty_traces(
+        self,
+        *args,
+        **kwargs,
+    ) -> Self:
+        self.data = []
+
+        return self
+
     def update_layout(
         self,
         *args,

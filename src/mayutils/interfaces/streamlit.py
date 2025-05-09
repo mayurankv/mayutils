@@ -1,4 +1,5 @@
 from pathlib import Path
+import subprocess
 import streamlit as st
 from streamlit import session_state as ss
 
@@ -28,3 +29,7 @@ class StreamlitManager(object):
         path = Path(path)
         css = Path(path).read_text()
         StreamlitManager.add_style(css=css)
+
+    @staticmethod
+    def run() -> None:
+        subprocess.run(args="poetry run streamlit run main.py")
