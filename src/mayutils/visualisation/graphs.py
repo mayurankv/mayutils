@@ -481,6 +481,13 @@ pio.templates["base"] = go.layout.Template(
         },
     }
 )
+pio.templates["slides"] = go.layout.Template(
+    layout=dict(
+        width=900,
+        height=600,
+        autosize=False,
+    )
+)
 pio.templates.default = "base"
 pio.renderers.default = "vscode"
 

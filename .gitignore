@@ -7,6 +7,7 @@ __pycache__/
 *.jython_cache/
 *.py[cod]
 *$py.class
+temp/
 
 # C extensions
 *.so
