@@ -1,5 +1,6 @@
 Tooling: @critical
 	Plots: @critical
+		☐ `Subplot.from_plots` @classmethod using double nested array notation for rows and columns @critical
 		☐ Error bouunds @critical
 			☐ Fan Chart
 				☐ `Fan` trace

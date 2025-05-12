@@ -253,7 +253,7 @@ pio.templates["base"] = go.layout.Template(
                         # "symbol": "x",
                         "size": 4,
                     },
-                    "hovertemplate": "<b>%{fullData.name}</b><br>x: %{x:.4f}<br>y: %{y:.4f}<extra></extra>",
+                    "hovertemplate": "<b>%{fullData.name}</b><br>x: %{x}<br>y: %{y}<extra></extra>",
                     "type": "scatter",
                 },
             ],
@@ -668,7 +668,7 @@ class Ecdf(Line):
             x=_x,
             y=_y,
             customdata=_y - y_shift,
-            hovertemplate="<b>%{fullData.name}</b><br>x: %{x:.4f}<br>y: %{customdata:.4f}<extra></extra>",
+            hovertemplate="<b>%{fullData.name}</b><br>x: %{x}<br>y: %{customdata}<extra></extra>",
             *args,
             **kwargs,
         )
@@ -828,8 +828,8 @@ class Bar3d(go.Mesh3d):
             flatshading=flatshading,
             hovertemplate="x: %{customdata[0]}<br>"
             "y: %{customdata[1]}<br>"
-            "z: %{customdata[2]:.4f}<br>"
-            "w: %{customdata[3]:.4f}<extra></extra>",
+            "z: %{customdata[2]}<br>"
+            "w: %{customdata[3]}<extra></extra>",
             customdata=np.stack(
                 [
                     np.repeat(self._x_arr, repeats=8),
@@ -1946,7 +1946,7 @@ class SubPlot(Plot):
                 )
                 else spacing["x"]["shared"]
             )
-            * (max_yaxis - 1),
+            * max_yaxis,
             num_axes=len(subplot_config.plots[0]),
             fraction=get_domain_fraction(
                 axis_idx=1,
