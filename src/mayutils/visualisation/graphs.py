@@ -253,7 +253,7 @@ pio.templates["base"] = go.layout.Template(
                         # "symbol": "x",
                         "size": 4,
                     },
-                    "hovertemplate": "<b>%{fullData.name}</b><br>x: %{x}<br>y: %{y}<extra></extra>",
+                    "hovertemplate": "<b>%{fullData.name}</b><br>x: %{x:.4f}<br>y: %{y:.4f}<extra></extra>",
                     "type": "scatter",
                 },
             ],
@@ -607,6 +607,68 @@ class Line(go.Scatter):
         raise NotImplementedError("Method incomplete")
 
 
+class Ecdf(Line):
+    def __init__(
+        self,
+        x: ArrayLike,
+        y: Optional[ArrayLike] = None,
+        y_shift: float = 0,
+        norm: Literal["probability", "percentage", "count"] = "probability",
+        mode: Literal["standard", "reversed", "complementary"] = "standard",
+        fill: Literal["tozeroy", "tonexty", "toself"] = "toself",
+        *args,
+        **kwargs,
+    ) -> None:
+        _x = np.asarray(x)
+        idx = np.argsort(_x)
+
+        if mode == "reversed":
+            idx = np.flip(idx)
+
+        _x = _x[idx]
+
+        if y is None:
+            _y = np.ones(shape=len(_x))
+        else:
+            _y = np.asarray(y)
+            if len(_y) != len(_x):
+                raise ValueError("x and y arrays are not the same length")
+
+            _y = _y[idx]
+
+        y_sum = np.sum(_y)
+        _y = np.cumsum(_y)
+        if mode == "complementary":
+            _y = y_sum - _y
+
+        if norm == "probability":
+            _y = _y / y_sum
+        elif norm == "percentage":
+            _y = 100 * _y / y_sum
+
+        _y += y_shift
+
+        kwargs["line_shape"] = "vh"  # if mode == "reversed" else "hv"
+        kwargs["fill"] = fill
+
+        if fill == "toself":
+            _x = np.insert(_x, 0, _x[-1])
+            _y = np.insert(_y, 0, y_shift)
+            # np.append(_x, [_x[-1]])
+            # _y = np.append(_y, [y_shift])
+
+        super().__init__(
+            x=_x,
+            y=_y,
+            customdata=_y - y_shift,
+            hovertemplate="<b>%{fullData.name}</b><br>x: %{x:.4f}<br>y: %{customdata:.4f}<extra></extra>",
+            *args,
+            **kwargs,
+        )
+
+        self.meta = "ecdf"
+
+
 class Scatter(go.Scatter):
     def __init__(
         self,
@@ -759,8 +821,8 @@ class Bar3d(go.Mesh3d):
             flatshading=flatshading,
             hovertemplate="x: %{customdata[0]}<br>"
             "y: %{customdata[1]}<br>"
-            "z: %{customdata[2]:.2f}<br>"
-            "w: %{customdata[3]:.2f}<extra></extra>",
+            "z: %{customdata[2]:.4f}<br>"
+            "w: %{customdata[3]:.4f}<extra></extra>",
             customdata=np.stack(
                 [
                     np.repeat(self._x_arr, repeats=8),
@@ -1310,22 +1372,26 @@ class Plot(go.Figure):
                     trace.marker.color  # type: ignore
                     or shuffled_colourscale[idx % len(shuffled_colourscale)]
                 )
-            elif trace.meta == "line":
-                trace.textfont.color = (
-                    trace.line.color
+            if trace.meta in ["line", "ecdf"]:  # type: ignore
+                trace.textfont.color = (  # type: ignore
+                    trace.line.color  # type: ignore
                     or shuffled_colourscale[idx % len(shuffled_colourscale)]
                 )
+                if trace.meta == "ecdf":  # type: ignore
+                    colour = Colour.parse(colour=trace.textfont.color)  # type: ignore
+                    opacity = 0.1
+                    trace.fillcolor = colour.to_str(opacity=opacity)  # type: ignore
 
         bound_groups = {}
         for idx, trace in enumerate(self.data):
-            if trace.legendgroup and trace.legendgroup.startswith("bounds"):
-                if trace.legendgroup not in bound_groups:
-                    bound_groups[trace.legendgroup] = [None, []]
+            if trace.legendgroup and trace.legendgroup.startswith("bounds"):  # type: ignore
+                if trace.legendgroup not in bound_groups:  # type: ignore
+                    bound_groups[trace.legendgroup] = [None, []]  # type: ignore
 
-                if trace.fill == "toself":
-                    bound_groups[trace.legendgroup][1].append(trace)
+                if trace.fill == "toself":  # type: ignore
+                    bound_groups[trace.legendgroup][1].append(trace)  # type: ignore
                 else:
-                    bound_groups[trace.legendgroup][0] = (trace.line.color, idx)
+                    bound_groups[trace.legendgroup][0] = (trace.line.color, idx)  # type: ignore
 
         for (line_colour, idx), bound_traces in bound_groups.values():
             if line_colour is None:
@@ -1335,9 +1401,7 @@ class Plot(go.Figure):
 
                 opacity = Colour.parse(colour=bound_traces[0].fillcolor).a
                 for bound_trace in bound_traces:
-                    bound_trace.fillcolor = colour.to_str(
-                        opacity=opacity,  # type: ignore
-                    )
+                    bound_trace.fillcolor = colour.to_str(opacity=opacity)  # type: ignore
 
         return self
 
@@ -1388,23 +1452,25 @@ class Plot(go.Figure):
     @final
     def add_rug(
         self,
-        rug_type: Literal["scatter", "violin", "box", "strip"] = "scatter",
+        rug_type: Literal[
+            "scatter", "violin", "box", "strip", "historgram", "ecdf"
+        ] = "scatter",
         *args,
         **kwargs,
     ) -> Self:
         if getattr(self, "_added_rugs", False):
             return self
 
-        hist_count = 0
+        rug_count = 0
         traces = []
         for idx, trace in enumerate(self.data):
             if isinstance(trace, go.Histogram):
-                hist_count += 1
+                rug_count += 1
                 if rug_type == "scatter":
                     traces.append(
                         go.Scatter(
                             x=self.data[idx].x,  # type: ignore
-                            y=([hist_count] * len(self.data[idx].x)),  # type: ignore
+                            y=([rug_count] * len(self.data[idx].x)),  # type: ignore
                             xaxis="x1",
                             yaxis="y2",
                             mode="markers",
@@ -1427,10 +1493,9 @@ class Plot(go.Figure):
                     )
                 elif rug_type == "box":
                     traces.append(
-                        # TODO: Different rug types
                         go.Box(
                             x=self.data[idx].x,  # type: ignore
-                            y=([hist_count] * len(self.data[idx].x)),  # type: ignore
+                            y=([rug_count] * len(self.data[idx].x)),  # type: ignore
                             xaxis="x1",
                             yaxis="y2",
                             orientation="h",
@@ -1464,10 +1529,9 @@ class Plot(go.Figure):
                     )
                 elif rug_type == "strip":
                     traces.append(
-                        # TODO: Different rug types
                         go.Box(
                             x=self.data[idx].x,  # type: ignore
-                            y=([hist_count] * len(self.data[idx].x)),  # type: ignore
+                            y=([rug_count] * len(self.data[idx].x)),  # type: ignore
                             xaxis="x1",
                             yaxis="y2",
                             orientation="h",
@@ -1502,7 +1566,7 @@ class Plot(go.Figure):
                     traces.append(
                         go.Violin(
                             x=self.data[idx].x,  # type: ignore
-                            y=([hist_count] * len(self.data[idx].x)),  # type: ignore
+                            y=([rug_count] * len(self.data[idx].x)),  # type: ignore
                             xaxis="x1",
                             yaxis="y2",
                             orientation="h",
@@ -1522,7 +1586,7 @@ class Plot(go.Figure):
                                 color=self.data[idx].marker.line.color,  # type: ignore
                                 size=5,
                             ),
-                            scalegroup="histogram_added_rug",
+                            scalegroup="added_rug",
                             points=kwargs.pop("points", "suspectedoutliers"),
                             opacity=0.6,
                             jitter=0.6,
@@ -1532,11 +1596,37 @@ class Plot(go.Figure):
                             **kwargs,
                         )
                     )
+                elif rug_type == "histogram":
+                    raise NotImplementedError("Histogram not implemented")
+                elif rug_type == "ecdf":
+                    traces.append(
+                        Ecdf(
+                            x=self.data[idx].x,  # type: ignore
+                            y_shift=rug_count,  # type: ignore
+                            xaxis="x1",
+                            yaxis="y2",
+                            name=(
+                                (self.data[idx].name + " Rug")  # type: ignore
+                                if self.data[idx].name  # type: ignore
+                                else f"trace {idx} Rug"
+                            ),
+                            legendgroup=self.data[idx].legendgroup  # type: ignore
+                            or null(set_inline(self.data[idx], "legendgroup", idx))
+                            or idx,
+                            showlegend=False,
+                            line=dict(
+                                color=self.data[idx].marker.line.color,  # type: ignore
+                            ),
+                            fill="toself",
+                            *args,
+                            **kwargs,
+                        )
+                    )
                 else:
                     raise ValueError(f"Rug type {rug_type} is unknown")
 
         height = 0.15 if rug_type == "scatter" else 0.3
-        if hist_count > 0:
+        if rug_count > 0:
             self.update_layout(
                 yaxis1=dict(
                     domain=[height + 0.1, 1],
@@ -1553,10 +1643,12 @@ class Plot(go.Figure):
                 ),
             )
 
-            for trace in traces:
-                self.add_trace(trace=trace)
+            # for trace in traces:
+            self.add_traces(data=traces)
 
         self._added_rugs = True
+
+        self.modifications()
 
         return self
 
@@ -1569,12 +1661,14 @@ class Plot(go.Figure):
                 isinstance(trace, plot_class)
                 or (
                     (trace.meta == plot_name)  # type: ignore
-                    and (plot_name in ["bar3d", "null", "scatter"])
+                    and (plot_name in ["bar3d", "null", "scatter", "line", "ecdf"])
                 )
                 for trace in self.data
             ]
             for plot_name, plot_class in {
                 "bar3d": Bar3d,
+                "line": Line,
+                "ecdf": Ecdf,
                 "null": Null,
                 "scatter": Scatter,
                 "histogram": go.Histogram,
@@ -1650,9 +1744,7 @@ class Plot(go.Figure):
                         showlegend=False,
                         label_name=False,
                     )
-                    for idx, include in enumerate(
-                        plot_types["histogram"],
-                    )
+                    for idx, include in enumerate(plot_types["histogram"])
                     if include
                 ],
                 "layout": dict(),

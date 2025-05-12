@@ -5,7 +5,7 @@ from mayutils.objects.dataframes import (
 from mayutils.visualisation.notebook import setup_notebooks
 
 
-def setup():
+def setup() -> None:
     setup_logging()
     setup_notebooks()
     setup_dataframes()

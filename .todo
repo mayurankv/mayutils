@@ -1,7 +1,7 @@
 Tooling:
 	Plots:
 		@critical
-		☐ Error bouunds
+		☐ Error bouunds @critical
 			☐ Fan Chart
 				☐ `Fan` trace
 			☐ Error Bounds
@@ -17,30 +17,32 @@ Tooling:
 					)
 				)
 				```
-		☐ Marginals and Rugs
+		☐ Marginals and Rugs @critical
 			☐ Rugs
 				☐ Add histogram type
 					- https://plotly.com/python/2d-histogram-contour/
-			☐ 2D: Scatter
-				- https://plotly.com/python/2d-histogram-contour/
-			☐ 1D: Histogram
-		☐ ECDF Trace type (reverse and complementary)
-			- https://plotly.com/python/ecdf-plots/
-		☐ 3D Histogram
+			☐ Convert rugs to work independently for x and y axis dependent on trace type:
+				☐ 2D: Scatter
+					- https://plotly.com/python/2d-histogram-contour/
+				☐ 1D: Histogram
+		☐ 3D Histogram @critical @high
 			☐ Heatmap/contour alternative
-		☐ Subplot enlargement
+		☐ Categorical 3D Axes @critical @medium
+			- https://plotly.com/python/categorical-axes/
+		☐ Animations @low
+			- https://plotly.com/python/animations/
+			- https://community.plotly.com/t/single-subplot-animations/35235/2
+			- https://plotly.com/~empet/15243/animating-traces-in-subplotsbr/#/
+		☐ Subplot enlargement @hard @low
 			☐ Plot from subplot axis and traces
 				- https://community.plotly.com/t/how-to-remove-subplots-or-create-new-plot-from-a-subplot/72117/2
 			☐ Zooming In
 				- https://codepen.io/saratoga01/pen/QwWydeV
 				- https://codepen.io/saratoga01/pen/WbNQygR
 				- https://community.plotly.com/t/make-subplots-extract-highlight-one-subplot/74188/2
-		☐ Categorical 3D Axes
-			- https://plotly.com/python/categorical-axes/
-		☐ Animations
-			- https://plotly.com/python/animations/
-			- https://community.plotly.com/t/single-subplot-animations/35235/2
-			- https://plotly.com/~empet/15243/animating-traces-in-subplotsbr/#/
+			☐ Full screen button from streamlit
+				- https://github.com/plotly/plotly.js/issues/6287
+				- https://gist.github.com/p1-rde/2120938f1c7f44c26755cfd83f8562e8
 
 		Classification: @low
 			☐ https://plotly.com/python/knn-classification/
@@ -48,7 +50,7 @@ Tooling:
 			☐ https://plotly.com/python/pca-visualization/
 			☐ https://towardsdatascience.com/using-shap-values-to-explain-how-your-machine-learning-model-works-732b3f40e137/
 
-		Maps:
+		Maps: @low
 			☐ https://plotly.com/python/map-subplots-and-small-multiples/
 			☐ https://plotly.com/python/tile-county-choropleth/
 			☐ https://plotly.com/python/tile-scatter-maps/
@@ -56,10 +58,6 @@ Tooling:
 			☐ https://plotly.com/python/scatter-plots-on-maps/
 			☐ https://plotly.com/python/density-heatmaps/
 			☐ https://plotly.com/python/choropleth-maps/
-
-	Scripts:
-		☐ Script to bump version major, minor, patch
-			- `scripts.versioning`
 
 	Logging: @medium
 		☐ Readd logging file handler to logger
