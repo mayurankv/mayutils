@@ -1,6 +1,5 @@
-Tooling:
-	Plots:
-		@critical
+Tooling: @critical
+	Plots: @critical
 		☐ Error bouunds @critical
 			☐ Fan Chart
 				☐ `Fan` trace
@@ -64,28 +63,28 @@ Tooling:
 		☐ Add logger.name to rich handler output
 			- https://github.com/Textualize/rich/issues/850
 
-	Decorators:
+	Decorators: @low
 		☐ See if any other good decorators to implement
 
-	Classes:
+	Classes: @low
 		☐ Add default class methods
 
-	Tables:
+	Tables: @low
 		☐ Great Tables Theming @low
 			- https://posit-dev.github.io/great-tables/get-started/table-theme-options.html
 
-	DataFrames:
+	DataFrames: @low
 		☐ Polars functionality (wait till more familiar) @low
 
-	Mathematics:
+	Mathematics: @low
 		☐ JIT https://numba.pydata.org/numba-doc/dev/user/jit.html
 
-	Filesystem:
+	Filesystem: @low
 		Webdrivers:
 			☐ Fix Chrome @hard
 				☐ Fix all Chromium
 			☐ Fix Firefox @hard
-	Apps:
+	Apps: @low
 		☐ https://typer.tiangolo.com
 		☐ streamlit
 
@@ -93,7 +92,7 @@ Tooling:
 		☐ Set `[tool.poetry.optional-dependencies]`
 			- Ensure safe to use without additional dependencies though or when using in python, not IPython
 
-Productivity:
+Productivity: @medium
 	Assistive AI:
 		☐ Cursor
 			☐ Set up @critical
@@ -111,18 +110,18 @@ Productivity:
 				☐ https://githubnext.com/projects/copilot-workspace/
 				☐ https://github.com/githubnext/copilot-workspace-user-manual
 
+		☐ Obsidian
+
 		Read:
 			- https://www.reddit.com/r/ChatGPTCoding/comments/1ilg9zl/cursor_vs_aider_vs_vscode_copilot_which_ai_coding/
 
-Understand:
+Understand: @low
+	- https://github.com/scottgasch/pyutils
 	- https://aws.amazon.com/what-is/data-lake/
 
-Tools:
+Tools: @low
 	Drawing:
 		- https://www.tldraw.com/
 		- https://excalidraw.com
 	Writing:
 		- https://stackedit.io/
-
-
-https://github.com/scottgasch/pyutils
