@@ -65,6 +65,13 @@ Tooling: @critical
 		☐ Add logger.name to rich handler output
 			- https://github.com/Textualize/rich/issues/850
 
+	Pydantic: @low
+		- https://docs.pydantic.dev/latest/api/base_model/#pydantic.BaseModel.model_construct
+		- https://docs.pydantic.dev/latest/why/#ecosystem
+		☐ Set up some things to use pydantic
+		☐ Translate dataclasses to pydantic dataclasses where helpful
+		☐ Explore `BaseModel`
+
 	Decorators: @low
 		☐ See if any other good decorators to implement
 
