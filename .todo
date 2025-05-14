@@ -59,7 +59,8 @@ Tooling: @critical
 			☐ https://plotly.com/python/density-heatmaps/
 			☐ https://plotly.com/python/choropleth-maps/
 
-	Logging: @medium
+	Logging: @critical
+		☐ Make classmethod or staticmethod to change logging default level
 		☐ Readd logging file handler to logger
 		☐ Add logger.name to rich handler output
 			- https://github.com/Textualize/rich/issues/850

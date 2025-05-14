@@ -22,50 +22,6 @@ FILE_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 root_logger = logging.getLogger()
 
 
-def setup_logging(
-    log_dir: Path | str = get_root() / "logs",
-    console_level: Level = logging.WARNING,
-    file_level: Level = logging.NOTSET,
-) -> None:
-    log_dir = Path(log_dir)
-    log_dir.mkdir(parents=True, exist_ok=True)
-
-    handlers = dict(
-        console=RichHandler(
-            level=console_level,
-            rich_tracebacks=True,
-            show_time=True,
-            show_path=True,
-        ),
-        # file=RotatingFileHandler(
-        #     filename=log_dir / f"{datetime.now():%Y-%m-%d}.log",
-        #     maxBytes=10_485_760,
-        #     backupCount=5,
-        #     encoding="utf-8",
-        # ),
-    )
-    handlers["console"].setFormatter(fmt=logging.Formatter(fmt=CONSOLE_FORMAT))
-    # handlers["file"].setFormatter(fmt=logging.Formatter(fmt=FILE_FORMAT))
-    # handlers["file"].setLevel(level=file_level)
-
-    root_logger.handlers.clear()
-    for handler in handlers.values():
-        root_logger.addHandler(hdlr=handler)
-    root_logger.setLevel(level=logging.DEBUG)
-
-    # module = sys.modules[__name__]
-
-    # for name, obj in list(vars(module).items()):
-    #     if name in ["log"]:
-    #         continue
-
-    #     if isfunction(obj) and obj.__module__ == __name__:
-    #         if name.startswith("__") or hasattr(obj, "__wrapped__"):
-    #             continue
-
-    #         setattr(module, name, log(obj))
-
-
 class Logger(logging.Logger):
     def __init__(
         self,
@@ -76,6 +32,51 @@ class Logger(logging.Logger):
             *args,
             **kwargs,
         )
+
+    @staticmethod
+    def configure(
+        log_dir: Path | str = get_root() / "logs",
+        console_level: Level = logging.WARNING,
+        file_level: Level = logging.NOTSET,
+    ) -> None:
+        log_dir = Path(log_dir)
+        log_dir.mkdir(parents=True, exist_ok=True)
+
+        handlers = dict(
+            console=RichHandler(
+                level=console_level,
+                rich_tracebacks=True,
+                show_time=True,
+                show_path=True,
+            ),
+            # file=RotatingFileHandler(
+            #     filename=log_dir / f"{datetime.now():%Y-%m-%d}.log",
+            #     maxBytes=10_485_760,
+            #     backupCount=5,
+            #     encoding="utf-8",
+            # ),
+        )
+        handlers["console"].setFormatter(fmt=logging.Formatter(fmt=CONSOLE_FORMAT))
+        # handlers["file"].setFormatter(fmt=logging.Formatter(fmt=FILE_FORMAT))
+        # handlers["file"].setLevel(level=file_level)
+
+        root_logger.handlers.clear()
+        for handler in handlers.values():
+            root_logger.addHandler(hdlr=handler)
+        root_logger.setLevel(level=logging.DEBUG)
+
+        # module = sys.modules[__name__]
+
+        # for name, obj in list(vars(module).items()):
+        #     if name in ["log"]:
+        #         continue
+
+        #     if isfunction(obj) and obj.__module__ == __name__:
+        #         if name.startswith("__") or hasattr(obj, "__wrapped__"):
+        #             continue
+
+        #         setattr(module, name, log(obj))
+
 
     @classmethod
     def clone(

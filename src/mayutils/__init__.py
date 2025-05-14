@@ -1,4 +1,4 @@
-from mayutils.environment.logging import setup_logging
+from mayutils.environment.logging import Logging
 from mayutils.objects.dataframes import (
     setup_dataframes,
 )
@@ -6,7 +6,7 @@ from mayutils.visualisation.notebook import setup_notebooks
 
 
 def setup() -> None:
-    setup_logging()
+    Logging.configure()
     setup_notebooks()
     setup_dataframes()
 
