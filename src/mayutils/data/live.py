@@ -89,11 +89,13 @@ class LiveData(object):
                     **self.format_kwargs,
                 )
             )
-            self.data = pd.concat([self.data, additional_data])
 
-            self._get_aggregated_data()
+            if not additional_data.empty:
+                self.data = pd.concat([self.data, additional_data])
 
-            self.period = new_period
+                self._get_aggregated_data()
+
+                self.period = new_period
 
         return self
 
