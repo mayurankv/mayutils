@@ -55,7 +55,9 @@ class LiveData(object):
             )
         )
 
-        self._get_aggregated_data()
+        self.empty = self.data.empty
+        if not self.empty:
+            self._get_aggregated_data()
 
         return None
 
@@ -91,7 +93,10 @@ class LiveData(object):
             )
 
             if not additional_data.empty:
-                self.data = pd.concat([self.data, additional_data])
+                if not self.empty:
+                    self.data = pd.concat([self.data, additional_data])
+                else:
+                    self.data = additional_data
 
                 self._get_aggregated_data()
 
