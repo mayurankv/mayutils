@@ -1,6 +1,6 @@
 from functools import wraps
 from types import FunctionType
-from typing import Any, Callable, NoReturn
+from typing import Any, Callable, NoReturn, Type
 
 
 class classonlyproperty:
@@ -78,41 +78,30 @@ def add_method(
 
 
 def adopt_super_methods(
-    cls: type,
-) -> type:
-    for name in dir(cls.__base__):
+    cls: Type,
+) -> Type:
+    base_cls = cls.__base__
+
+    for name in dir(base_cls):
         if name.startswith("__"):
             continue
 
-        base_method = getattr(cls.__base__, name)
+        base_method = getattr(base_cls, name)
         if not isinstance(base_method, FunctionType):
             continue
 
-        def make_wrapper(
-            name,
-            base_method: FunctionType,
-        ):
-            @wraps(wrapped=base_method)
-            def wrapper(
-                self,
-                *args,
-                **kwargs,
-            ):
-                getattr(super(cls, self), name)(
-                    *args,
-                    **kwargs,
-                )
+        # Skip if subclass already overrides this method
+        if name in cls.__dict__:
+            continue
+
+        def make_wrapper(method_name, base_method):
+            @wraps(base_method)
+            def wrapper(self, *args, **kwargs):
+                getattr(super(cls, self), method_name)(*args, **kwargs)
                 return self
 
             return wrapper
 
-        setattr(
-            cls,
-            name,
-            make_wrapper(
-                name=name,
-                base_method=base_method,
-            ),
-        )
+        setattr(cls, name, make_wrapper(name, base_method))
 
     return cls

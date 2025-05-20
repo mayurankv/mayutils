@@ -1,3 +1,4 @@
+from functools import update_wrapper
 import os
 from math import isqrt, ceil
 from typing import Literal, Optional, Self, final
@@ -5,7 +6,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 import pandas as pd
 from pandas import DataFrame
-from mayutils.objects.classes import adopt_super_methods
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from scipy.stats import gaussian_kde, norm
@@ -1079,7 +1079,6 @@ class SubPlotConfig:
         )
 
 
-@adopt_super_methods
 class Plot(go.Figure):
     def __init__(
         self,
@@ -1227,6 +1226,46 @@ class Plot(go.Figure):
         self,
     ) -> go.Figure:
         return go.Figure(data=self)
+
+    def add_trace(
+        self,
+        trace,
+        *args,
+        **kwargs,
+    ) -> Self:
+        super().add_trace(
+            trace=trace,
+            *args,
+            **kwargs,
+        )
+
+        return self
+
+    def add_vrect(
+        self,
+        *args,
+        **kwargs,
+    ) -> Self:
+        update_wrapper(wrapper=go.Figure.add_vrect, wrapped=self.add_vrect)
+        super().add_vrect(
+            *args,
+            **kwargs,
+        )
+
+        return self
+
+    def add_hline(
+        self,
+        *args,
+        **kwargs,
+    ) -> Self:
+        update_wrapper(wrapper=go.Figure.add_hline, wrapped=self.add_hline)
+        super().add_hline(
+            *args,
+            **kwargs,
+        )
+
+        return self
 
     def empty_traces(
         self,
