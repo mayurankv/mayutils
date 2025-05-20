@@ -2057,7 +2057,7 @@ class SubPlot(Plot):
                 **line_title_styles,
             )
 
-        for row_idx, row_titles in enumerate(subplot_config.titles.plots or []):
+        for row_idx, row_titles in enumerate((subplot_config.titles.plots or [])[::-1]):
             for col_idx, plot_title in enumerate(row_titles):
                 self.add_title(
                     title=plot_title or "",
