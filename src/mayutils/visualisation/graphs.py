@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 import pandas as pd
 from pandas import DataFrame
+from mayutils.objects.classes import adopt_super_methods
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from scipy.stats import gaussian_kde, norm
@@ -1078,6 +1079,7 @@ class SubPlotConfig:
         )
 
 
+@adopt_super_methods
 class Plot(go.Figure):
     def __init__(
         self,
@@ -1225,20 +1227,6 @@ class Plot(go.Figure):
         self,
     ) -> go.Figure:
         return go.Figure(data=self)
-
-    def add_trace(
-        self,
-        trace,
-        *args,
-        **kwargs,
-    ) -> Self:
-        super().add_trace(
-            trace=trace,
-            *args,
-            **kwargs,
-        )
-
-        return self
 
     def empty_traces(
         self,

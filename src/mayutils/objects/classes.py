@@ -1,3 +1,5 @@
+from functools import wraps
+from types import FunctionType
 from typing import Any, Callable, NoReturn
 
 
@@ -71,5 +73,46 @@ def add_method(
         method_name,
         new_method,
     )
+
+    return cls
+
+
+def adopt_super_methods(
+    cls: type,
+) -> type:
+    for name in dir(cls.__base__):
+        if name.startswith("__"):
+            continue
+
+        base_method = getattr(cls.__base__, name)
+        if not isinstance(base_method, FunctionType):
+            continue
+
+        def make_wrapper(
+            name,
+            base_method: FunctionType,
+        ):
+            @wraps(wrapped=base_method)
+            def wrapper(
+                self,
+                *args,
+                **kwargs,
+            ):
+                getattr(super(cls, self), name)(
+                    *args,
+                    **kwargs,
+                )
+                return self
+
+            return wrapper
+
+        setattr(
+            cls,
+            name,
+            make_wrapper(
+                name=name,
+                base_method=base_method,
+            ),
+        )
 
     return cls
