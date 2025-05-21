@@ -2185,7 +2185,7 @@ class SubPlot(Plot):
                             else None,
                             "domain": x_domains[col_idx],
                             "showticklabels": (
-                                subplot_config.main_axis_configs.yaxes[axis_idx].mode
+                                subplot_config.main_axis_configs.xaxis.mode
                                 != "collapsed"
                             )
                             or (row_idx == len(subplot_config.plots) - 1),
