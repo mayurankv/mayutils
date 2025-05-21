@@ -2044,7 +2044,7 @@ class SubPlot(Plot):
                 )
                 + 20
             )
-        for row_idx, row_title in enumerate(subplot_config.titles.rows or []):
+        for row_idx, row_title in enumerate((subplot_config.titles.rows or [])[::-1]):
             self.add_title(
                 title=row_title,
                 edge="left",

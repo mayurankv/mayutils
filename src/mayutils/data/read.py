@@ -40,7 +40,6 @@ def get_query_data(
             query_name=query_name,
             queries_folders=queries_folders,
             reader=reader,
-            backend=backend,
             **format_kwargs,
         )
 
