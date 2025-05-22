@@ -1264,6 +1264,17 @@ class Plot(go.Figure):
 
         return self
 
+    def add_vline(
+        self,
+        *args,
+        **kwargs,
+    ) -> Self:
+        update_wrapper(wrapper=go.Figure.add_vline, wrapped=self.add_vline)
+        super().add_vline(
+            *args,
+            **kwargs,
+        )
+
     def add_hline(
         self,
         *args,
