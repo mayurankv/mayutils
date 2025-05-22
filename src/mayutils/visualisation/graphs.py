@@ -1275,6 +1275,8 @@ class Plot(go.Figure):
             **kwargs,
         )
 
+        return self
+
     def add_hline(
         self,
         *args,
