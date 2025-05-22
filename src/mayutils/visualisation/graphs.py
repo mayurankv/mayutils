@@ -1241,6 +1241,16 @@ class Plot(go.Figure):
 
         return self
 
+    def add_shape(
+        self,
+        *args,
+        **kwargs,
+    ) -> Self:
+        update_wrapper(wrapper=go.Figure.add_shape, wrapped=self.add_shape)
+        super().add_shape(*args, **kwargs)
+
+        return self
+
     def add_vrect(
         self,
         *args,
