@@ -114,7 +114,10 @@ Productivity: @medium
 				☐ https://github.com/PatrickJS/awesome-cursorrules
 				☐ Search `cursorrules`
 		☐ Copilot
-			☐ Understand current subscription setting
+			Rules:
+				☐ https://docs.github.com/en/copilot/customizing-copilot/adding-personal-custom-instructions-for-github-copilot
+				☐ https://docs.github.com/en/copilot/customizing-copilot/adding-repository-custom-instructions-for-github-copilot
+			☐ https://docs.github.com/en/copilot/customizing-copilot/customizing-the-development-environment-for-copilot-coding-agent
 			☐ Understand Copilot Workspace
 				☐ https://githubnext.com/projects/copilot-workspace/
 				☐ https://github.com/githubnext/copilot-workspace-user-manual
