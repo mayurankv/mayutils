@@ -76,33 +76,58 @@ class Presentation(object):
     ) -> None:
         webbrowser.open(self.link)
 
+    def get_thumbnail_url(
+        self,
+        slide_number: int,
+    ) -> str:
+        slide_id = self.slides["slides"][slide_number - 1]["objectId"]
+        url = (
+            self.service.presentations()
+            .pages()
+            .getThumbnail(
+                presentationId=self.id,
+                pageObjectId=slide_id,
+            )
+            .execute()["contentUrl"]
+        )
+
+        return url
+
     def display(
         self,
         slide_number: Optional[int] = None,
+        **kwargs,
     ) -> None:
         if slide_number is not None:
-            slide_id = self.slides["slides"][slide_number - 1]["objectId"]
-            url = (
-                self.service.presentations()
-                .pages()
-                .getThumbnail(
-                    presentationId=self.id,
-                    pageObjectId=slide_id,
-                )
-                .execute()["contentUrl"]
-            )
+            url = self.get_thumbnail_url(slide_number=slide_number)
 
             try:
                 from IPython.core.display import Image
                 from IPython.display import display
 
-                display(Image(url=url))
+                display(
+                    Image(
+                        url=url,
+                        **kwargs,
+                    )
+                )
             except ImportError:
                 print(f"URL: `{url}`")
 
         else:
             for slide_idx in range(len(self.slides["slides"])):
                 self.display(slide_number=slide_idx + 1)
+
+    def _repr_mimebundle_(
+        self,
+        include=None,
+        exclude=None,
+    ):
+        url = self.get_thumbnail_url(slide_number=1)
+
+        return {
+            "text/html": f'<img src="{url}" style="max-width: 100%;">',
+        }
 
     def update(
         self,
