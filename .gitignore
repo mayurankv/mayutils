@@ -1,5 +1,6 @@
 .streamlit/secrets.toml
 .env
+.secrets
 .DS_Store
 
 # Byte-compiled / optimized / DLL files

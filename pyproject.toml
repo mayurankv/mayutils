@@ -52,6 +52,11 @@ numba = "^0.61.2"
 sqlalchemy = "^2.0.40"
 snowflake-sqlalchemy = "^1.7.3"
 streamlit = "^1.45.0"
+keyring = "^25.6.0"
+google-auth = "^2.40.2"
+google-auth-oauthlib = "^1.2.2"
+google-auth-httplib2 = "^0.2.0"
+google-api-python-client = "^2.170.0"
 
 
 [tool.poetry.group.dev.dependencies]
