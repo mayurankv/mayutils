@@ -54,6 +54,38 @@ class Drive(object):
 
         return file
 
+    def find_file_id(
+        self,
+        file_name: str,
+    ) -> str:
+        file: File | None = self.find_file(
+            file_name=file_name,
+        )
+        if not file:
+            raise FileNotFoundError(f"File '{file_name}' not found.")
+
+        file_id: str | None = file.get("id", None)
+        if not file_id:
+            raise ValueError(f"File '{file_name}' has no ID.")
+
+        return file_id
+
+    def delete_file_by_id(
+        self,
+        file_id: str,
+    ) -> None:
+        self.service.files().delete(fileId=file_id).execute()
+
+    def delete_file_by_name(
+        self,
+        file_name: str,
+    ) -> None:
+        self.service.files().delete(
+            fileId=self.find_file_id(
+                file_name=file_name,
+            ),
+        ).execute()
+
 
 class Presentation(object):
     def __init__(
@@ -63,13 +95,25 @@ class Presentation(object):
     ) -> None:
         self.id: str = presentation["presentationId"]
         self.service: SlidesService = slides_service
-        self.slides: PresentationInternal = presentation
+        self.internal: PresentationInternal = presentation
 
     @property
     def link(
         self,
     ) -> str:
         return f"https://docs.google.com/presentation/d/{self.id}/edit"
+
+    @property
+    def slides(
+        self,
+    ) -> Any:
+        return self.internal["slides"]
+
+    @property
+    def title(
+        self,
+    ) -> Any:
+        return self.internal["title"]
 
     def open(
         self,
@@ -80,7 +124,7 @@ class Presentation(object):
         self,
         slide_number: int,
     ) -> str:
-        slide_id = self.slides["slides"][slide_number - 1]["objectId"]
+        slide_id = self.slides[slide_number - 1]["objectId"]
         url = (
             self.service.presentations()
             .pages()
@@ -115,7 +159,7 @@ class Presentation(object):
                 print(f"URL: `{url}`")
 
         else:
-            for slide_idx in range(len(self.slides["slides"])):
+            for slide_idx in range(len(self.slides)):
                 self.display(slide_number=slide_idx + 1)
 
     def _repr_mimebundle_(
@@ -178,15 +222,9 @@ class Presentation(object):
         drive: Drive,
         slides_service: SlidesService,
     ) -> Self:
-        file: File | None = drive.find_file(
+        presentation_id: str = drive.find_file_id(
             file_name=presentation_name,
         )
-        if not file:
-            raise FileNotFoundError(f"Presentation '{presentation_name}' not found.")
-
-        presentation_id: str | None = file.get("id", None)
-        if not presentation_id:
-            raise ValueError(f"Presentation '{presentation_name}' has no ID.")
 
         return cls.retrieve_from_id(
             presentation_id=presentation_id,
@@ -218,15 +256,9 @@ class Presentation(object):
         drive: Drive,
         slides_service: SlidesService,
     ) -> Self:
-        file: File | None = drive.find_file(
+        template_id: str = drive.find_file_id(
             file_name=template_name,
         )
-        if not file:
-            raise FileNotFoundError(f"Template '{template_name}' not found.")
-
-        template_id: str | None = file.get("id", None)
-        if not template_id:
-            raise ValueError(f"Template '{template_name}' has no ID.")
 
         presentation: PresentationInternal = (
             drive.service.files()
@@ -273,6 +305,26 @@ class Presentation(object):
                     slides_service=slides_service,
                 )
 
+    def reset(
+        self,
+        drive: Drive,
+    ) -> Self:
+        presentation_name = self.title
+
+        drive.delete_file_by_id(
+            file_id=self.id,
+        )
+
+        new_presentation = self.create_new(
+            presentation_name=presentation_name,
+            slides_service=self.service,
+        )
+
+        self.internal = new_presentation.internal
+        self.id = new_presentation.id
+
+        return self
+
     def copy_slide(
         self,
         slide_number: Optional[int] = None,
@@ -284,26 +336,26 @@ class Presentation(object):
             )
 
         if slide_number is None:
-            source_index = len(self.slides["slides"]) - 1
+            source_index = len(self.slides) - 1
         else:
             source_index = slide_number - 1  # Convert to zero-based index
 
-        if source_index < 0 or source_index >= len(self.slides["slides"]):
+        if source_index < 0 or source_index >= len(self.slides):
             raise IndexError(
-                f"Slide number {source_index + 1} is out of range. Presentation has {len(self.slides['slides'])} slides."
+                f"Slide number {source_index + 1} is out of range. Presentation has {len(self.slides)} slides."
             )
 
         if to_position is None:
-            target_index = len(self.slides["slides"])
+            target_index = len(self.slides)
         else:
             target_index = to_position - 1
 
-        if target_index < 0 or target_index > len(self.slides["slides"]):
+        if target_index < 0 or target_index > len(self.slides):
             raise IndexError(
-                f"Target position {target_index + 1} is out of range. Presentation has {len(self.slides['slides'])} slides."
+                f"Target position {target_index + 1} is out of range. Presentation has {len(self.slides)} slides."
             )
 
-        slide_id = self.slides["slides"][source_index]["objectId"]
+        slide_id = self.slides[source_index]["objectId"]
 
         requests = [
             {"duplicateObject": {"objectId": slide_id, "insertionIndex": target_index}},
@@ -317,15 +369,15 @@ class Presentation(object):
         self,
         slide_number: int,
     ) -> Self:
-        if len(self.slides["slides"]) == 1:
+        if len(self.slides) == 1:
             raise ValueError("Cannot delete the only slide in the presentation.")
 
-        if slide_number < 1 or slide_number > len(self.slides["slides"]):
+        if slide_number < 1 or slide_number > len(self.slides):
             raise IndexError(
-                f"Slide number {slide_number} is out of range. Presentation has {len(self.slides['slides'])} slides."
+                f"Slide number {slide_number} is out of range. Presentation has {len(self.slides)} slides."
             )
 
-        slide_id = self.slides["slides"][slide_number - 1]["objectId"]
+        slide_id = self.slides[slide_number - 1]["objectId"]
         if slide_id is None:
             raise ValueError(f"Slide number {slide_number} has no ID.")
 
