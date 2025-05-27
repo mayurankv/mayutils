@@ -158,7 +158,7 @@ class Presentation(object):
         if not file:
             raise FileNotFoundError(f"Presentation '{presentation_name}' not found.")
 
-        presentation_id: str | None = getattr(file, "id", None)
+        presentation_id: str | None = file.get("id", None)
         if not presentation_id:
             raise ValueError(f"Presentation '{presentation_name}' has no ID.")
 
@@ -198,7 +198,7 @@ class Presentation(object):
         if not file:
             raise FileNotFoundError(f"Template '{template_name}' not found.")
 
-        template_id: str | None = getattr(file, "id", None)
+        template_id: str | None = file.get("id", None)
         if not template_id:
             raise ValueError(f"Template '{template_name}' has no ID.")
 
