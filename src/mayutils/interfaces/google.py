@@ -93,7 +93,8 @@ class Presentation(object):
             )
 
             try:
-                from IPython.core.display import Image, display
+                from IPython.core.display import Image
+                from IPython.display import display
 
                 display(Image(url=url))
             except ImportError:
