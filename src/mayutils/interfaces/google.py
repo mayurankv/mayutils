@@ -71,9 +71,14 @@ class Drive(object):
     def find_file(
         self,
         file_name: str,
+        folder_id: Optional[str] = None,
     ) -> File | None:
+        query = f"name = '{file_name}' and trashed = false"
+        if folder_id is not None:
+            query += f" and '{folder_id}' in parents"
+
         results = self.query_files(
-            query=f"name = '{file_name}' and trashed = false",
+            query=query,
             fields="files(id, name)",
         )
 
@@ -84,9 +89,11 @@ class Drive(object):
     def find_file_id(
         self,
         file_name: str,
+        **kwargs,
     ) -> str:
         file: File | None = self.find_file(
             file_name=file_name,
+            **kwargs,
         )
         if not file:
             raise FileNotFoundError(f"File '{file_name}' not found.")
@@ -106,10 +113,12 @@ class Drive(object):
     def delete_file_by_name(
         self,
         file_name: str,
+        **kwargs,
     ) -> None:
         self.files().delete(
             fileId=self.find_file_id(
                 file_name=file_name,
+                **kwargs,
             ),
         ).execute()
 
@@ -138,6 +147,14 @@ class Drive(object):
             mimetype=mimetype,
             resumable=True,
         )
+
+        try:
+            self.delete_file_by_name(
+                file_name=file_path.name,
+                folder_id=folder_id,
+            )
+        except (FileNotFoundError, ValueError):
+            pass
 
         uploaded_file = (
             self.files()
