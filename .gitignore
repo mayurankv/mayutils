@@ -2,6 +2,7 @@
 .env
 .secrets
 .DS_Store
+ignore.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

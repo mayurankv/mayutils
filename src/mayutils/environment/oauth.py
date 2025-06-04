@@ -251,3 +251,17 @@ def google_oauth(
         raise ValueError("Authentication failed, please check your credentials.")
 
     return creds, updated  # type: ignore
+
+
+def reset_service_oauth(
+    service_name: str,
+    username: str = getpass.getuser(),
+) -> None:
+    keyring.delete_password(
+        service_name=service_name,
+        username=username,
+    )
+
+    logger.debug(
+        msg=f"OAuth token for {service_name} and user {username} has been reset.",
+    )

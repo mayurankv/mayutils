@@ -1548,7 +1548,7 @@ class Plot(go.Figure):
                             **kwargs,
                         )
                     )
-                elif rug_type == "box":
+                elif rug_type == "strip":
                     traces.append(
                         go.Box(
                             x=self.data[idx].x,  # type: ignore
@@ -1584,7 +1584,7 @@ class Plot(go.Figure):
                             **kwargs,
                         )
                     )
-                elif rug_type == "strip":
+                elif rug_type == "box":
                     traces.append(
                         go.Box(
                             x=self.data[idx].x,  # type: ignore

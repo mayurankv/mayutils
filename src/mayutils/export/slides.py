@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Optional
 from datetime import date
 from subprocess import call
@@ -56,9 +57,9 @@ def export_slides(
     theme: Optional[tuple[str, str]] = None,
     serve: bool = False,
     light: bool = False,
-) -> None:
+) -> Path | None:
     if not is_interactive():
-        return
+        return None
 
     today = date.today().strftime(
         format="%Y_%m_%d",
@@ -89,3 +90,5 @@ def export_slides(
             args=f"{DISPLAY_TYPE_ENV_VAR}=slides jupyter nbconvert {escape(filepath)} --output {escape(str(output_filepath))} --execute {'' if theme is None else ('--template=' + theme[0])} --to slides --no-input --no-prompt{'' if not serve else ' --post serve'} --SlidesExporter.reveal_scroll=True --SlidesExporter.reveal_number=c/t --SlidesExporter.reveal_theme={'simple' if light else 'night'} {'' if theme is None else ('--TemplateExporter.extra_template_basedirs=' + theme[1])}",
             shell=True,
         )
+
+    return output_filepath

@@ -1,13 +1,21 @@
+from pathlib import Path
 from typing import Optional, Self, Any
+import uuid
+from base64 import b64encode
+import mimetypes
 
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
 
 import webbrowser
+
+from mayutils.objects.colours import Colour
 
 DriveService = Any
 SlidesService = Any
 PresentationInternal = Any
+SlideInternal = Any
 File = Any
 
 
@@ -17,6 +25,11 @@ class Drive(object):
         drive_service: DriveService,
     ) -> None:
         self.service = drive_service
+
+    def files(
+        self,
+    ) -> Any:
+        return self.service.files()
 
     @classmethod
     def from_creds(
@@ -33,24 +46,36 @@ class Drive(object):
             drive_service=drive_service,
         )
 
-    def find_file(
+    def query_files(
         self,
-        file_name: str,
-    ) -> File | None:
-        query = f"name = '{file_name}' and mimeType = 'application/vnd.google-apps.presentation' and trashed = false"
-
+        query: str,
+        spaces: str="drive",
+        supportsAllDrives: bool=True,
+        **kwargs,
+    ) -> Any:
         results = (
-            self.service.files()
+            self.files()
             .list(
                 q=query,
-                spaces="drive",
-                fields="files(id, name)",
+                spaces=spaces,
+                supportsAllDrives=supportsAllDrives,
+                **kwargs,
             )
             .execute()
         )
 
-        files = results.get("files", [])
-        file = files[0] if files else None
+        return results
+
+    def find_file(
+        self,
+        file_name: str,
+    ) -> File | None:
+        results = self.query_files(
+            query=f"name = '{file_name}' and trashed = false",
+            fields="files(id, name)",
+        )
+
+        file = (results.get("files", []) or [None])[0]
 
         return file
 
@@ -74,17 +99,78 @@ class Drive(object):
         self,
         file_id: str,
     ) -> None:
-        self.service.files().delete(fileId=file_id).execute()
+        self.files().delete(fileId=file_id).execute()
 
     def delete_file_by_name(
         self,
         file_name: str,
     ) -> None:
-        self.service.files().delete(
+        self.files().delete(
             fileId=self.find_file_id(
                 file_name=file_name,
             ),
         ).execute()
+
+    def upload(
+        self,
+        file_path: Path | str,
+        folder_id: Optional[str] = None,
+    ) -> str:
+        file_path = Path(file_path)
+
+        if not file_path.exists():
+            raise FileNotFoundError(f"File not found: {file_path}")
+
+        mimetype = mimetypes.guess_type(url=file_path)[0]
+        if not mimetype:
+            raise ValueError(f"Could not determine mime type for {file_path}")
+
+        file_metadata = {
+            "name": file_path.name,
+            "mimeType": mimetype,
+            **({"parents": [folder_id]} if folder_id is not None else {}),
+        }
+
+        media = MediaFileUpload(
+            filename=str(file_path),
+            mimetype=mimetype,
+            resumable=True,
+        )
+
+        uploaded_file = (
+            self.files()
+            .create(
+                body=file_metadata,
+                media_body=media,
+                fields="id",
+                supportsAllDrives=True,
+            )
+            .execute()
+        )
+
+        uploaded_file_id: str | None = uploaded_file.get("id", None)
+        if not uploaded_file_id:
+            raise ValueError(f"Failed to upload file: {file_path}")
+
+        return uploaded_file_id
+
+    def get(
+        self,
+        file_path: Path | str,
+        force_upload: bool = False,
+    ) -> str:
+        file_path = Path(file_path)
+
+        try:
+            file_id = self.find_file_id(file_name=str(file_path))
+            if force_upload:
+                self.delete_file_by_id(file_id=file_id)
+                file_id = self.upload(file_path=file_path)
+
+        except FileNotFoundError:
+            file_id = self.upload(file_path=file_path)
+
+        return file_id
 
 
 class Presentation(object):
@@ -98,16 +184,48 @@ class Presentation(object):
         self.internal: PresentationInternal = presentation
 
     @property
+    def height(
+        self,
+    ) -> float:
+        return self.internal["pageSize"]["height"]["magnitude"] / 12700
+
+    @property
+    def width(
+        self,
+    ) -> float:
+        return self.internal["pageSize"]["width"]["magnitude"] / 12700
+
+    @property
     def link(
         self,
     ) -> str:
         return f"https://docs.google.com/presentation/d/{self.id}/edit"
 
+    def slide(
+        self,
+        slide_number: int,
+    ) -> SlideInternal:
+        if slide_number < 1 or slide_number > len(self.internal["slides"]):
+            raise IndexError(
+                f"Slide number {slide_number} is out of range. Presentation has {len(self.internal['slides'])} slides."
+            )
+
+        return self.internal["slides"][slide_number - 1]
+
     @property
     def slides(
         self,
-    ) -> Any:
-        return self.internal["slides"]
+    ) -> list[SlideInternal]:
+        return [
+            self.slide(slide_number=slide_idx + 1)
+            for slide_idx in range(len(self.internal["slides"]))
+        ]
+
+    def slide_id(
+        self,
+        slide_number: int,
+    ) -> SlideInternal:
+        return self.slide(slide_number=slide_number)["objectId"]
 
     @property
     def title(
@@ -176,13 +294,16 @@ class Presentation(object):
     def update(
         self,
         requests: list[dict],
-    ) -> None:
-        self.service.presentations().batchUpdate(
-            presentationId=self.id,
-            body={
-                "requests": requests,
-            },
-        ).execute()
+    ) -> Self:
+        if requests:
+            self.service.presentations().batchUpdate(
+                presentationId=self.id,
+                body={
+                    "requests": requests,
+                },
+            ).execute()
+
+        return self
 
     @staticmethod
     def service_from_creds(
@@ -195,6 +316,26 @@ class Presentation(object):
         )
 
         return slides_service
+
+    @classmethod
+    def fresh_from_creds(
+        cls,
+        presentation_name: str,
+        creds: Credentials,
+        template: Optional[str] = None,
+    ) -> Self:
+        drive = Drive.from_creds(creds=creds)
+        slides_service = Presentation.service_from_creds(creds=creds)
+
+        return cls(
+            presentation=Presentation.get(
+                presentation_name=presentation_name,
+                drive=drive,
+                slides_service=slides_service,
+                template=template,
+            ),
+            slides_service=slides_service,
+        )
 
     @classmethod
     def retrieve_from_id(
@@ -237,16 +378,28 @@ class Presentation(object):
         presentation_name: str,
         slides_service: SlidesService,
     ) -> Self:
-        presentation: PresentationInternal = (
+        presentation_internal: PresentationInternal = (
             slides_service.presentations()
             .create(body={"title": presentation_name})
             .execute()
         )
 
-        return cls(
-            presentation=presentation,
+        presentation = cls(
+            presentation=presentation_internal,
             slides_service=slides_service,
         )
+
+        requests = [
+            {
+                "deleteObject": {"objectId": element["objectId"]},
+            }
+            for element in presentation.slide(slide_number=1).get("pageElements", [])
+            if element.get("placeholder", None)
+        ]
+
+        presentation.update(requests=requests)
+
+        return presentation
 
     @classmethod
     def create_from_template(
@@ -261,7 +414,7 @@ class Presentation(object):
         )
 
         presentation: PresentationInternal = (
-            drive.service.files()
+            drive.files()
             .copy(
                 fileId=template_id,
                 body={
@@ -324,6 +477,8 @@ class Presentation(object):
         self.id = new_presentation.id
 
         return self
+
+    # TODO: New slide: Inputs include optional insertion position and optional slide id else `uuid uuid.uuid4().hex`
 
     def copy_slide(
         self,
@@ -409,3 +564,254 @@ class Presentation(object):
             slide_number=slide_number,
         )
         return self
+
+    def insert_text(
+        self,
+        text: str,
+        slide_number: Optional[int] = None,
+        height: Optional[float] = None,
+        width: Optional[float] = None,
+        x_shift: Optional[float] = None,
+        y_shift: Optional[float] = None,
+        element_id: str = uuid.uuid4().hex,
+        bold: bool = False,
+        italic: bool = False,
+        underline: bool = False,
+        strikethrough: bool = False,
+        font_size: Optional[int] = None,
+        font_family: Optional[str] = None,
+        colour: Optional[Colour | str] = None,
+        background_colour: Optional[Colour | str] = None,
+        link: Optional[str] = None,
+        **kwargs,
+    ) -> Self:
+        if height is None:
+            height = self.height * 0.9
+        if width is None:
+            width = self.width * 0.9
+        if x_shift is None:
+            x_shift = self.width * 0.05
+        if y_shift is None:
+            y_shift = self.height * 0.05
+
+        if colour is not None and not isinstance(colour, Colour):
+            if colour.startswith("theme-"):
+                theme_color = colour[len("theme-") :]
+            else:
+                parsed_colour = Colour.parse(colour=colour)
+        if background_colour is not None and not isinstance(background_colour, Colour):
+            if background_colour.startswith("theme-"):
+                theme_background_color = background_colour[len("theme-") :]
+            else:
+                parsed_background_colour = Colour.parse(colour=background_colour)
+
+        if slide_number is None:
+            slide_number = len(self.slides)
+        elif slide_number < 1 or slide_number > len(self.slides):
+            raise IndexError(
+                f"Slide number {slide_number} is out of range. Presentation has {len(self.slides)} slides."
+            )
+
+        requests = [
+            {
+                "createShape": {
+                    "objectId": element_id,
+                    "shapeType": "TEXT_BOX",
+                    "elementProperties": {
+                        "pageObjectId": self.slide_id(slide_number=slide_number),
+                        "size": {
+                            "height": {
+                                "magnitude": height,
+                                "unit": "PT",
+                            },
+                            "width": {
+                                "magnitude": width,
+                                "unit": "PT",
+                            },
+                        },
+                        "transform": {
+                            "scaleX": 1,
+                            "scaleY": 1,
+                            "translateX": x_shift,
+                            "translateY": y_shift,
+                            "unit": "PT",
+                        },
+                    },
+                }
+            },
+            {
+                "insertText": {
+                    "objectId": element_id,
+                    "insertionIndex": 0,
+                    "text": text,
+                }
+            },
+            {
+                "updateTextStyle": {
+                    "objectId": element_id,
+                    "style": {
+                        **(
+                            {"fontSize": {"magnitude": font_size, "unit": "PT"}}
+                            if font_size is not None
+                            else {}
+                        ),
+                        "bold": bold,
+                        "italic": italic,
+                        "underline": underline,
+                        "strikethrough": strikethrough,
+                        **(
+                            {
+                                "foregroundColor": (
+                                    {}
+                                    if colour is None
+                                    else {
+                                        "opaqueColor": {
+                                            "rgbColor": {
+                                                "red": parsed_colour.r / 255,
+                                                "green": parsed_colour.g / 255,
+                                                "blue": parsed_colour.b / 255,
+                                            }
+                                        }
+                                    }
+                                    if not (
+                                        isinstance(colour, str)
+                                        and colour.startswith("theme-")
+                                    )
+                                    else {"themeColor": theme_color}
+                                )
+                            }
+                            if colour
+                            else {}
+                        ),
+                        **(
+                            {
+                                "backgroundColor": (
+                                    {}
+                                    if colour is None
+                                    else {
+                                        "opaqueColor": {
+                                            "rgbColor": {
+                                                "red": parsed_background_colour.r / 255,
+                                                "green": parsed_background_colour.g
+                                                / 255,
+                                                "blue": parsed_background_colour.b
+                                                / 255,
+                                            }
+                                        }
+                                    }
+                                    if not (
+                                        isinstance(background_colour, str)
+                                        and background_colour.startswith("theme-")
+                                    )
+                                    else {"themeColor": theme_background_color}
+                                )
+                            }
+                            if background_colour
+                            else {}
+                        ),
+                        **({"fontFamily": font_family} if font_family else {}),
+                        **({"link": {"url": link}} if link is not None else {}),
+                        **kwargs,
+                    },
+                    "textRange": {"type": "ALL"},
+                    "fields": "*",
+                }
+            },
+        ]
+
+        return self.update(requests=requests)
+
+    def insert_image(
+        self,
+        image_path: Path | str,
+        slide_number: Optional[int] = None,
+        height: Optional[float] = None,
+        width: Optional[float] = None,
+        x_shift: Optional[float] = None,
+        y_shift: Optional[float] = None,
+        element_id: str = uuid.uuid4().hex,
+        drive: Optional[Drive] = None,
+        force_upload: bool = False,
+    ) -> Self:
+        image_path = Path(image_path)
+
+        if not image_path.exists():
+            raise FileNotFoundError(f"Image file not found: {image_path}")
+
+        if height is None:
+            height = self.height * 0.9
+        if width is None:
+            width = self.width * 0.9
+        if x_shift is None:
+            x_shift = self.width * 0.05
+        if y_shift is None:
+            y_shift = self.height * 0.05
+
+        if slide_number is None:
+            slide_number = len(self.slides)
+        elif slide_number < 1 or slide_number > len(self.slides):
+            raise IndexError(
+                f"Slide number {slide_number} is out of range. Presentation has {len(self.slides)} slides."
+            )
+
+        mimetype = mimetypes.guess_type(url=image_path)[0]
+        if not mimetype:
+            raise ValueError(f"Could not determine mime type for {image_path}")
+
+        image_data = b64encode(image_path.read_bytes()).decode()
+        data_url = f"data:{mimetype};base64,{image_data}"
+
+        if len(data_url) <= 2000:  # Direct insertion if under 2KB
+            image_url = data_url
+        else:
+            if drive is None:
+                raise ValueError("Drive instance required for large images")
+
+            try:
+                uploaded_file_id = drive.get(
+                    file_path=image_path,
+                    force_upload=force_upload,
+                )
+
+                file_data = (
+                    drive.files()
+                    .get(
+                        fileId=uploaded_file_id,
+                        fields="thumbnailLink",
+                        supportsAllDrives=True,
+                    )
+                    .execute()
+                )
+
+                if "thumbnailLink" not in file_data:
+                    raise ValueError("Could not generate thumbnail for image")
+
+                image_url = file_data["thumbnailLink"]
+
+            except Exception as err:
+                raise ValueError(f"Failed to upload image to Drive: {err}") from err
+
+        requests = [
+            {
+                "createImage": {
+                    "objectId": element_id,
+                    "url": image_url,
+                    "elementProperties": {
+                        "pageObjectId": self.slide_id(slide_number=slide_number),
+                        "size": {
+                            "height": {"magnitude": height, "unit": "PT"},
+                            "width": {"magnitude": width, "unit": "PT"},
+                        },
+                        "transform": {
+                            "scaleX": 1,
+                            "scaleY": 1,
+                            "translateX": x_shift,
+                            "translateY": y_shift,
+                            "unit": "PT",
+                        },
+                    },
+                }
+            }
+        ]
+
+        return self.update(requests=requests)

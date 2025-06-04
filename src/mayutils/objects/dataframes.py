@@ -258,6 +258,37 @@ class DataframeUtilsAccessor(object):
 
         return max_abs
 
+    def rename_index(
+        self,
+        index_name: str,
+    ) -> DataFrame:
+        self.df.index.name = index_name
+        return self.df
+
+    def cutoff(
+        self,
+        cutoff: int,
+        aggregation: Callable[[DataFrame], Series] = lambda x: x.sum()
+    ) -> DataFrame:
+        df_cut = self.df.loc[self.df.index < cutoff]
+        df_cut[f"{cutoff}+"] = aggregation(self.df.loc[self.df.index >= cutoff])
+        df_cut.index = df_cut.index.astype(dtype=str)
+        df_cut = df_cut.sort_index(key=lambda x: x.str.split(pat="+").str[0].astype(dtype=int))
+
+        return df_cut
+
+cutoff_val=15
+df_click_rates.index = df_click_rates.index.astype(int)
+cutoff = df_click_rates.loc[df_click_rates.index < cutoff_val]
+cutoff.loc[f"{cutoff_val}+"] = df_click_rates.loc[df_click_rates.index >= cutoff_val].sum(
+    # axis=1
+)
+cutoff.index = cutoff.index.astype(str)
+cutoff = cutoff.sort_index(key=lambda x: x.str.split("+").str[0].astype(int))
+# df_click_rates.str.split("+").str[0]
+cutoff
+
+
     def change_map(
         self,
         reference_value: float = 0,
