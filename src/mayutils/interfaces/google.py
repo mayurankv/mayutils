@@ -49,8 +49,9 @@ class Drive(object):
     def query_files(
         self,
         query: str,
-        spaces: str="drive",
-        supportsAllDrives: bool=True,
+        spaces: str = "drive",
+        supportsAllDrives: bool = True,
+        includeItemsFromAllDrives: bool = True,
         **kwargs,
     ) -> Any:
         results = (
@@ -59,6 +60,7 @@ class Drive(object):
                 q=query,
                 spaces=spaces,
                 supportsAllDrives=supportsAllDrives,
+                includeItemsFromAllDrives=includeItemsFromAllDrives,
                 **kwargs,
             )
             .execute()
