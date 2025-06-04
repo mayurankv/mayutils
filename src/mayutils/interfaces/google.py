@@ -113,6 +113,7 @@ class Drive(object):
     def delete_file_by_name(
         self,
         file_name: str,
+        supportsAllDrives: bool = True,
         **kwargs,
     ) -> None:
         self.files().delete(
@@ -120,6 +121,7 @@ class Drive(object):
                 file_name=file_name,
                 **kwargs,
             ),
+            supportsAllDrives=supportsAllDrives,
         ).execute()
 
     def upload(
