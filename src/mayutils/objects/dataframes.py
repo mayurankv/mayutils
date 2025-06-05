@@ -272,7 +272,7 @@ class DataframeUtilsAccessor(object):
     ) -> DataFrame:
         df_cut = self.df.loc[self.df.index < cutoff].copy()
         if aggregation is not None:
-            df_cut.loc[f"{cutoff}+"] = aggregation(self.df.loc[self.df.index >= cutoff])
+            df_cut.loc[f"{cutoff}+", :] = aggregation(self.df.loc[self.df.index >= cutoff])
             df_cut.index = df_cut.index.astype(dtype=str)
             df_cut = df_cut.sort_index(
                 key=lambda x: x.str.split(pat="+").str[0].astype(dtype=int)
