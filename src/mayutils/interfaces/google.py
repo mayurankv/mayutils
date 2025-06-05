@@ -124,13 +124,11 @@ class Drive(object):
             supportsAllDrives=supportsAllDrives,
         ).execute()
 
-    def upload(
+    def _create_media(
         self,
-        file_path: Path | str,
+        file_path: Path,
         folder_id: Optional[str] = None,
-    ) -> str:
-        file_path = Path(file_path)
-
+    ) -> tuple[MediaFileUpload, dict[str, Any]]:
         if not file_path.exists():
             raise FileNotFoundError(f"File not found: {file_path}")
 
@@ -150,13 +148,17 @@ class Drive(object):
             resumable=True,
         )
 
-        try:
-            self.delete_file_by_name(
-                file_name=file_path.name,
-                folder_id=folder_id,
-            )
-        except (FileNotFoundError, ValueError):
-            pass
+        return media, file_metadata
+
+    def _upload(
+        self,
+        file_path: Path,
+        folder_id: Optional[str] = None,
+    ) -> str:
+        media, file_metadata = self._create_media(
+            file_path=file_path,
+            folder_id=folder_id,
+        )
 
         uploaded_file = (
             self.files()
@@ -174,6 +176,57 @@ class Drive(object):
             raise ValueError(f"Failed to upload file: {file_path}")
 
         return uploaded_file_id
+
+    def _update(
+        self,
+        file_path: Path,
+        file_id: str,
+        folder_id: Optional[str] = None,
+    ) -> str:
+        media, file_metadata = self._create_media(
+            file_path=file_path,
+            folder_id=folder_id,
+        )
+
+        updated_file = (
+            self.files()
+            .update(
+                fileId=file_id,
+                supportsAllDrives=True,
+                media_body=media,
+            )
+            .execute()
+        )
+
+        updated_file_id: str | None = updated_file.get("id", None)
+        if not updated_file_id:
+            raise ValueError(f"Failed to upload file: {file_path}")
+
+        return updated_file_id
+
+    def upload(
+        self,
+        file_path: Path | str,
+        folder_id: Optional[str] = None,
+    ) -> str:
+        file_path = Path(file_path)
+
+        try:
+            file_id = self.find_file_id(file_name=file_path.name)
+        except (FileNotFoundError, ValueError):
+            file_id = None
+
+        if file_id is not None:
+            return self._update(
+                file_path=file_path,
+                file_id=file_id,
+                folder_id=folder_id,
+            )
+        else:
+            return self._upload(
+                file_path=file_path,
+                folder_id=folder_id,
+            )
 
     def get(
         self,
