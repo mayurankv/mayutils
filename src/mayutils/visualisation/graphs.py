@@ -694,6 +694,7 @@ class Kde(Line):
         super().__init__(
             x=_x_grid,
             y=_y,
+            customdata=_x,
             fill=kwargs.pop("fill", "tozeroy"),
             *args,
             **kwargs,
@@ -1449,7 +1450,7 @@ class Plot(go.Figure):
         self,
     ) -> Self:
         for idx, trace in enumerate(self.data):
-            if isinstance(trace, go.Histogram):
+            if isinstance(trace, go.Histogram) or trace.meta in ["kde"]:
                 trace.marker.line.color = (  # type: ignore
                     trace.marker.color  # type: ignore
                     or shuffled_colourscale[idx % len(shuffled_colourscale)]
@@ -1461,7 +1462,7 @@ class Plot(go.Figure):
                 )
                 if trace.meta in ["ecdf", "kde"]:  # type: ignore
                     colour = Colour.parse(colour=trace.textfont.color)  # type: ignore
-                    opacity = 0.1
+                    opacity = 0.1 if trace.meta == "ecdf" else 0.4  # type: ignore
                     trace.fillcolor = colour.to_str(opacity=opacity)  # type: ignore
 
         bound_groups = {}
@@ -1537,6 +1538,7 @@ class Plot(go.Figure):
         rug_type: Literal[
             "scatter", "violin", "box", "strip", "historgram", "ecdf"
         ] = "scatter",
+        rug_height: Optional[float] = None,
         *args,
         **kwargs,
     ) -> Self:
@@ -1547,167 +1549,172 @@ class Plot(go.Figure):
         traces = []
         for idx, trace in enumerate(self.data):
             if isinstance(trace, go.Histogram):
-                rug_count += 1
-                if rug_type == "scatter":
-                    traces.append(
-                        go.Scatter(
-                            x=self.data[idx].x,  # type: ignore
-                            y=([rug_count] * len(self.data[idx].x)),  # type: ignore
-                            xaxis="x1",
-                            yaxis="y2",
-                            mode="markers",
-                            name=(
-                                (self.data[idx].name + " Rug")  # type: ignore
-                                if self.data[idx].name  # type: ignore
-                                else f"trace {idx} Rug"
-                            ),
-                            legendgroup=self.data[idx].legendgroup  # type: ignore
-                            or null(set_inline(self.data[idx], "legendgroup", idx))
-                            or idx,
-                            showlegend=False,
-                            marker=dict(
-                                color=self.data[idx].marker.line.color,  # type: ignore
-                                symbol="line-ns-open",
-                            ),
-                            *args,
-                            **kwargs,
-                        )
+                x = self.data[idx].x
+            elif trace.meta == "kde":
+                x = self.data[idx].customdata
+            else:
+                continue
+            rug_count += 1
+            if rug_type == "scatter":
+                traces.append(
+                    go.Scatter(
+                        x=x,  # type: ignore
+                        y=([rug_count] * len(x)),  # type: ignore
+                        xaxis="x1",
+                        yaxis="y2",
+                        mode="markers",
+                        name=(
+                            (self.data[idx].name + " Rug")  # type: ignore
+                            if self.data[idx].name  # type: ignore
+                            else f"trace {idx} Rug"
+                        ),
+                        legendgroup=self.data[idx].legendgroup  # type: ignore
+                        or null(set_inline(self.data[idx], "legendgroup", idx))
+                        or idx,
+                        showlegend=False,
+                        marker=dict(
+                            color=self.data[idx].marker.line.color,  # type: ignore
+                            symbol="line-ns-open",
+                        ),
+                        *args,
+                        **kwargs,
                     )
-                elif rug_type == "strip":
-                    traces.append(
-                        go.Box(
-                            x=self.data[idx].x,  # type: ignore
-                            y=([rug_count] * len(self.data[idx].x)),  # type: ignore
-                            xaxis="x1",
-                            yaxis="y2",
-                            orientation="h",
-                            name=(
-                                (self.data[idx].name + " Rug")  # type: ignore
-                                if self.data[idx].name  # type: ignore
-                                else f"trace {idx} Rug"
-                            ),
-                            legendgroup=self.data[idx].legendgroup  # type: ignore
-                            or null(set_inline(self.data[idx], "legendgroup", idx))
-                            or idx,
-                            showlegend=False,
-                            line=dict(
-                                color=TRANSPARENT,
-                            ),
-                            fillcolor=TRANSPARENT,
-                            marker=dict(
-                                color=self.data[idx].marker.line.color,  # type: ignore
-                                size=4,
-                            ),
-                            notched=True,
-                            boxpoints="all",
-                            hoveron="points",
-                            width=0.6,
-                            opacity=0.6,
-                            jitter=0.6,
-                            pointpos=0,
-                            *args,
-                            **kwargs,
-                        )
+                )
+            elif rug_type == "strip":
+                traces.append(
+                    go.Box(
+                        x=x,  # type: ignore
+                        y=([rug_count] * len(x)),  # type: ignore
+                        xaxis="x1",
+                        yaxis="y2",
+                        orientation="h",
+                        name=(
+                            (self.data[idx].name + " Rug")  # type: ignore
+                            if self.data[idx].name  # type: ignore
+                            else f"trace {idx} Rug"
+                        ),
+                        legendgroup=self.data[idx].legendgroup  # type: ignore
+                        or null(set_inline(self.data[idx], "legendgroup", idx))
+                        or idx,
+                        showlegend=False,
+                        line=dict(
+                            color=TRANSPARENT,
+                        ),
+                        fillcolor=TRANSPARENT,
+                        marker=dict(
+                            color=self.data[idx].marker.line.color,  # type: ignore
+                            size=4,
+                        ),
+                        notched=True,
+                        boxpoints="all",
+                        hoveron="points",
+                        width=0.6,
+                        opacity=0.6,
+                        jitter=0.6,
+                        pointpos=0,
+                        *args,
+                        **kwargs,
                     )
-                elif rug_type == "box":
-                    traces.append(
-                        go.Box(
-                            x=self.data[idx].x,  # type: ignore
-                            y=([rug_count] * len(self.data[idx].x)),  # type: ignore
-                            xaxis="x1",
-                            yaxis="y2",
-                            orientation="h",
-                            name=(
-                                (self.data[idx].name + " Rug")  # type: ignore
-                                if self.data[idx].name  # type: ignore
-                                else f"trace {idx} Rug"
-                            ),
-                            legendgroup=self.data[idx].legendgroup  # type: ignore
-                            or null(set_inline(self.data[idx], "legendgroup", idx))
-                            or idx,
-                            showlegend=False,
-                            line=dict(
-                                color=self.data[idx].marker.line.color,  # type: ignore
-                            ),
-                            marker=dict(
-                                color=self.data[idx].marker.line.color,  # type: ignore
-                                size=4,
-                            ),
-                            notched=True,
-                            boxpoints=kwargs.pop(
-                                "points", kwargs.pop("boxpoints", "suspectedoutliers")
-                            ),
-                            width=0.4,
-                            opacity=0.6,
-                            jitter=0.6,
-                            *args,
-                            **kwargs,
-                        )
+                )
+            elif rug_type == "box":
+                traces.append(
+                    go.Box(
+                        x=x,  # type: ignore
+                        y=([rug_count] * len(x)),  # type: ignore
+                        xaxis="x1",
+                        yaxis="y2",
+                        orientation="h",
+                        name=(
+                            (self.data[idx].name + " Rug")  # type: ignore
+                            if self.data[idx].name  # type: ignore
+                            else f"trace {idx} Rug"
+                        ),
+                        legendgroup=self.data[idx].legendgroup  # type: ignore
+                        or null(set_inline(self.data[idx], "legendgroup", idx))
+                        or idx,
+                        showlegend=False,
+                        line=dict(
+                            color=self.data[idx].marker.line.color,  # type: ignore
+                        ),
+                        marker=dict(
+                            color=self.data[idx].marker.line.color,  # type: ignore
+                            size=4,
+                        ),
+                        notched=True,
+                        boxpoints=kwargs.pop(
+                            "points", kwargs.pop("boxpoints", "suspectedoutliers")
+                        ),
+                        width=0.4,
+                        opacity=0.6,
+                        jitter=0.6,
+                        *args,
+                        **kwargs,
                     )
-                elif rug_type == "violin":
-                    traces.append(
-                        go.Violin(
-                            x=self.data[idx].x,  # type: ignore
-                            y=([rug_count] * len(self.data[idx].x)),  # type: ignore
-                            xaxis="x1",
-                            yaxis="y2",
-                            orientation="h",
-                            name=(
-                                (self.data[idx].name + " Rug")  # type: ignore
-                                if self.data[idx].name  # type: ignore
-                                else f"trace {idx} Rug"
-                            ),
-                            legendgroup=self.data[idx].legendgroup  # type: ignore
-                            or null(set_inline(self.data[idx], "legendgroup", idx))
-                            or idx,
-                            showlegend=False,
-                            line=dict(
-                                color=self.data[idx].marker.line.color,  # type: ignore
-                            ),
-                            marker=dict(
-                                color=self.data[idx].marker.line.color,  # type: ignore
-                                size=5,
-                            ),
-                            scalegroup="added_rug",
-                            points=kwargs.pop("points", "suspectedoutliers"),
-                            opacity=0.6,
-                            jitter=0.6,
-                            width=1,
-                            side="positive",
-                            *args,
-                            **kwargs,
-                        )
+                )
+            elif rug_type == "violin":
+                traces.append(
+                    go.Violin(
+                        x=x,  # type: ignore
+                        y=([rug_count] * len(x)),  # type: ignore
+                        xaxis="x1",
+                        yaxis="y2",
+                        orientation="h",
+                        name=(
+                            (self.data[idx].name + " Rug")  # type: ignore
+                            if self.data[idx].name  # type: ignore
+                            else f"trace {idx} Rug"
+                        ),
+                        legendgroup=self.data[idx].legendgroup  # type: ignore
+                        or null(set_inline(self.data[idx], "legendgroup", idx))
+                        or idx,
+                        showlegend=False,
+                        line=dict(
+                            color=self.data[idx].marker.line.color,  # type: ignore
+                        ),
+                        marker=dict(
+                            color=self.data[idx].marker.line.color,  # type: ignore
+                            size=5,
+                        ),
+                        scalegroup="added_rug",
+                        points=kwargs.pop("points", "suspectedoutliers"),
+                        opacity=0.6,
+                        jitter=0.6,
+                        width=1,
+                        side="positive",
+                        *args,
+                        **kwargs,
                     )
-                elif rug_type == "histogram":
-                    raise NotImplementedError("Histogram not implemented")
-                elif rug_type == "ecdf":
-                    traces.append(
-                        Ecdf(
-                            x=self.data[idx].x,  # type: ignore
-                            y_shift=rug_count,  # type: ignore
-                            xaxis="x1",
-                            yaxis="y2",
-                            name=(
-                                (self.data[idx].name + " Rug")  # type: ignore
-                                if self.data[idx].name  # type: ignore
-                                else f"trace {idx} Rug"
-                            ),
-                            legendgroup=self.data[idx].legendgroup  # type: ignore
-                            or null(set_inline(self.data[idx], "legendgroup", idx))
-                            or idx,
-                            showlegend=False,
-                            line=dict(
-                                color=self.data[idx].marker.line.color,  # type: ignore
-                            ),
-                            fill="toself",
-                            *args,
-                            **kwargs,
-                        )
+                )
+            elif rug_type == "histogram":
+                raise NotImplementedError("Histogram not implemented")
+            elif rug_type == "ecdf":
+                traces.append(
+                    Ecdf(
+                        x=x,  # type: ignore
+                        y_shift=rug_count,  # type: ignore
+                        xaxis="x1",
+                        yaxis="y2",
+                        name=(
+                            (self.data[idx].name + " Rug")  # type: ignore
+                            if self.data[idx].name  # type: ignore
+                            else f"trace {idx} Rug"
+                        ),
+                        legendgroup=self.data[idx].legendgroup  # type: ignore
+                        or null(set_inline(self.data[idx], "legendgroup", idx))
+                        or idx,
+                        showlegend=False,
+                        line=dict(
+                            color=self.data[idx].marker.line.color,  # type: ignore
+                        ),
+                        fill="toself",
+                        *args,
+                        **kwargs,
                     )
-                else:
-                    raise ValueError(f"Rug type {rug_type} is unknown")
+                )
+            else:
+                raise ValueError(f"Rug type {rug_type} is unknown")
 
-        height = 0.15 if rug_type == "scatter" else 0.3
+        height = rug_height or (0.15 if rug_type == "scatter" else 0.3)
         if rug_count > 0:
             self.update_layout(
                 yaxis1=dict(
@@ -1942,7 +1949,7 @@ class Plot(go.Figure):
                         button
                         for plot_type, idxs in plot_types.items()
                         if any(idxs)
-                        for button in buttons[plot_type]
+                        for button in buttons.get(plot_type, [])
                     ],
                 )
             ]
