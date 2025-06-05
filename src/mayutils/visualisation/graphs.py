@@ -677,6 +677,31 @@ class Ecdf(Line):
         self.meta = "ecdf"
 
 
+class Kde(Line):
+    def __init__(
+        self,
+        x: ArrayLike,
+        bandwidth: Optional[float] = None,
+        *args,
+        **kwargs,
+    ) -> None:
+        _x = np.asarray(x)
+        kde = gaussian_kde(_x, bw_method=bandwidth)
+
+        _x_grid = np.linspace(np.min(_x), np.max(_x), 1000)
+        _y = kde(_x_grid)
+
+        super().__init__(
+            x=_x_grid,
+            y=_y,
+            fill=kwargs.pop("fill", "tozeroy"),
+            *args,
+            **kwargs,
+        )
+
+        self.meta = "kde"
+
+
 class Scatter(go.Scatter):
     def __init__(
         self,
@@ -1429,12 +1454,12 @@ class Plot(go.Figure):
                     trace.marker.color  # type: ignore
                     or shuffled_colourscale[idx % len(shuffled_colourscale)]
                 )
-            if trace.meta in ["line", "ecdf"]:  # type: ignore
+            if trace.meta in ["line", "ecdf", "kde"]:  # type: ignore
                 trace.textfont.color = (  # type: ignore
                     trace.line.color  # type: ignore
                     or shuffled_colourscale[idx % len(shuffled_colourscale)]
                 )
-                if trace.meta == "ecdf":  # type: ignore
+                if trace.meta in ["ecdf", "kde"]:  # type: ignore
                     colour = Colour.parse(colour=trace.textfont.color)  # type: ignore
                     opacity = 0.1
                     trace.fillcolor = colour.to_str(opacity=opacity)  # type: ignore
