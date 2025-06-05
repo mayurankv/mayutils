@@ -13,4 +13,4 @@ def setup() -> None:
 
 setup()
 
-__version__ = "1.0.37"
+__version__ = "1.0.38"
