@@ -112,13 +112,14 @@ class Styler(Style):
         dark: bool = False,
         fontsize: int = 14,
         dpi: int = 200,
+        use_mathjax: bool = True,
         max_rows: Optional[int] = None,
         max_cols: Optional[int] = None,
     ) -> Path:
         path = Path(path)
         table_conversion = "selenium"
         chrome_path = None
-        use_mathjax = True
+        use_mathjax = use_mathjax
         crop_top = True
 
         converter = prepare_converter(
