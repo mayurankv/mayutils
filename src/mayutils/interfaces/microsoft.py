@@ -58,11 +58,11 @@ class Presentation:
     @property
     def height(
         self,
-    ) -> Length | None:
+    ) -> Length:
         return (
             Length(emu=self.internal.slide_height)
             if self.internal.slide_height is not None
-            else None
+            else Length.from_float(value=7.5 * BaseLength._EMUS_PER_INCH)
         )
 
     @height.setter
@@ -75,11 +75,11 @@ class Presentation:
     @property
     def width(
         self,
-    ) -> Length | None:
+    ) -> Length:
         return (
             Length(emu=self.internal.slide_width)
             if self.internal.slide_width is not None
-            else None
+            else Length.from_float(value=13.33 * BaseLength._EMUS_PER_INCH)
         )
 
     @width.setter

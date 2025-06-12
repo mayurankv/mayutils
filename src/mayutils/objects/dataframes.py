@@ -114,7 +114,7 @@ class Styler(Style):
         dpi: int = 200,
         max_rows: Optional[int] = None,
         max_cols: Optional[int] = None,
-    ) -> None:
+    ) -> Path:
         path = Path(path)
         table_conversion = "selenium"
         chrome_path = None
@@ -199,7 +199,7 @@ class Styler(Style):
             filename=path,
         )
 
-        return
+        return path
 
 
 class DataframeUtilsAccessor(object):
@@ -214,7 +214,7 @@ class DataframeUtilsAccessor(object):
         path: Path | str,
         *args,
         **kwargs,
-    ) -> None:
+    ) -> Path:
         path = Path(path)
 
         if path.suffix in [".png", ".jpeg", ".jpg", ".pdf", ".svg", ".eps"]:
@@ -245,6 +245,8 @@ class DataframeUtilsAccessor(object):
         else:
             # TODO:
             raise NotImplementedError(f"Format {path.suffix} is an unsupported format")
+
+        return path
 
     def max_abs(
         self,
@@ -370,7 +372,7 @@ class SeriesUtilsAccessor(object):
     def save(
         self,
         path: Path | str,
-    ) -> None:
+    ) -> Path:
         # TODO: Finish
         raise NotImplementedError(
             "Not implemented for series yet: leverage existing df methods"
