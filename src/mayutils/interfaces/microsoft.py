@@ -53,7 +53,11 @@ class Presentation:
     def height(
         self,
     ) -> Length | None:
-        return self.internal.slide_height
+        return (
+            Length(emu=self.internal.slide_height)
+            if self.internal.slide_height is not None
+            else None
+        )
 
     @height.setter
     def height(
@@ -66,7 +70,11 @@ class Presentation:
     def width(
         self,
     ) -> Length | None:
-        return self.internal.slide_width
+        return (
+            Length(emu=self.internal.slide_width)
+            if self.internal.slide_width is not None
+            else None
+        )
 
     @width.setter
     def width(
@@ -195,7 +203,7 @@ class Presentation:
             if slide_number is not None
             else len(self.slides) - 1
         )
-        
+
         textbox = slide.shapes.add_textbox(
             left=x_shift,
             top=y_shift,
@@ -255,6 +263,7 @@ class Presentation:
             )
 
         if link is not None:
+            raise NotImplementedError("Jyperlinks are not implemented yet.")
             from pptx.util import URI
 
             textbox.text_frame.paragraphs[0].hyperlink.address = URI(link)

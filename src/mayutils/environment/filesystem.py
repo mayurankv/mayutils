@@ -26,6 +26,19 @@ def get_module_root() -> Path:
     )
 
 
+def get_module_path(
+    module: object,
+) -> Path:
+    paths = getattr(module, "__path__", None)
+    if paths is None:
+        raise ValueError(f"Module {module} does not have a __path__ attribute.")
+
+    try:
+        return Path(paths[0])
+    except IndexError:
+        raise ValueError(f"Module {module} does not have a valid path.")
+
+
 def read_file(
     path: Path | str,
 ) -> str:
