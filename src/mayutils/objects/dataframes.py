@@ -73,9 +73,9 @@ class Styler(Style):
             val: float,
         ) -> str:
             if val < reference_value:
-                return f"background-color: {min_colour.to_str(opacity=scaling * abs(val - reference_value) / max_abs)});"
+                return f"background-color: {min_colour.to_str(opacity=scaling * abs(val - reference_value) / max_abs)};"
             elif val > reference_value:
-                return f"background-color: {max_colour.to_str(opacity=scaling * abs(val - reference_value) / max_abs)});"
+                return f"background-color: {max_colour.to_str(opacity=scaling * abs(val - reference_value) / max_abs)};"
             else:
                 return "background-color: rgba(0, 0, 0, 0);"
 
@@ -249,13 +249,15 @@ class DataframeUtilsAccessor(object):
     def max_abs(
         self,
         reference_value: float = 0,
+        columns: Optional[list | Index] = None,
     ) -> float:
+        values = self.df if columns is None else self.df[columns]
         min_neg: float = min(
-            float((self.df - reference_value).min(axis=None)),  # type: ignore
+            float((values - reference_value).min(axis=None)),  # type: ignore
             0,
         )
         max_pos: float = max(
-            float((self.df - reference_value).max(axis=None)),  # type: ignore
+            float((values - reference_value).max(axis=None)),  # type: ignore
             0,
         )
         max_abs = max(max_pos, -min_neg)
@@ -297,6 +299,7 @@ class DataframeUtilsAccessor(object):
         return self.styler.change_map(
             max_abs=self.max_abs(
                 reference_value=reference_value,
+                columns=columns,
             ),
             reference_value=reference_value,
             scaling=scaling,
