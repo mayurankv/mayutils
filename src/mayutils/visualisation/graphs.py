@@ -1475,6 +1475,7 @@ class Plot(go.Figure):
             if trace.meta in ["line", "ecdf", "kde"]:  # type: ignore
                 trace.textfont.color = (  # type: ignore
                     trace.line.color  # type: ignore
+                    or trace.marker.color  # type: ignore
                     or shuffled_colourscale[idx % len(shuffled_colourscale)]
                 )
                 if trace.meta in ["ecdf", "kde"]:  # type: ignore
