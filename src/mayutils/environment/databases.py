@@ -19,6 +19,7 @@ class EngineWrapper(object):
         cls,
         *args,
         **kwargs,
+
     ) -> Self:
         return cls(
             create_engine(

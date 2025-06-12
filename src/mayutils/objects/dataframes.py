@@ -65,6 +65,7 @@ class Styler(Style):
         max_abs: float,
         reference_value: float = 0,
         scaling: float = 0.6,
+        columns: Optional[list | Index] = None,
     ) -> Self:
         def style_map(
             val: float,
@@ -76,7 +77,10 @@ class Styler(Style):
             else:
                 return "background-color: rgba(0, 0, 0, 0);"
 
-        return self.map(style_map=style_map)
+        if columns is None:
+            return self.map(style_map=style_map)
+        else:
+            return self.map(style_map=style_map, subset=columns)
 
     def row_format(
         self,
@@ -272,7 +276,9 @@ class DataframeUtilsAccessor(object):
     ) -> DataFrame:
         df_cut = self.df.loc[self.df.index < cutoff].copy()
         if aggregation is not None:
-            df_cut.loc[f"{cutoff}+", :] = aggregation(self.df.loc[self.df.index >= cutoff])
+            df_cut.loc[f"{cutoff}+", :] = aggregation(
+                self.df.loc[self.df.index >= cutoff]
+            )
             df_cut.index = df_cut.index.astype(dtype=str)
             df_cut = df_cut.sort_index(
                 key=lambda x: x.str.split(pat="+").str[0].astype(dtype=int)
@@ -284,6 +290,7 @@ class DataframeUtilsAccessor(object):
         self,
         reference_value: float = 0,
         scaling: float = 0.6,
+        columns: Optional[list] = None,
     ) -> Styler:
         return self.styler.change_map(
             max_abs=self.max_abs(
@@ -291,6 +298,7 @@ class DataframeUtilsAccessor(object):
             ),
             reference_value=reference_value,
             scaling=scaling,
+            columns=columns,
         )
 
     @property
