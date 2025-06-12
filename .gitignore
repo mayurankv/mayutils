@@ -1,6 +1,7 @@
 .streamlit/secrets.toml
 .env
 .secrets
+.ignore
 .DS_Store
 ignore.ipynb
 
