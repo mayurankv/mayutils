@@ -66,14 +66,16 @@ class Styler(Style):
         reference_value: float = 0,
         scaling: float = 0.6,
         columns: Optional[list | Index] = None,
+        max_colour: Colour = Colour.parse(colour="rgba(0, 255, 154, 1)"),
+        min_colour: Colour = Colour.parse(colour="rgba(226, 0, 0, 1)"),
     ) -> Self:
         def style_map(
             val: float,
         ) -> str:
             if val < reference_value:
-                return f"background-color: rgba(226, 0, 0, {scaling * abs(val - reference_value) / max_abs});"
+                return f"background-color: {min_colour.to_str(opacity=scaling * abs(val - reference_value) / max_abs)});"
             elif val > reference_value:
-                return f"background-color: rgba(0, 255, 154, {scaling * abs(val - reference_value) / max_abs});"
+                return f"background-color: {max_colour.to_str(opacity=scaling * abs(val - reference_value) / max_abs)});"
             else:
                 return "background-color: rgba(0, 0, 0, 0);"
 
