@@ -1,6 +1,6 @@
 [project]
 name = "mayutils"
-version = "1.0.48"
+version = "1.0.49"
 description = "Utilities for Python from Mayuran Visakan"
 authors = [
     {name = "Mayuran Visakan",email = "mayuran.k.v@gmail.com"}
