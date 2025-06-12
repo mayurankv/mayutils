@@ -1,6 +1,7 @@
 from functools import update_wrapper
 import os
 from math import isqrt, ceil
+from pathlib import Path
 from typing import Literal, Optional, Self, final
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -1445,7 +1446,7 @@ class Plot(go.Figure):
         save: bool = True,
         *args,
         **kwargs,
-    ) -> None:
+    ) -> Path:
         if save:
             for image_format in image_formats:
                 self.copy().update_layout(
@@ -1460,11 +1461,13 @@ class Plot(go.Figure):
                     **kwargs,
                 )
 
+        return IMAGES_FOLDER / f"{filename}.{image_format}"
+
     def modifications(
         self,
     ) -> Self:
         for idx, trace in enumerate(self.data):
-            if isinstance(trace, go.Histogram) or trace.meta in ["kde"]:
+            if isinstance(trace, go.Histogram) or trace.meta in ["kde"]:  # type: ignore
                 trace.marker.line.color = (  # type: ignore
                     trace.marker.color  # type: ignore
                     or shuffled_colourscale[idx % len(shuffled_colourscale)]

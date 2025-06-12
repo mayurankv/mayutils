@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Optional, Self
 from pptx import Presentation as Init
 from pptx.shapes.autoshape import Shape
-from pptx.slide import SlideLayout, Slides, Slide
+from pptx.slide import SlideLayouts, SlideLayout, Slides, Slide
 from pptx.util import Pt, Length as BaseLength
 from pptx.dml.color import RGBColor
 from mayutils.objects.colours import Colour
@@ -48,6 +48,12 @@ class Presentation:
         self.blank_layout = self.internal.slide_layouts[
             len(self.internal.slide_layouts) - 1
         ]
+
+    @property
+    def layouts(
+        self,
+    ) -> SlideLayouts:
+        return self.internal.slide_layouts
 
     @property
     def height(
@@ -110,6 +116,16 @@ class Presentation:
 
         return self
 
+    def empty(
+        self,
+    ) -> Self:
+        for i in range(len(self.slides) - 1, -1, -1):
+            rId = self.slides._sldIdLst[i].rId
+            self.internal.part.drop_rel(rId=rId)
+            del self.slides._sldIdLst[i]
+
+        return self
+
     def delete_slide(
         self,
         slide_number: int,
@@ -164,6 +180,49 @@ class Presentation:
         raise NotImplementedError("Reordering slides is not implemented yet.")
         return self
 
+    def insertion_spacing(
+        self,
+        height: Optional[Length] = None,
+        width: Optional[Length] = None,
+        x_shift: Optional[Length] = None,
+        y_shift: Optional[Length] = None,
+    ) -> dict:
+        if width is None:
+            if self.width is None:
+                raise ValueError(
+                    "Width must be specified if presentation width is not set."
+                )
+        if height is None:
+            if self.height is None:
+                raise ValueError(
+                    "Height must be specified if presentation height is not set."
+                )
+        if x_shift is None:
+            if self.width is None:
+                raise ValueError(
+                    "Width must be specified if presentation width is not set."
+                )
+            if width is not None:
+                x_shift = Length.from_float(value=(self.width - width) * 0.5)
+            else:
+                x_shift = Length.from_float(value=0.05 * self.width)
+        if y_shift is None:
+            if self.height is None:
+                raise ValueError(
+                    "Height must be specified if presentation height is not set."
+                )
+            if height is not None:
+                y_shift = Length.from_float(value=(self.height - height) * 0.5)
+            else:
+                y_shift = Length.from_float(value=0.05 * self.height)
+
+        return dict(
+            left=x_shift,
+            top=y_shift,
+            width=width,
+            height=height,
+        )
+
     def insert_textbox(
         self,
         slide_number: Optional[int] = None,
@@ -173,31 +232,6 @@ class Presentation:
         y_shift: Optional[Length] = None,
         **kwargs,
     ) -> Shape:
-        if height is None:
-            if self.height is None:
-                raise ValueError(
-                    "Height must be specified if presentation height is not set."
-                )
-            height = Length.from_float(self.height * 0.9)
-        if width is None:
-            if self.width is None:
-                raise ValueError(
-                    "Width must be specified if presentation width is not set."
-                )
-            width = Length.from_float(self.width * 0.9)
-        if x_shift is None:
-            if self.width is None:
-                raise ValueError(
-                    "Width must be specified if presentation width is not set."
-                )
-            x_shift = Length.from_float(self.width * 0.05)
-        if y_shift is None:
-            if self.height is None:
-                raise ValueError(
-                    "Height must be specified if presentation height is not set."
-                )
-            y_shift = Length.from_float(self.height * 0.05)
-
         slide = self.slide(
             slide_number=slide_number
             if slide_number is not None
@@ -205,10 +239,12 @@ class Presentation:
         )
 
         textbox = slide.shapes.add_textbox(
-            left=x_shift,
-            top=y_shift,
-            width=width,
-            height=height,
+            **self.insertion_spacing(
+                height=height,
+                width=width,
+                x_shift=x_shift,
+                y_shift=y_shift,
+            ),
         )
 
         return textbox
