@@ -115,6 +115,7 @@ class Styler(Style):
         use_mathjax: bool = True,
         max_rows: Optional[int] = None,
         max_cols: Optional[int] = None,
+        additional_css: str = "",
     ) -> Path:
         path = Path(path)
         table_conversion = "selenium"
@@ -170,6 +171,7 @@ class Styler(Style):
                     border-collapse: collapse;
                     border-color: transparent;
                 }}
+                {additional_css}
             </style>
         """.format(
             base=base.to_str(),
@@ -190,6 +192,7 @@ class Styler(Style):
                 .to_str()
             ),
             font_colour=font_colour,
+            additional_css=additional_css,
         )
 
         with disable_max_image_pixels():
