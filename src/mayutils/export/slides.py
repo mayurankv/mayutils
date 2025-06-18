@@ -91,4 +91,4 @@ def export_slides(
             shell=True,
         )
 
-    return output_filepath
+    return SLIDES_FOLDER / f"{file_title}.slides.html"
