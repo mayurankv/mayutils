@@ -1444,6 +1444,7 @@ class Plot(go.Figure):
         image_formats: list[str] = ["png"],  # ["png", "jpeg", "pdf"]
         scale: Optional[int] = 5,
         save: bool = True,
+        template: str = "base+plotly_white",
         *args,
         **kwargs,
     ) -> Path:
@@ -1452,7 +1453,7 @@ class Plot(go.Figure):
                 self.copy().update_layout(
                     paper_bgcolor="rgba(255,255,255,1)",
                     plot_bgcolor="rgba(255,255,255,1)",
-                    template="plotly_white",
+                    template=template,
                 ).write_image(
                     file=IMAGES_FOLDER / f"{filename}.{image_format}",
                     format=image_format,
