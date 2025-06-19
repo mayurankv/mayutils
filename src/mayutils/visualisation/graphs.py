@@ -504,6 +504,12 @@ pio.templates["save"] = go.layout.Template(
         "layout": {
             "xaxis": save_axis_dict,
             "yaxis": save_axis_dict,
+            "colorscale": {
+                "diverging": DIVERGENT_COLOURSCALE,
+                "sequential": CONTINUOUS_COLORSCALE,
+                "sequentialminus": CONTINUOUS_COLORSCALE,
+            },
+            "colorway": shuffled_colourscale,
         }
     }
 )
