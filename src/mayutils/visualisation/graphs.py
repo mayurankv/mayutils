@@ -492,7 +492,7 @@ pio.templates["slides"] = go.layout.Template(
     )
 )
 save_axis_dict = dict(
-    zerolinecolor="rgba(200,200,200,0.4)",
+    zerolinecolor="rgba(200,200,200,0.5)",
     gridcolor="rgba(200,200,200,0.3)",
     linecolor="rgba(200,200,200,0.5)",
     minor=dict(

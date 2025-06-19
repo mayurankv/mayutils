@@ -80,6 +80,38 @@ class Colour:
 
         return self
 
+    def _html_show(
+        self,
+        size: int=50,
+    ) -> str:
+        return f'<div style="width:{size}px;height:{size}px;background-color:{self.to_str()};"></div>'
+
+    def show(
+        self,
+    ) -> None:
+        try:
+            from IPython.display import display
+            from IPython.core.display import HTML
+
+            display(HTML(self._html_show()))
+        except ImportError:
+            import matplotlib.pyplot as plt
+
+            fig, ax = plt.subplots(figsize=(1, 1), dpi=100)
+            fig.patch.set_visible(False)
+            ax.set_facecolor(color=self.to_str(method="hex"))
+
+            ax.set_xticks([])
+            ax.set_yticks([])
+            ax.set_xlim(0, 1)
+            ax.set_ylim(0, 1)
+            for spine in ax.spines.values():
+                spine.set_visible(False)
+
+            plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+
+            plt.show()
+
     def to_str(
         self,
         opacity: Optional[float] = None,
@@ -152,6 +184,11 @@ class Colour:
         self,
     ) -> str:
         return self.to_str()
+
+    def __repr_html__(
+        self,
+    ) -> str:
+        return self._html_show() + f"<p>{self.to_str()}</p>"
 
     def to_hsv(
         self,
