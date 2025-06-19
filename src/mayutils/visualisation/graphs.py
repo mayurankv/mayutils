@@ -383,6 +383,7 @@ pio.templates["base"] = go.layout.Template(
                 "l": 50,
                 "b": 50,
                 "t": 75,
+                "r": 10,
             },
             "modebar": {
                 "bgcolor": TRANSPARENT,
@@ -489,6 +490,22 @@ pio.templates["slides"] = go.layout.Template(
         height=600,
         autosize=False,
     )
+)
+save_axis_dict = dict(
+    zerolinecolor="rgba(200,200,200,0.4)",
+    gridcolor="rgba(200,200,200,0.3)",
+    linecolor="rgba(200,200,200,0.5)",
+    minor=dict(
+        gridcolor="rgba(200,200,200,0.1)",
+    ),
+)
+pio.templates["save"] = go.layout.Template(
+    {
+        "layout": {
+            "xaxis": save_axis_dict,
+            "yaxis": save_axis_dict,
+        }
+    }
 )
 pio.templates.default = "base"
 pio.renderers.default = "vscode"
@@ -1444,7 +1461,7 @@ class Plot(go.Figure):
         image_formats: list[str] = ["png"],  # ["png", "jpeg", "pdf"]
         scale: Optional[int] = 5,
         save: bool = True,
-        template: str = "base+plotly_white",
+        template: str = "base+plotly_white+save",
         *args,
         **kwargs,
     ) -> Path:
