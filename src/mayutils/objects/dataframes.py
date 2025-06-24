@@ -54,7 +54,8 @@ class Styler(Style):
         def style_map(value):
             return (
                 "color: rgba(0,0,0,0); background-color: rgba(0, 0, 0, 0);"
-                if np.isnan(value)
+                if isinstance(value, (float, int, np.floating, np.integer))
+                and np.isnan(value)
                 else ""
             )
 
