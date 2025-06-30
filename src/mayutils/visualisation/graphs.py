@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 import pandas as pd
 from pandas import DataFrame
+from mayutils.objects.types import RecursiveDict
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 from scipy.stats import gaussian_kde, norm
@@ -745,15 +746,15 @@ class Icicle(go.Icicle):
     @classmethod
     def from_dict(
         cls,
-        icicle_dict: dict[str, float | dict],
+        icicle_dict: RecursiveDict[float],
         **kwargs,
     ) -> Self:
-        node_values: dict[str, int] = {}
+        node_values: dict[str, float] = {}
 
         def calculate_values(
-            d: dict[str, int | dict],
+            d: RecursiveDict[float],
             path: str = "",
-        ) -> int:
+        ) -> float:
             if path in node_values:
                 return node_values[path]
 
@@ -775,10 +776,10 @@ class Icicle(go.Icicle):
         ids: list[str] = []
         labels: list[str] = []
         parents: list[str] = []
-        values: list[int] = []
+        values: list[float] = []
 
         def build_lists(
-            d: dict[str, int | dict],
+            d: RecursiveDict[float],
             parent_path: str = "",
         ) -> None:
             for key, value in d.items():
