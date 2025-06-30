@@ -786,7 +786,7 @@ class Icicle(go.Icicle):
 
                 ids.append(current_path)
                 labels.append(key)
-                parents.append(parent_path.split(sep="/")[-1] if parent_path else "")
+                parents.append(parent_path)
                 values.append(node_values[current_path])
 
                 if isinstance(value, dict):
