@@ -745,7 +745,7 @@ class Icicle(go.Icicle):
     @classmethod
     def from_dict(
         cls,
-        icicle_dict: dict[str, int | dict],
+        icicle_dict: dict[str, float | dict],
         **kwargs,
     ) -> Self:
         node_values: dict[str, int] = {}
