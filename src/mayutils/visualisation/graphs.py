@@ -1575,7 +1575,11 @@ class Plot(go.Figure):
 
         bound_groups = {}
         for idx, trace in enumerate(self.data):
-            if trace.legendgroup and trace.legendgroup.startswith("bounds"):  # type: ignore
+            if (
+                hasattr(trace, "legendgroup")
+                and trace.legendgroup
+                and trace.legendgroup.startswith("bounds")
+            ):  # type: ignore
                 if trace.legendgroup not in bound_groups:  # type: ignore
                     bound_groups[trace.legendgroup] = [None, []]  # type: ignore
 
