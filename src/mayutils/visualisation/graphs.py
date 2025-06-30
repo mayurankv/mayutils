@@ -746,13 +746,13 @@ class Icicle(go.Icicle):
     @classmethod
     def from_dict(
         cls,
-        icicle_dict: RecursiveDict[float],
+        icicle_dict: RecursiveDict[str, float],
         **kwargs,
     ) -> Self:
         node_values: dict[str, float] = {}
 
         def calculate_values(
-            d: RecursiveDict[float],
+            d: RecursiveDict[str, float],
             path: str = "",
         ) -> float:
             if path in node_values:
@@ -779,7 +779,7 @@ class Icicle(go.Icicle):
         values: list[float] = []
 
         def build_lists(
-            d: RecursiveDict[float],
+            d: RecursiveDict[str, float],
             parent_path: str = "",
         ) -> None:
             for key, value in d.items():
