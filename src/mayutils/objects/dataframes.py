@@ -107,6 +107,18 @@ class Styler(Style):
     ) -> str:
         return super(Styler, self.ignore_null()).__repr__()
 
+    def hide(
+        self,
+        *args,
+        **kwargs,
+    ) -> Self:
+        super().hide(
+            *args,
+            **kwargs,
+        )
+
+        return self
+
     def save(
         self,
         path: Path | str,
