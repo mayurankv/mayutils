@@ -1379,8 +1379,11 @@ class Plot(go.Figure):
         *args,
         **kwargs,
     ) -> Self:
-        update_wrapper(wrapper=go.Figure.add_shape, wrapped=self.add_shape)
-        super().add_shape(*args, **kwargs)
+        # update_wrapper(wrapper=go.Figure.add_shape, wrapped=self.add_shape)
+        super().add_shape(
+            *args,
+            **kwargs,
+        )
 
         return self
 
@@ -1389,7 +1392,7 @@ class Plot(go.Figure):
         *args,
         **kwargs,
     ) -> Self:
-        update_wrapper(wrapper=go.Figure.add_vrect, wrapped=self.add_vrect)
+        # update_wrapper(wrapper=go.Figure.add_vrect, wrapped=self.add_vrect)
         super().add_vrect(
             *args,
             **kwargs,
@@ -1402,7 +1405,7 @@ class Plot(go.Figure):
         *args,
         **kwargs,
     ) -> Self:
-        update_wrapper(wrapper=go.Figure.add_vline, wrapped=self.add_vline)
+        # update_wrapper(wrapper=go.Figure.add_vline, wrapped=self.add_vline)
         super().add_vline(
             *args,
             **kwargs,
@@ -1415,7 +1418,7 @@ class Plot(go.Figure):
         *args,
         **kwargs,
     ) -> Self:
-        update_wrapper(wrapper=go.Figure.add_hline, wrapped=self.add_hline)
+        # update_wrapper(wrapper=go.Figure.add_hline, wrapped=self.add_hline)
         super().add_hline(
             *args,
             **kwargs,
