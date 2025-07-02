@@ -544,6 +544,7 @@ class Line(go.Scatter):
     def __init__(
         self,
         label_name: bool | str = False,
+        textposition: str = "middle right",
         *args,
         **kwargs,
     ) -> None:
@@ -552,6 +553,7 @@ class Line(go.Scatter):
             "+text" if label_name is not False and not mode.endswith("+text") else ""
         )
         kwargs["mode"] = mode
+        kwargs["textposition"] = textposition
 
         label_name = (
             kwargs.get("name", None) if label_name is True else label_name
