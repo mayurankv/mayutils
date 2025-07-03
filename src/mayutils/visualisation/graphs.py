@@ -1,4 +1,3 @@
-from functools import update_wrapper
 import os
 from math import isqrt, ceil
 from pathlib import Path
@@ -1068,6 +1067,7 @@ class Titles:
     rows: Optional[tuple[str, ...]] = None
     cols: Optional[tuple[str, ...]] = None
     plots: Optional[tuple[tuple[Optional[str], ...], ...]] = None
+    cols_top: bool = False
 
     def __post_init__(
         self,
@@ -2244,14 +2244,14 @@ class SubPlot(Plot):
         for col_idx, col_title in enumerate(subplot_config.titles.cols or []):
             self.add_title(
                 title=col_title,
-                edge="bottom",
+                edge="bottom" if not subplot_config.titles.cols_top else "top",
                 x_domain=(
                     x_domains[col_idx][0],
                     x_domains[col_idx][1],
                 ),
                 y_domain=(
-                    y_domains[0][0],
-                    y_domains[0][1],
+                    y_domains[0 if not subplot_config.titles.cols_top else -1][0],
+                    y_domains[0 if not subplot_config.titles.cols_top else -1][1],
                 ),
                 offset=line_title_offsets[1],
                 **line_title_styles,
