@@ -30,7 +30,7 @@ def get_periods(
             "start_timestamp": subtract_month(
                 date=date,
                 months=idx,
-                day=1,
+                day=day,
             ).strftime(format=format),
             "end_timestamp": subtract_month(
                 date=date,
