@@ -1,8 +1,18 @@
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 from dateutil.relativedelta import relativedelta
 
-from mayutils.core.types import Interval, Periods
+from mayutils.core.types import Interval
+
+
+@dataclass(frozen=True)
+class Period:
+    start_timestamp: str
+    end_timestamp: str
+
+
+type Periods = list[Period]
 
 
 def subtract_month(
@@ -25,19 +35,19 @@ def get_periods(
     format: str = "%Y-%m-%d %H:%M:%S",
     day: Optional[int] = 1,
 ) -> Periods:
-    date_pairs: Periods = [
-        {
-            "start_timestamp": subtract_month(
+    date_pairs = [
+        Period(
+            start_timestamp=subtract_month(
                 date=date,
                 months=idx,
                 day=day,
             ).strftime(format=format),
-            "end_timestamp": subtract_month(
+            end_timestamp=subtract_month(
                 date=date,
                 months=idx - 1,
                 day=day,
             ).strftime(format=format),
-        }
+        )
         for idx in range(num_periods, 0, -1)
     ]
 

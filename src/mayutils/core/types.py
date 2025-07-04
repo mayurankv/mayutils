@@ -11,12 +11,6 @@ type Operation = Literal[
 type Calculations = dict[Operation, dict[str, tuple[str, ...]]]
 
 
-class Period(TypedDict):
-    start_timestamp: str
-    end_timestamp: str
-
-
-type Periods = list[Period]
 type Interval = Literal["second", "minute", "hour", "day", "month", "year"]
 
 DataName = str
