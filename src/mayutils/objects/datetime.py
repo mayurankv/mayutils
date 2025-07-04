@@ -23,6 +23,7 @@ def get_periods(
     date: datetime = datetime.today(),
     num_periods: int = 13,
     format: str = "%Y-%m-%d %H:%M:%S",
+    day: Optional[int] = 1,
 ) -> Periods:
     date_pairs: Periods = [
         {
@@ -34,7 +35,7 @@ def get_periods(
             "end_timestamp": subtract_month(
                 date=date,
                 months=idx - 1,
-                day=1,
+                day=day,
             ).strftime(format=format),
         }
         for idx in range(num_periods, 0, -1)
