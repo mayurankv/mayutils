@@ -1,4 +1,7 @@
 Tooling: @critical
+	Presentations:
+		☐ Improve Presentation text interface
+			☐ Add text direct from markdown
 	Plots: @critical
 		☐ `trace_info` @property to infer the colours (and trace type and other info) by traces for easy access to guessing colours (and refactor code to use this) @critical
 		☐ `Subplot.from_plots` @classmethod using double nested array notation for rows and columns @critical

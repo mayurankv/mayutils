@@ -1,5 +1,7 @@
 from pathlib import Path
 from typing import Callable, Literal, Optional, Self
+
+from itables import show
 from great_tables import GT
 from pandas import (
     DataFrame,
@@ -264,6 +266,17 @@ class DataframeUtilsAccessor(object):
             raise NotImplementedError(f"Format {path.suffix} is an unsupported format")
 
         return path
+
+    def interact(
+        self,
+        *args,
+        **kwargs,
+    ) -> None:
+        return show(
+            df=self.df,
+            *args,
+            **kwargs,
+        )
 
     def max_abs(
         self,

@@ -2245,6 +2245,36 @@ files = [
 arrow = ">=0.15.0"
 
 [[package]]
+name = "itables"
+version = "2.4.3"
+description = "Pandas and Polar DataFrames as interactive DataTables"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "itables-2.4.3-py3-none-any.whl", hash = "sha256:002d3c75d0c5b66a7b5a9c0821b892f8a92f318bfa77884bd6ded083557cecfd"},
+    {file = "itables-2.4.3.tar.gz", hash = "sha256:96ff86748ea31eccdd6ec3c6d3d40318c6851a9e460f5fd23ddae0b2f865a9f5"},
+]
+
+[package.dependencies]
+ipython = "*"
+numpy = "*"
+pandas = "*"
+
+[package.extras]
+all = ["anywidget", "dash", "matplotlib", "polars", "pyarrow", "pytz", "shiny", "shinywidgets", "streamlit", "traitlets", "typeguard (>=4.4.1)", "world-bank-data"]
+check-type = ["typeguard (>=4.4.1)"]
+dash = ["dash"]
+dev = ["anywidget", "dash", "ipykernel", "jupyterlab", "jupytext", "marimo", "matplotlib", "nbconvert", "polars", "pyarrow", "pytest", "pytest-cov", "pytz", "requests", "shiny", "shinywidgets", "streamlit", "traitlets", "typeguard (>=4.4.1)", "watchfiles", "world-bank-data"]
+polars = ["polars", "pyarrow"]
+samples = ["pytz", "world-bank-data"]
+shiny = ["shiny", "shinywidgets"]
+streamlit = ["streamlit"]
+style = ["matplotlib"]
+test = ["anywidget", "dash", "ipykernel", "jupytext", "marimo", "matplotlib", "nbconvert", "polars", "pyarrow", "pytest", "pytest-cov", "pytz", "requests", "shiny", "shinywidgets", "streamlit", "traitlets", "typeguard (>=4.4.1)", "world-bank-data"]
+widget = ["anywidget", "traitlets"]
+
+[[package]]
 name = "jaraco-classes"
 version = "3.4.0"
 description = "Utility functions for Python class constructs"
@@ -6898,4 +6928,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">3.10,<4.0"
-content-hash = "1ec12b5a3cf375cb1d4ce6e259e015eb7f49589bdea4dab32e201bb9d9a7df92"
+content-hash = "35a268af9029c503b826f53e4933a7f0aee74efdc6874169d041256051a4eb92"
