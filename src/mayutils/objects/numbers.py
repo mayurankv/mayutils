@@ -1,6 +1,9 @@
 def prettify(
     num: float,
 ) -> str:
+    if num == 0:
+        return "0"
+
     num = float("{:.3g}".format(num))
     pos_magnitude = 0
     neg_magnitude = 0
