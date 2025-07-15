@@ -2,6 +2,12 @@ Tooling: @critical
 	Presentations:
 		☐ Improve Presentation text interface
 			☐ Add text direct from markdown
+			- https://github.com/scanny/python-pptx/issues/1019
+			- https://github.com/MartinPacker/md2pptx/blob/master/docs/user-guide.md
+			- https://python-pptx.readthedocs.io/en/latest/search.html?q=bullet&check_keywords=yes&area=default
+			- https://python-pptx.readthedocs.io/en/latest/dev/analysis/shp-movie.html?highlight=animation
+	Tables:
+		☐ Add `itables` support
 	Numbers:
 		☐ To prettify, add SI units and decimal places
 	Plots: @critical
