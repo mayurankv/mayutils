@@ -1363,11 +1363,9 @@ class Plot(go.Figure):
     def add_annotation(
         self,
         *args,
-        text: str,
         **kwargs,
     ) -> Self:
         super().add_annotation(
-            text=text,
             *args,
             **kwargs,
         )
