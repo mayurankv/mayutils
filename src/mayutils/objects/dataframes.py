@@ -109,6 +109,18 @@ class Styler(Style):
     ) -> str:
         return super(Styler, self.ignore_null()).__repr__()
 
+    def interact(
+        self,
+        *args,
+        **kwargs,
+    ) -> None:
+        return show(
+            df=self,
+            allow_html=True,
+            *args,
+            **kwargs,
+        )
+
     def hide(
         self,
         *args,
