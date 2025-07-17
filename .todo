@@ -8,6 +8,8 @@ Tooling: @critical
 			- https://python-pptx.readthedocs.io/en/latest/dev/analysis/shp-movie.html?highlight=animation
 	Tables:
 		☐ Add `itables` support
+		☐ https://mwouts.github.io/itables/quick_start.html
+		☐ https://mwouts.github.io/itables/formatting.html
 	Numbers:
 		☐ To prettify, add SI units and decimal places
 	Plots: @critical

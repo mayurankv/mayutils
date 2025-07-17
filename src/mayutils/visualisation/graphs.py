@@ -375,6 +375,7 @@ pio.templates["base"] = go.layout.Template(
                     "size": 12,
                     "weight": 200,
                 },
+                "bgcolor": TRANSPARENT,
             },
             "mapbox": {
                 "style": "dark",
@@ -510,6 +511,9 @@ pio.templates["save"] = go.layout.Template(
                 "sequentialminus": CONTINUOUS_COLORSCALE,
             },
             "colorway": shuffled_colourscale,
+            "legend": {
+                "bgcolor": TRANSPARENT,
+            },
         }
     }
 )
