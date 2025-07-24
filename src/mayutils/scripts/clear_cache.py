@@ -80,6 +80,7 @@ def clean(
         help="List files that would be deleted, do not delete",
     ),
 ) -> None:
+    console.print(f"[blue]Targeting folder {folder}[/blue]")
     files = [
         child
         for child in folder.iterdir()
