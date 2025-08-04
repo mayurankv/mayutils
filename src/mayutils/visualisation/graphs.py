@@ -654,6 +654,7 @@ class Ecdf(Line):
         norm: Literal["probability", "percentage", "count"] = "probability",
         mode: Literal["standard", "reversed", "complementary"] = "standard",
         fill: Literal["tozeroy", "tonexty", "toself"] = "toself",
+        left_inclusive: bool = False,
         *args,
         **kwargs,
     ) -> None:
@@ -686,7 +687,9 @@ class Ecdf(Line):
 
         _y += y_shift
 
-        kwargs["line_shape"] = "vh"  # if mode == "reversed" else "hv"
+        kwargs["line_shape"] = (
+            "hv" if ((mode != "reversed") ^ (not left_inclusive)) else "vh"
+        )
         kwargs["fill"] = fill
 
         if fill == "toself":
