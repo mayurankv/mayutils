@@ -4,7 +4,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 
-@njit
+@njit(cache=True)
 def choice_replacement(
     arr: NDArray,
     p: Optional[NDArray] = None,
@@ -26,7 +26,7 @@ def choice_replacement(
     return arr[indices.ravel()].reshape(indices.shape)
 
 
-@njit
+@njit(cache=True)
 def np_apply_along_axis_2d(
     func1d: Callable[[NDArray], float],
     arr: NDArray,
@@ -47,7 +47,7 @@ def np_apply_along_axis_2d(
     return result
 
 
-@njit
+@njit(cache=True)
 def mean2d(
     arr: NDArray,
     axis: int,
@@ -59,7 +59,7 @@ def mean2d(
     )
 
 
-@njit
+@njit(cache=True)
 def std2d(
     arr: NDArray,
     axis: int,
