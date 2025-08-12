@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Callable, Optional
 from numba import njit
 import numpy as np
 from numpy.typing import NDArray
@@ -24,3 +24,48 @@ def choice_replacement(
     )
 
     return arr[indices.ravel()].reshape(indices.shape)
+
+
+@njit
+def np_apply_along_axis_2d(
+    func1d: Callable[[NDArray], float],
+    arr: NDArray,
+    axis: int,
+) -> NDArray:
+    assert arr.ndim == 2
+    assert axis in [0, 1]
+
+    if axis == 0:
+        result = np.empty(arr.shape[1])
+        for i in range(len(result)):
+            result[i] = func1d(arr[:, i])
+    else:
+        result = np.empty(arr.shape[0])
+        for i in range(len(result)):
+            result[i] = func1d(arr[i, :])
+
+    return result
+
+
+@njit
+def mean2d(
+    arr: NDArray,
+    axis: int,
+) -> NDArray:
+    return np_apply_along_axis_2d(
+        func1d=np.mean,
+        arr=arr,
+        axis=axis,
+    )
+
+
+@njit
+def std2d(
+    arr: NDArray,
+    axis: int,
+) -> NDArray:
+    return np_apply_along_axis_2d(
+        func1d=np.std,
+        arr=arr,
+        axis=axis,
+    )
