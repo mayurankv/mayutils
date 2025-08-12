@@ -17,10 +17,10 @@ def choice_replacement(
     if p is None:
         return np.random.choice(a=arr, size=size)
 
-    return arr[
-        np.searchsorted(
-            np.cumsum(p),
-            np.random.random(size=size),
-            side="right",
-        )
-    ]
+    indices = np.searchsorted(
+        np.cumsum(p),
+        np.random.random(size=size),
+        side="right",
+    )
+
+    return arr[indices.ravel()].reshape(indices.shape)
