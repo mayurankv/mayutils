@@ -20,7 +20,7 @@ def choice_replacement(
     return arr[
         np.searchsorted(
             np.cumsum(p),
-            np.random.uniform(size=size),
+            np.random.random(size=size),
             side="right",
         )
     ]
