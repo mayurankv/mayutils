@@ -1348,6 +1348,46 @@ class Plot(go.Figure):
             plot_config=PlotConfig.empty(),
         )
 
+    @classmethod
+    def as_dropdown(
+        cls,
+        plots: dict[str, Self],
+        description: str,
+    ) -> Self:
+        return cls.from_figure(
+            fig=go.Figure(
+                data=(first_plot := next(iter(plots.values()))).data,
+                layout=first_plot.layout,
+                frames=[
+                    go.Frame(data=plot.data, layout=plot.layout, name=label)
+                    for label, plot in plots.items()
+                ],
+            ).update_layout(
+                updatemenus=[
+                    dict(
+                        buttons=[
+                            dict(
+                                label=label,
+                                method="animate",
+                                args=[
+                                    [label],
+                                    dict(
+                                        mode="immediate",
+                                        frame=dict(duration=0, redraw=True),
+                                        transition=dict(duration=0),
+                                    ),
+                                ],
+                            )
+                            for label in plots.keys()
+                        ],
+                        type="dropdown",
+                        direction="down",
+                    )
+                ],
+            ),
+            description=description,
+        )
+
     def to_figure(
         self,
     ) -> go.Figure:
