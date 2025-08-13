@@ -1357,32 +1357,109 @@ class Plot(go.Figure):
         return cls.from_figure(
             fig=go.Figure(
                 data=(first_plot := next(iter(plots.values()))).data,
-                layout=first_plot.layout,
+                layout=first_plot.layout.update(  # type: ignore
+                    updatemenus=[
+                        dict(
+                            buttons=[
+                                dict(
+                                    label=label,
+                                    method="animate",
+                                    args=[
+                                        [label],
+                                        dict(
+                                            mode="immediate",
+                                            frame=dict(
+                                                duration=0,
+                                                redraw=True,
+                                            ),
+                                            transition=dict(duration=0),
+                                        ),
+                                    ],
+                                )
+                                for label in plots.keys()
+                            ],
+                            type="dropdown",
+                            direction="down",
+                        )
+                    ],
+                ),
                 frames=[
-                    go.Frame(data=plot.data, layout=plot.layout, name=label)
-                    for label, plot in plots.items()
-                ],
-            ).update_layout(
-                updatemenus=[
-                    dict(
-                        buttons=[
-                            dict(
-                                label=label,
-                                method="animate",
-                                args=[
-                                    [label],
-                                    dict(
-                                        mode="immediate",
-                                        frame=dict(duration=0, redraw=True),
-                                        transition=dict(duration=0),
+                    go.Frame(
+                        data=plot.data,
+                        layout=plot.layout.update(  # type: ignore
+                            **(
+                                dict(
+                                    shapes=(
+                                        go.layout.Shape(
+                                            type="rect",
+                                            line=dict(color="rgba(0,0,0,0)", width=0),
+                                            fillcolor="rgba(0,0,0,0)",
+                                        ),
+                                    )
+                                )
+                                if not hasattr(plot.layout, "shapes")
+                                or plot.layout.shapes == tuple()  # type: ignore
+                                else dict()
+                            ),
+                            **(
+                                dict(
+                                    annotations=(
+                                        go.layout.Annotation(
+                                            xref="paper",
+                                            yref="paper",
+                                            text="",
+                                            showarrow=False,
+                                        ),
+                                    )
+                                )
+                                if not hasattr(plot.layout, "annotations")
+                                or plot.layout.annotations == tuple()  # type: ignore
+                                else dict()
+                            ),
+                            xaxis=dict(
+                                autorange=False,
+                                range=plot.layout.xaxis.range  # type: ignore
+                                or (
+                                    np.nanmin(
+                                        [
+                                            np.nanmin(trace.x)  # type: ignore
+                                            for trace in plot.data
+                                            if hasattr(trace, "x") and trace.x.any()  # type: ignore
+                                        ]
                                     ),
-                                ],
-                            )
-                            for label in plots.keys()
-                        ],
-                        type="dropdown",
-                        direction="down",
+                                    np.nanmax(
+                                        [
+                                            np.nanmax(trace.x)  # type: ignore
+                                            for trace in plot.data
+                                            if hasattr(trace, "x") and trace.x.any()  # type: ignore
+                                        ]
+                                    ),
+                                ),
+                            ),
+                            yaxis=dict(
+                                autorange=False,
+                                range=plot.layout.yaxis.range  # type: ignore
+                                or (
+                                    np.nanmin(
+                                        [
+                                            np.nanmin(trace.y)  # type: ignore
+                                            for trace in plot.data
+                                            if hasattr(trace, "y") and trace.y.any()  # type: ignore
+                                        ]
+                                    ),
+                                    np.nanmax(
+                                        [
+                                            np.nanmax(trace.y)  # type: ignore
+                                            for trace in plot.data
+                                            if hasattr(trace, "y") and trace.y.any()  # type: ignore
+                                        ]
+                                    ),
+                                ),
+                            ),
+                        ),
+                        name=label,
                     )
+                    for label, plot in plots.items()
                 ],
             ),
             description=description,
@@ -1712,9 +1789,9 @@ class Plot(go.Figure):
         traces = []
         for idx, trace in enumerate(self.data):
             if isinstance(trace, go.Histogram):
-                x = self.data[idx].x
-            elif trace.meta == "kde":
-                x = self.data[idx].customdata
+                x = self.data[idx].x  # type: ignore
+            elif trace.meta == "kde":  # type: ignore
+                x = self.data[idx].customdata  # type: ignore
             else:
                 continue
             rug_count += 1
