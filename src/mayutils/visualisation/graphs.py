@@ -1351,8 +1351,8 @@ class Plot(go.Figure):
     @classmethod
     def as_dropdown(
         cls,
-        plots: dict[str, Self],
         description: str,
+        **plots: Self,
     ) -> Self:
         return cls.from_figure(
             fig=go.Figure(
@@ -1628,9 +1628,9 @@ class Plot(go.Figure):
         for idx, trace in enumerate(self.data):
             if (
                 hasattr(trace, "legendgroup")
-                and trace.legendgroup
-                and trace.legendgroup.startswith("bounds")
-            ):  # type: ignore
+                and trace.legendgroup  # type: ignore
+                and trace.legendgroup.startswith("bounds")  # type: ignore
+            ):
                 if trace.legendgroup not in bound_groups:  # type: ignore
                     bound_groups[trace.legendgroup] = [None, []]  # type: ignore
 
