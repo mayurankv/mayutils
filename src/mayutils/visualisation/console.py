@@ -19,9 +19,10 @@ def console_latex(
 def replace_print(
     print_method: Optional[Callable] = None,
 ) -> Generator[None, Any, None]:
-    base_print = (
-        __builtins__["print"] if isinstance(__builtins__, dict) else __builtins__.print
-    )
+    # base_print = (
+    #     __builtins__["print"] if isinstance(__builtins__, dict) else __builtins__.print
+    # )
+    base_print = print
     original = builtins.print
     builtins.print = print_method if print_method is not None else base_print
     try:
