@@ -62,6 +62,7 @@ google-cloud-storage = "^3.1.0"
 requests = "^2.32.3"
 python-pptx = "^1.0.2"
 itables = "^2.4.3"
+polars = "^1.32.3"
 
 
 [tool.poetry.group.dev.dependencies]

@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pathlib import Path
 from typing import Optional, Self, Any
 import uuid
@@ -10,13 +11,21 @@ from googleapiclient.http import MediaFileUpload
 
 import webbrowser
 
+from pandas import DataFrame
+from mayutils.objects.dataframes import column_to_excel
+import polars as pl
+
 from mayutils.objects.colours import Colour
 
 DriveService = Any
 SlidesService = Any
-PresentationInternal = Any
+SlidesInternal = Any
 SlideInternal = Any
 File = Any
+
+SheetsService = Any
+SheetsInternal = Any
+SheetInternal = Any
 
 
 class Drive(object):
@@ -247,15 +256,15 @@ class Drive(object):
         return file_id
 
 
-class Presentation(object):
+class Slides(object):
     def __init__(
         self,
-        presentation: PresentationInternal,
+        presentation: SlidesInternal,
         slides_service: SlidesService,
     ) -> None:
         self.id: str = presentation["presentationId"]
         self.service: SlidesService = slides_service
-        self.internal: PresentationInternal = presentation
+        self.internal: SlidesInternal = presentation
 
     @property
     def height(
@@ -310,7 +319,7 @@ class Presentation(object):
     def open(
         self,
     ) -> None:
-        webbrowser.open(self.link)
+        webbrowser.open(url=self.link)
 
     def get_thumbnail_url(
         self,
@@ -399,10 +408,10 @@ class Presentation(object):
         template: Optional[str] = None,
     ) -> Self:
         drive = Drive.from_creds(creds=creds)
-        slides_service = Presentation.service_from_creds(creds=creds)
+        slides_service = Slides.service_from_creds(creds=creds)
 
         return cls(
-            presentation=Presentation.get(
+            presentation=Slides.get(
                 presentation_name=presentation_name,
                 drive=drive,
                 slides_service=slides_service,
@@ -417,7 +426,7 @@ class Presentation(object):
         presentation_id: str,
         slides_service: SlidesService,
     ) -> Self:
-        presentation: PresentationInternal = (
+        presentation: SlidesInternal = (
             slides_service.presentations()
             .get(
                 presentationId=presentation_id,
@@ -452,7 +461,7 @@ class Presentation(object):
         presentation_name: str,
         slides_service: SlidesService,
     ) -> Self:
-        presentation_internal: PresentationInternal = (
+        presentation_internal: SlidesInternal = (
             slides_service.presentations()
             .create(body={"title": presentation_name})
             .execute()
@@ -487,7 +496,7 @@ class Presentation(object):
             file_name=template_name,
         )
 
-        presentation: PresentationInternal = (
+        presentation: SlidesInternal = (
             drive.files()
             .copy(
                 fileId=template_id,
@@ -889,3 +898,656 @@ class Presentation(object):
         ]
 
         return self.update(requests=requests)
+
+
+class Sheet(object):
+    def __init__(
+        self,
+        sheet: SheetInternal,
+        parent: Sheets,
+        sheets_service: SheetsService,
+    ) -> None:
+        self.service: SheetsService = sheets_service
+        self.internal: SheetInternal = sheet
+        self.id: str = self.internal.get("properties", {})["sheetId"]
+        self.parent = parent
+
+    @property
+    def title(
+        self,
+    ) -> str:
+        return self.internal.get("properties", {}).get("title")
+
+    @property
+    def index(
+        self,
+    ) -> int:
+        return self.internal.get("properties", {}).get("index")
+
+    @property
+    def rows(
+        self,
+    ) -> int:
+        return (
+            self.internal.get("properties", {})
+            .get("gridProperties", {})
+            .get("rowCount")
+        )
+
+    @property
+    def columns(
+        self,
+    ) -> int:
+        return (
+            self.internal.get("properties", {})
+            .get("gridProperties", {})
+            .get("columnCount")
+        )
+
+    def to_arrays(
+        self,
+        range: Optional[str] = None,
+    ) -> list:
+        data = (
+            self.service.spreadsheets()
+            .values()
+            .get(
+                spreadsheetId=self.parent.id,
+                range=f"{self.title}!A1:{column_to_excel(column=self.columns)}{self.rows}"
+                if range is None
+                else f"{self.title}!{range}",
+            )
+            .execute()
+        )
+
+        values = data.get("values", [])
+
+        return values
+
+    def to_pandas(
+        self,
+        range: Optional[str] = None,
+    ) -> DataFrame:
+        return DataFrame(data=self.to_arrays(range=range))
+
+    def to_polars(
+        self,
+        range: Optional[str] = None,
+    ) -> pl.DataFrame:
+        raise NotImplementedError("Polars not implemented yet")
+
+    @property
+    def df(
+        self,
+    ) -> DataFrame:
+        return self.to_pandas(
+            range=None,
+        )
+
+    def __repr__(
+        self,
+    ) -> str:
+        return repr(self.df)
+
+    def _repr_html_(
+        self,
+    ) -> str:
+        return self.df.utils.styler.set_caption(self.title)._repr_html_()  # type: ignore
+
+    def _repr_latex_(
+        self,
+    ) -> str:
+        return self.df.utils.styler.set_caption(self.title)._repr_latex_()  # type: ignore
+
+    # def _repr_mimebundle_(
+    #     self,
+    #     include=None,
+    #     exclude=None,
+    # ) -> str:
+    #     return self.df._repr_mimebundle_(  # type: ignore
+    #         include=include,
+    #         exclude=exclude,
+    #     )
+
+    def update_values(
+        self,
+        range: str,
+        values: list[list[Any]],
+        as_user: bool = True,
+    ) -> Self:
+        self.parent = self.parent.update_values(
+            range=range,
+            values=values,
+            as_user=as_user,
+        )
+
+        self.internal = self.parent.sheet(sheet_number=self.index + 1).internal
+
+        return self
+
+    def insert(
+        self,
+        range: Optional[str],
+        values: list[list[Any]],
+        as_user: bool = True,
+    ) -> Self:
+        return self.update_values(
+            range=f"{self.title}!{'A1' if range is None else range}",
+            values=values,
+            as_user=as_user,
+        )
+
+    def insert_df(
+        self,
+        range: Optional[str],
+        df: DataFrame,
+        as_user: bool = True,
+        index_name: str = "Index",
+    ) -> Self:
+        df_with_index = df.reset_index(
+            names=index_name,
+        )
+
+        return self.update_values(
+            range=f"{self.title}!{'A1' if range is None else range}",
+            values=[df_with_index.columns.to_list()] + df_with_index.to_numpy().tolist(),  # type: ignore
+            as_user=as_user,
+        )
+
+    # TODO: Insert values, Insert formula
+
+
+class Sheets(object):
+    def __init__(
+        self,
+        sheets: SheetsInternal,
+        sheets_service: SheetsService,
+    ) -> None:
+        self.service: SheetsService = sheets_service
+        self.internal: SheetsInternal = sheets
+        self.id: str = self.internal["spreadsheetId"]
+
+    @property
+    def link(
+        self,
+    ) -> str:
+        return f"https://docs.google.com/presentation/d/{self.id}/edit"
+
+    def sheet(
+        self,
+        sheet_number: int,
+    ) -> Sheet:
+        if sheet_number < 1 or sheet_number > len(self.internal["sheets"]):
+            raise IndexError(
+                f"Sheet number {sheet_number} is out of range. Spreadsheet has {len(self.internal['sheets'])} sheets."
+            )
+
+        sheet_internal = self.internal["sheets"][sheet_number - 1]
+
+        return Sheet(
+            sheet=sheet_internal,
+            parent=self,
+            sheets_service=self.service,
+        )
+
+    def sheet_from_name(
+        self,
+        sheet_name: str,
+    ) -> Sheet:
+        sheet_number = next(
+            (
+                idx + 1
+                for idx, sheet in enumerate(self.internal["sheets"])
+                if sheet.get("properties", {}).get("title", "") == sheet_name
+            ),
+            None,
+        )
+
+        if sheet_number is None:
+            raise ValueError(f"Sheet with title '{sheet_name}' not found.")
+
+        return self.sheet(
+            sheet_number=sheet_number,
+        )
+
+    @property
+    def sheets(
+        self,
+    ) -> list[Sheet]:
+        return [
+            self.sheet(sheet_number=sheet_idx + 1)
+            for sheet_idx in range(len(self.internal["sheets"]))
+        ]
+
+    @property
+    def title(
+        self,
+    ) -> str:
+        return self.internal.get("properties", {}).get("title")
+
+    def open(
+        self,
+    ) -> None:
+        webbrowser.open(url=self.link)
+
+    def __repr__(
+        self,
+    ) -> str:
+        return self.sheet(sheet_number=1).__repr__()
+
+    def _repr_html_(
+        self,
+    ) -> str:
+        return self.sheet(sheet_number=1)._repr_html_()
+
+    def _repr_latex_(
+        self,
+    ) -> str:
+        return self.sheet(sheet_number=1)._repr_latex_()
+
+    # def _repr_mimebundle_(
+    #     self,
+    #     include=None,
+    #     exclude=None,
+    # ):
+    #     return self.sheet(sheet_number=1)._repr_mimebundle_()
+
+    def refresh(
+        self,
+    ) -> Self:
+        self.internal = self.service.spreadsheets().get(spreadsheetId=self.id).execute()
+
+        return self
+
+    def update(
+        self,
+        requests: list[dict],
+    ) -> Self:
+        if requests:
+            self.service.spreadsheets().batchUpdate(
+                spreadsheetId=self.id,
+                body={
+                    "requests": requests,
+                },
+            ).execute()
+
+        self.refresh()
+
+        return self
+
+    def update_values(
+        self,
+        range: str,
+        values: list[list[Any]],
+        as_user: bool = True,
+    ) -> Self:
+        self.service.spreadsheets().values().update(
+            spreadsheetId=self.id,
+            range=range,
+            valueInputOption="RAW" if not as_user else "USER_ENTERED",
+            body={
+                "values": values,
+            },
+        ).execute()
+
+        self.refresh()
+
+        return self
+
+    @staticmethod
+    def service_from_creds(
+        creds: Credentials,
+    ) -> SheetsService:
+        sheets_service: SheetsService = build(
+            serviceName="sheets",
+            version="v4",
+            credentials=creds,
+        )
+
+        return sheets_service
+
+    @classmethod
+    def fresh_from_creds(
+        cls,
+        sheets_name: str,
+        creds: Credentials,
+        template: Optional[str] = None,
+    ) -> Self:
+        drive = Drive.from_creds(creds=creds)
+        sheets_service = Sheets.service_from_creds(creds=creds)
+
+        return cls(
+            sheets=Sheets.get(
+                sheets_name=sheets_name,
+                drive=drive,
+                sheets_service=sheets_service,
+                template=template,
+            ),
+            sheets_service=sheets_service,
+        )
+
+    @classmethod
+    def retrieve_from_id(
+        cls,
+        sheets_id: str,
+        sheets_service: SheetsService,
+    ) -> Self:
+        sheets: SheetsInternal = (
+            sheets_service.spreadsheets()
+            .get(
+                spreadsheetId=sheets_id,
+            )
+            .execute()
+        )
+
+        return cls(
+            sheets=sheets,
+            sheets_service=sheets_service,
+        )
+
+    @classmethod
+    def retrieve_from_name(
+        cls,
+        sheets_name: str,
+        drive: Drive,
+        sheets_service: SheetsService,
+    ) -> Self:
+        sheets_id: str = drive.find_file_id(
+            file_name=sheets_name,
+        )
+
+        return cls.retrieve_from_id(
+            sheets_id=sheets_id,
+            sheets_service=sheets_service,
+        )
+
+    @classmethod
+    def create_new(
+        cls,
+        sheets_name: str,
+        sheets_service: SheetsService,
+    ) -> Self:
+        sheets_internal: SheetsInternal = (
+            sheets_service.spreadsheets()
+            .create(
+                body={
+                    "properties": {"title": sheets_name},
+                },
+            )
+            .execute()
+        )
+
+        presentation = cls(
+            sheets=sheets_internal,
+            sheets_service=sheets_service,
+        )
+
+        return presentation
+
+    @classmethod
+    def create_from_template(
+        cls,
+        sheets_name: str,
+        template_name: str,
+        drive: Drive,
+        sheets_service: SheetsService,
+    ) -> Self:
+        template_id: str = drive.find_file_id(
+            file_name=template_name,
+        )
+
+        sheets: SheetsInternal = (
+            drive.files()
+            .copy(
+                fileId=template_id,
+                body={
+                    "name": sheets_name,
+                },
+            )
+            .execute()
+        )
+
+        return cls(
+            sheets=sheets,
+            sheets_service=sheets_service,
+        )
+
+    @classmethod
+    def get(
+        cls,
+        sheets_name: str,
+        drive: Drive,
+        sheets_service: SheetsService,
+        template: Optional[str] = None,
+    ) -> Self:
+        try:
+            return cls.retrieve_from_name(
+                sheets_name=sheets_name,
+                drive=drive,
+                sheets_service=sheets_service,
+            )
+
+        except FileNotFoundError:
+            if template is None:
+                return cls.create_new(
+                    sheets_name=sheets_name,
+                    sheets_service=sheets_service,
+                )
+            else:
+                return cls.create_from_template(
+                    sheets_name=sheets_name,
+                    template_name=template,
+                    drive=drive,
+                    sheets_service=sheets_service,
+                )
+
+    def reset(
+        self,
+        drive: Drive,
+    ) -> Self:
+        sheets_name = self.title
+
+        drive.delete_file_by_id(
+            file_id=self.id,
+        )
+
+        new_sheets = self.create_new(
+            sheets_name=sheets_name,
+            sheets_service=self.service,
+        )
+
+        self.internal = new_sheets.internal
+        self.id = new_sheets.id
+
+        return self
+
+    def rename_sheet(
+        self,
+        sheet: Sheet,
+        new_title: str,
+    ) -> Self:
+        if new_title in [sheet.title for sheet in self.sheets]:
+            raise ValueError(f"Sheet title {new_title} is already used")
+
+        return self.update(
+            requests=[
+                {
+                    "updateSheetProperties": {
+                        "properties": {
+                            "sheetId": sheet.id,
+                            "title": new_title,
+                        },
+                        "fields": "title",
+                    }
+                }
+            ]
+        )
+
+    def move_sheet(
+        self,
+        sheet: Sheet,
+        to_position: Optional[int] = None,
+    ) -> Self:
+        target_index = (len(self.sheets) if to_position is None else to_position) - 1
+        if target_index < 0 or target_index >= len(self.sheets):
+            raise IndexError(
+                f"Target position {target_index + 1} is out of range. Spreadsheet has {len(self.sheets)} sheets."
+            )
+
+        return self.update(
+            requests=[
+                {
+                    "updateSheetProperties": {
+                        "properties": {
+                            "sheetId": sheet.id,
+                            "index": target_index,
+                        },
+                        "fields": "index",
+                    }
+                }
+            ]
+        )
+
+    def copy_sheet(
+        self,
+        sheet: Optional[Sheet] = None,
+        new_title: Optional[str] = None,
+        to_position: Optional[int] = None,
+    ) -> Self:
+        if to_position is not None and sheet is None:
+            raise ValueError(
+                "If 'to_position' is specified, 'sheet' must also be specified."
+            )
+
+        sheet_number = len(self.sheets) if sheet is None else sheet.index + 1
+
+        if sheet_number < 1 or sheet_number > len(self.sheets):
+            raise IndexError(
+                f"Sheet number {sheet_number} is out of range. Spreadsheet has {len(self.sheets)} sheets."
+            )
+
+        target_index = len(self.sheets) if to_position is None else (to_position - 1)
+        if target_index < 0 or target_index > len(self.sheets):
+            raise IndexError(
+                f"Target position {target_index + 1} is out of range. Spreadsheet has {len(self.sheets)} sheets."
+            )
+
+        sheet_id = self.sheet(sheet_number=sheet_number).id
+
+        if new_title is not None and new_title in [
+            sheet.title for sheet in self.sheets
+        ]:
+            raise ValueError(f"Sheet title {new_title} is already used")
+
+        new_sheet_id = (
+            self.service.spreadsheets()
+            .sheets()
+            .copyTo(
+                spreadsheetId=self.id,
+                sheetId=sheet_id,
+                body=dict(destinationSpreadsheetId=self.id),
+            )
+            .execute()["sheetId"]
+        )
+
+        requests = []
+        if to_position is not None:
+            requests.append(
+                {
+                    "updateSheetProperties": {
+                        "properties": {
+                            "sheetId": new_sheet_id,
+                            "index": target_index,
+                        },
+                        "fields": "index",
+                    }
+                }
+            )
+
+        if new_title is not None:
+            requests.append(
+                {
+                    "updateSheetProperties": {
+                        "properties": {
+                            "sheetId": new_sheet_id,
+                            "title": new_title,
+                        },
+                        "fields": "title",
+                    }
+                }
+            )
+
+        return self.update(requests=requests)
+
+    def delete_sheet(
+        self,
+        sheet: Sheet,
+    ) -> Self:
+        requests = [
+            {
+                "deleteSheet": {
+                    "sheetId": sheet.id,
+                }
+            }
+        ]
+
+        return self.update(requests=requests)
+
+    def insert_sheet(
+        self,
+        new_title: Optional[str] = None,
+        to_position: Optional[int] = None,
+    ) -> Self:
+        target_index = len(self.sheets) if to_position is None else (to_position - 1)
+        if target_index < 0 or target_index > len(self.sheets):
+            raise IndexError(
+                f"Target position {target_index + 1} is out of range. Spreadsheet has {len(self.sheets)} sheets."
+            )
+
+        if new_title is not None and new_title in [
+            sheet.title for sheet in self.sheets
+        ]:
+            raise ValueError(f"Sheet title {new_title} is already used")
+
+        sheet_properties = {}
+        if to_position is not None:
+            sheet_properties["index"] = target_index
+
+        if new_title is not None:
+            sheet_properties["title"] = new_title
+
+        return self.update(
+            requests=[
+                {
+                    "addSheet": {
+                        "properties": sheet_properties,
+                    }
+                }
+            ]
+        )
+
+    def add_sheet_from_dataframe(
+        self,
+        df: DataFrame,
+        new_title: Optional[str] = None,
+        to_position: Optional[int] = None,
+        as_user=False,
+        **kwargs,
+    ) -> Self:
+        self.insert_sheet(
+            new_title=new_title,
+            to_position=to_position,
+        )
+
+        sheet = self.sheet(
+            sheet_number=len(self.sheets) if to_position is None else to_position
+        ).insert_df(
+            range=None,
+            df=df,
+            as_user=as_user,
+            **kwargs,
+        )
+
+        self.internal = sheet.parent.internal
+
+        return self

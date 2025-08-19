@@ -540,3 +540,15 @@ def setup_dataframes() -> None:
 #         use_mathjax=True,
 #         chrome_path=None,
 #     )
+
+
+def column_to_excel(
+    column: int,
+) -> str:
+    result = []
+
+    while column > 0:
+        column, rem = divmod(column - 1, 26)
+        result.append(chr(65 + rem))
+
+    return "".join(reversed(result))
