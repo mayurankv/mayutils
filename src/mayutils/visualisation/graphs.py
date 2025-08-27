@@ -517,6 +517,15 @@ pio.templates["save"] = go.layout.Template(
         }
     }
 )
+pio.templates["business_compliant"] = go.layout.Template(
+    {
+        "layout": {
+            "font": {
+                "family": '"Mona Sans", "CMU Serif", "Monaspace Neon", "Open Sans", verdana, arial, sans-serif',
+            },
+        }
+    }
+)
 pio.templates.default = "base"
 pio.renderers.default = "vscode"
 
@@ -1661,10 +1670,13 @@ class Plot(go.Figure):
         image_formats: list[str] = ["png"],  # ["png", "jpeg", "pdf"]
         scale: Optional[int] = 5,
         save: bool = True,
-        template: str = "base+plotly_white+save",
+        template: Optional[str] = None,
         *args,
         **kwargs,
     ) -> Path:
+        if template is None:
+            template = f"{pio.templates.default}+plotly_white+save"
+
         if save:
             for image_format in image_formats:
                 self.copy().update_layout(
