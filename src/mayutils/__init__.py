@@ -1,4 +1,5 @@
 import warnings
+from importlib import metadata
 from mayutils.environment.logging import Logger
 from mayutils.objects.dataframes import (
     setup_dataframes,
@@ -22,4 +23,4 @@ def setup() -> None:
 
 setup()
 
-__version__ = "1.0.89"
+__version__ = metadata.version(distribution_name="mayutils")
