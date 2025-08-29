@@ -7,11 +7,10 @@ from shlex import quote as escape
 from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
 from mayutils.visualisation.notebook import (
-    is_interactive,
+    not_nbconvert,
     write_markdown,
 )
 from mayutils.export import OUTPUT_FOLDER
-from mayutils.core.constants import DISPLAY_TYPE_ENV_VAR
 
 WARNING = "Not an ipython notebook"
 
@@ -30,7 +29,7 @@ SLIDES_FOLDER = OUTPUT_FOLDER / "Slides"
 
 
 def is_slides() -> bool:
-    return os.getenv(key=DISPLAY_TYPE_ENV_VAR, default=None) == "slides"
+    return os.getenv(key="_NBCONVERT_OUTPUT_FORMAT", default=None) == "slides"
 
 
 def subtitle_text(
@@ -58,7 +57,7 @@ def export_slides(
     serve: bool = False,
     light: bool = False,
 ) -> Path | None:
-    if not is_interactive():
+    if not not_nbconvert():
         return None
 
     today = date.today().strftime(
@@ -87,7 +86,7 @@ def export_slides(
             total=None,
         )
         call(
-            args=f"{DISPLAY_TYPE_ENV_VAR}=slides jupyter nbconvert {escape(filepath)} --output {escape(str(output_filepath))} --execute {'' if theme is None else ('--template=' + theme[0])} --to slides --no-input --no-prompt{'' if not serve else ' --post serve'} --SlidesExporter.reveal_scroll=True --SlidesExporter.reveal_number=c/t --SlidesExporter.reveal_theme={'simple' if light else 'night'} {'' if theme is None else ('--TemplateExporter.extra_template_basedirs=' + theme[1])}",
+            args=f"_NBCONVERT_OUTPUT_FORMAT=slides jupyter nbconvert {escape(filepath)} --output {escape(str(output_filepath))} --execute {'' if theme is None else ('--template=' + theme[0])} --to slides --no-input --no-prompt{'' if not serve else ' --post serve'} --SlidesExporter.reveal_scroll=True --SlidesExporter.reveal_number=c/t --SlidesExporter.reveal_theme={'simple' if light else 'night'} {'' if theme is None else ('--TemplateExporter.extra_template_basedirs=' + theme[1])}",
             shell=True,
         )
 

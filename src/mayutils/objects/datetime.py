@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Literal
 from dateutil.relativedelta import relativedelta
 
-from mayutils.core.types import Interval
+type Interval = Literal["second", "minute", "hour", "day", "month", "year"]
 
 
 @dataclass(frozen=True)

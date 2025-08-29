@@ -9,6 +9,52 @@ from mayutils.objects.classes import (
 
 reverse_colourmap: dict[str, str] = {value: key for key, value in colormap.items()}  # type: ignore
 
+BASE_COLOURSCALE = [
+    "#EF553B",  # Red
+    "#FF6692",  # Reddish-pink
+    "#FF97FF",  # Pink
+    "#FF85FF",  # Bright pink
+    "#FFCCFF",  # Light pink
+    "#FFA15A",  # Orange
+    "#FFBD8E",  # Peach
+    "#FECB52",  # Yellow-orange
+    "#FFE989",  # Yellow
+    "#B6E880",  # Yellow-green
+    "#3BDB5F",  # Green
+    "#00cc96",  # Teal
+    "#73DBB6",  # Mint
+    "#30D5DB",  # Light cyan
+    "#19d3f3",  # Cyan
+    "#636efa",  # Blue
+    "#9299FD",  # Blue-violet
+    "#ab63fa",  # Violet
+    "#C592FD",  # Lavender
+]
+CONTINUOUS_COLORSCALE = [
+    [0.0, "#0d0887"],
+    [0.1111111111111111, "#46039f"],
+    [0.2222222222222222, "#7201a8"],
+    [0.3333333333333333, "#9c179e"],
+    [0.4444444444444444, "#bd3786"],
+    [0.5555555555555556, "#d8576b"],
+    [0.6666666666666666, "#ed7953"],
+    [0.7777777777777778, "#fb9f3a"],
+    [0.8888888888888888, "#fdca26"],
+    [1.0, "#f0f921"],
+]
+DIVERGENT_COLOURSCALE = [
+    [0, "#8e0152"],
+    [0.1, "#c51b7d"],
+    [0.2, "#de77ae"],
+    [0.3, "#f1b6da"],
+    [0.4, "#fde0ef"],
+    [0.5, "#f7f7f7"],
+    [0.6, "#e6f5d0"],
+    [0.7, "#b8e186"],
+    [0.8, "#7fbc41"],
+    [0.9, "#4d9221"],
+    [1, "#276419"],
+]
 
 @dataclass
 class Colour:
@@ -260,3 +306,6 @@ def hex_to_rgba(
         return f"rgba({values[0]}, {values[1]}, {values[2]}, {alpha})"
     else:
         raise ValueError("Invalid hex colour format. Use #RRGGBB or #RRGGBBAA")
+
+TRANSPARENT = Colour.parse(colour="rgba(0,0,0,0)")
+SPECTRUM = [Colour.parse(colour=colour) for colour in BASE_COLOURSCALE]

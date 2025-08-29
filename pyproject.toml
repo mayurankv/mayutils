@@ -68,7 +68,6 @@ dev = [
 [project.scripts]
 clear_cache = "mayutils.scripts.clear_cache:app"
 generate_encryption_key = "mayutils.environment.oauth:generate_fernet_key"
-bump = "mayutils.scripts.versioning:bump"
 
 [tool.uv]
 prerelease = "if-necessary-or-explicit"

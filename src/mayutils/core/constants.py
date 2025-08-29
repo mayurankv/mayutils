@@ -1,7 +1,4 @@
 from rich.console import Console
-from typing import get_args
-
-from mayutils.core.types import Operation
 
 
 COLOURS = dict(
@@ -27,7 +24,5 @@ OPACITIES = {
 FONT_SIZES = {}
 
 
-DISPLAY_TYPE_ENV_VAR = "NB_DISPLAY_TYPE"
-OPERATIONS: tuple = get_args(Operation.__value__)
 
 CONSOLE = Console()  # TODO: Rich width for slides should be 72

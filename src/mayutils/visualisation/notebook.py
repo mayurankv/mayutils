@@ -5,7 +5,6 @@ from typing import Optional
 from IPython.display import display
 from IPython.core.display import Markdown, Math
 
-from mayutils.core.constants import DISPLAY_TYPE_ENV_VAR
 from mayutils.visualisation.console import setup_printing
 
 
@@ -36,8 +35,8 @@ def apply_css(
         pass
 
 
-def is_interactive() -> bool:
-    return os.getenv(key=DISPLAY_TYPE_ENV_VAR, default=None) is None
+def not_nbconvert() -> bool:
+    return os.getenv(key="_NBCONVERT_OUTPUT_FORMAT", default=None) is None
 
 
 def export(
