@@ -80,6 +80,7 @@ OPACITIES = {
     "quaternary": 0.3,
 }
 
+
 @dataclass
 class Colour:
     r: float
