@@ -134,13 +134,13 @@ pio.templates["base"] = go.layout.Template(
                     "texttemplate": "%{z}",
                 }
             ],
-            "heatmapgl": [
-                {
-                    "colorbar": {"outlinewidth": 0, "ticks": ""},
-                    "colorscale": CONTINUOUS_COLORSCALE,
-                    "type": "heatmapgl",
-                }
-            ],
+            # "heatmapgl": [
+            #     {
+            #         "colorbar": {"outlinewidth": 0, "ticks": ""},
+            #         "colorscale": CONTINUOUS_COLORSCALE,
+            #         "type": "heatmapgl",
+            #     }
+            # ],
             "histogram": [
                 {
                     "marker": {

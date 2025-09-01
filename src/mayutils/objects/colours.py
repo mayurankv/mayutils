@@ -9,27 +9,44 @@ from mayutils.objects.classes import (
 
 reverse_colourmap: dict[str, str] = {value: key for key, value in colormap.items()}  # type: ignore
 
-BASE_COLOURSCALE = [
-    "#EF553B",  # Red
-    "#FF6692",  # Reddish-pink
-    "#FF97FF",  # Pink
-    "#FF85FF",  # Bright pink
-    "#FFCCFF",  # Light pink
-    "#FFA15A",  # Orange
-    "#FFBD8E",  # Peach
-    "#FECB52",  # Yellow-orange
-    "#FFE989",  # Yellow
-    "#B6E880",  # Yellow-green
-    "#3BDB5F",  # Green
-    "#00cc96",  # Teal
-    "#73DBB6",  # Mint
-    "#30D5DB",  # Light cyan
-    "#19d3f3",  # Cyan
-    "#636efa",  # Blue
-    "#9299FD",  # Blue-violet
-    "#ab63fa",  # Violet
-    "#C592FD",  # Lavender
-]
+
+MAIN_COLOURSCALE = dict(
+    quartz="#FFCCFF",
+    pink="#FF97FF",
+    bubblegum="#FF85FF",
+    cherry="#FF6692",
+    red="#EF553B",
+    copper="#CF4915",
+    coral="#FFA15A",
+    orange="#FF9C12",
+    peach="#FFBD8E",
+    amber="#FECB52",
+    yellow="#FFE989",
+    lime="#B6E880",
+    green="#3BDB5F",
+    teal="#00cc96",
+    mint="#73DBB6",
+    cyan="#30D5DB",
+    sky="#19d3f3",
+    blue="#636efa",
+    periwinkle="#9299FD",
+    purple="#ab63fa",
+    mauve="#C592FD",
+    lavender="#DEBFFF",
+)
+SIMPLE_COLOURS = dict(
+    lightgreen="#73DBB6",
+    darkgreen="#3BDB5F",
+    cyan="#30D5DB",
+    blue="#9299FD",
+    yellow="#FFE989",
+    orange="#FFBD8E",
+    red="#F58B78",
+    purple="#C592FD",
+    lightpink="#FFCCFF",
+    pink="#FF85FF",
+)
+BASE_COLOURSCALE = list(MAIN_COLOURSCALE.values())
 CONTINUOUS_COLORSCALE = [
     [0.0, "#0d0887"],
     [0.1111111111111111, "#46039f"],
@@ -55,6 +72,13 @@ DIVERGENT_COLOURSCALE = [
     [0.9, "#4d9221"],
     [1, "#276419"],
 ]
+
+OPACITIES = {
+    "primary": 1.0,
+    "secondary": 0.5,
+    "tertiary": 0.4,
+    "quaternary": 0.3,
+}
 
 @dataclass
 class Colour:
@@ -128,7 +152,7 @@ class Colour:
 
     def _html_show(
         self,
-        size: int=50,
+        size: int = 50,
     ) -> str:
         return f'<div style="width:{size}px;height:{size}px;background-color:{self.to_str()};"></div>'
 
@@ -307,5 +331,8 @@ def hex_to_rgba(
     else:
         raise ValueError("Invalid hex colour format. Use #RRGGBB or #RRGGBBAA")
 
+
 TRANSPARENT = Colour.parse(colour="rgba(0,0,0,0)")
-SPECTRUM = [Colour.parse(colour=colour) for colour in BASE_COLOURSCALE]
+SPECTRUM = {
+    name: Colour.parse(colour=colour) for name, colour in MAIN_COLOURSCALE.items()
+}

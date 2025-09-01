@@ -14,7 +14,7 @@ from rich.progress import (
 from rich.console import Console
 from rich.table import Table
 
-from mayutils.data.read import CACHE_FOLDER
+from mayutils.data import CACHE_FOLDER
 
 app = typer.Typer()
 console = Console()

@@ -16,6 +16,7 @@ def timing(
 ):
     if func is None:
         raise ValueError("No function provided")
+
     @wraps(wrapped=func)
     def wrapper(
         *args,

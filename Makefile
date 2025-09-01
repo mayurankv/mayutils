@@ -2,31 +2,27 @@ ROOT := $(shell git rev-parse --show-toplevel)
 
 .phony: uncache
 uncache:
-	clear_cache
+	uv run clear_cache
 
 .phony: env
 env:
-	poetry install
+	uv sync
 
 .phony: lint
 lint:
-	poetry run ruff check
-	poetry run ruff format --check
+	uv run ruff check
+	uv run ruff format --check
 
 .phony: fmt
 fmt:
-	poetry run ruff check --fix
-	poetry run ruff format
+	uv run ruff check --fix
+	uv run ruff format
 
 .phony: clean
 clean:
 	find . -type d \( -name "__pycache__" -o -name ".ruff_cache" -o -name ".mypy_cache" -o -name ".pytest_cache" \) -exec rm -rf {} +
 
-.phony: bump
-bump:
-	poetry run bump $$(echo $$BUMP || echo patch)
-
 .phony: publish
 publish:
-	poetry build
-	poetry publish
+	uv build
+	uv publish

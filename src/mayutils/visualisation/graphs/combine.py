@@ -1,6 +1,7 @@
 import pymupdf
 from PIL import Image
 
+
 def combine_figures(
     files: list[str],
     title: str,

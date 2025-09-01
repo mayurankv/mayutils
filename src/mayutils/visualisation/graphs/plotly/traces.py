@@ -1,7 +1,10 @@
 from datetime import datetime
 from typing import Literal, Optional, Self
 
-from mayutils.visualisation.graphs.plotly.utilities import map_categorical_array, melt_dataframe
+from mayutils.visualisation.graphs.plotly.utilities import (
+    map_categorical_array,
+    melt_dataframe,
+)
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -490,6 +493,7 @@ class Bar3d(go.Mesh3d):
             *args,
             **kwargs,
         )
+
 
 def merge_cuboids(
     *cuboids: Cuboid,

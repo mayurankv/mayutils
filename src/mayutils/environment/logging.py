@@ -1,4 +1,5 @@
 import logging
+
 # from logging.handlers import RotatingFileHandler
 # from datetime import datetime
 from pathlib import Path
@@ -76,7 +77,6 @@ class Logger(logging.Logger):
         #             continue
 
         #         setattr(module, name, log(obj))
-
 
     @classmethod
     def clone(

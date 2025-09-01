@@ -687,7 +687,6 @@ class Plot(go.Figure):
         filename: str,
         image_formats: list[str] = ["png"],  # ["png", "jpeg", "pdf"]
         scale: Optional[int] = 5,
-        save: bool = True,
         template: Optional[str] = None,
         *args,
         **kwargs,
@@ -695,19 +694,18 @@ class Plot(go.Figure):
         if template is None:
             template = f"{pio.templates.default}+plotly_white+save"
 
-        if save:
-            for image_format in image_formats:
-                self.copy().update_layout(
-                    paper_bgcolor="rgba(255,255,255,1)",
-                    plot_bgcolor="rgba(255,255,255,1)",
-                    template=template,
-                ).write_image(
-                    file=IMAGES_FOLDER / f"{filename}.{image_format}",
-                    format=image_format,
-                    scale=scale,
-                    *args,
-                    **kwargs,
-                )
+        for image_format in image_formats:
+            self.copy().update_layout(
+                paper_bgcolor="rgba(255,255,255,1)",
+                plot_bgcolor="rgba(255,255,255,1)",
+                template=template,
+            ).write_image(
+                file=IMAGES_FOLDER / f"{filename}.{image_format}",
+                format=image_format,
+                scale=scale,
+                *args,
+                **kwargs,
+            )
 
         return IMAGES_FOLDER / f"{filename}.{image_format}"
 
@@ -1232,10 +1230,11 @@ class Plot(go.Figure):
         save: bool = True,
         show: bool = True,
     ) -> Self:
-        self.save(
-            filename=self._description,
-            save=save,
-        )
+        if save:
+            self.save(
+                filename=self._description,
+            )
+
         self.show(
             show=show,
         )

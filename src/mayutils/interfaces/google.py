@@ -1050,7 +1050,8 @@ class Sheet(object):
 
         return self.update_values(
             range=f"{self.title}!{'A1' if range is None else range}",
-            values=[df_with_index.columns.to_list()] + df_with_index.to_numpy().tolist(),  # type: ignore
+            values=[df_with_index.columns.to_list()]
+            + df_with_index.to_numpy().tolist(),  # type: ignore
             as_user=as_user,
         )
 
