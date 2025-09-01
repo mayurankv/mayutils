@@ -117,7 +117,7 @@ class Logger(logging.Logger):
 
         return cls.clone(logger=logger)
 
-    def log(
+    def report(
         self,
         *msgs: str,
         sep: str = " ",
@@ -176,7 +176,7 @@ def _log(
         *args,
         **kwargs,
     ) -> Any:
-        logger.log(
+        logger.report(
             f"Calling function: {func.__name__}",
             level=level,
             show=show,
@@ -189,7 +189,7 @@ def _log(
                 **kwargs,
             )
             end = time.perf_counter()
-            logger.log(
+            logger.report(
                 f"Function {func.__name__} returned ({end - start:.2f}s): {result}",
                 level=level,
                 show=show,
@@ -198,7 +198,7 @@ def _log(
             return result
         except Exception as exception:
             end = time.perf_counter()
-            logger.log(
+            logger.report(
                 f"Function {func.__name__} raised an exception ({end - start:.2f}s): {exception}",
                 level=logging.ERROR,
                 exc_info=True,
@@ -243,13 +243,13 @@ def log(
         raise ValueError("No target provided")
     if isinstance(target, type):
         return _log_class(
-            cls=target,
+            target,
             *args,
             **kwargs,
         )
     else:
         return _log(
-            func=target,
+            target,
             *args,
             **kwargs,
         )

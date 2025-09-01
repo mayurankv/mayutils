@@ -1,3 +1,6 @@
+from typing import Any
+
+
 def null(
     *args,
     **kwargs,
@@ -9,7 +12,7 @@ def set_inline(
     object,
     property,
     value,
-) -> None:
+) -> Any:
     object.__setitem__(property, value)
 
     return object

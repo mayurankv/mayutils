@@ -18,7 +18,7 @@ class LiveData(object):
         - Data is stored in a pandas DataFrame
     """
 
-    def __init__(
+    def _initialise(
         self,
         query_string: str,
         engine: EngineWrapper,
@@ -60,6 +60,30 @@ class LiveData(object):
             self._get_aggregated_data()
 
         return None
+
+    def __init__(
+        self,
+        query_string: str,
+        engine: EngineWrapper,
+        index_column: str,
+        start_timestamp: datetime,
+        rolling: bool = True,
+        aggregations: dict[str, Callable[[DataFrame], DataFrame]] = {},
+        update_frequency: Optional[timedelta] = None,
+        time_format: str = "%Y-%m-%d",
+        **format_kwargs,
+    ) -> None:
+        return self._initialise(
+            query_string=query_string,
+            engine=engine,
+            index_column=index_column,
+            start_timestamp=start_timestamp,
+            rolling=rolling,
+            aggregations=aggregations,
+            update_frequency=update_frequency,
+            time_format=time_format,
+            **format_kwargs,
+        )
 
     def update(
         self,
@@ -118,7 +142,7 @@ class LiveData(object):
         self,
         start_timestamp: Optional[datetime] = None,
     ) -> Self:
-        self.__init__(
+        self._initialise(
             query_string=self.query_string,
             engine=self.engine,
             index_column=self.index_column,

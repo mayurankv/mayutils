@@ -138,7 +138,12 @@ class Colour:
         rgb = getrgb(colour)
         opacity = rgb[3] if len(rgb) == 4 else opacity
 
-        return cls(*rgb[:3], a=opacity)
+        return cls(
+            r=rgb[0],
+            g=rgb[1],
+            b=rgb[2],
+            a=opacity,
+        )
 
     def set_opacity(
         self,

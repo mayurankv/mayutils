@@ -1,6 +1,6 @@
 [project]
 name = "mayutils"
-version = "1.2.0"
+version = "1.2.1"
 description = "Utilities for Python from Mayuran Visakan"
 authors = [
     { name = "Mayuran Visakan", email = "mayuran.k.v@gmail.com" }
@@ -55,6 +55,7 @@ dependencies = [
     "sqlalchemy>=2.0.43",
     "streamlit>=1.49.0",
     "typer>=0.16.1",
+    "types-six>=1.17.0.20250515",
     "unicodeit>=0.7.5",
 ]
 
@@ -72,6 +73,10 @@ generate_encryption_key = "mayutils.environment.oauth:generate_fernet_key"
 
 [tool.uv]
 prerelease = "if-necessary-or-explicit"
+
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
 
 [build-system]
 requires = ["uv_build>=0.8.14,<0.9.0"]

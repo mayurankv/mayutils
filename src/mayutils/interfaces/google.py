@@ -677,6 +677,11 @@ class Slides(object):
         if y_shift is None:
             y_shift = self.height * 0.05
 
+        theme_color = ""
+        parsed_colour = Colour(0, 0, 0)
+        theme_background_color = ""
+        parsed_background_colour = Colour(0, 0, 0)
+
         if colour is not None and not isinstance(colour, Colour):
             if colour.startswith("theme-"):
                 theme_color = colour[len("theme-") :]
@@ -695,7 +700,7 @@ class Slides(object):
                 f"Slide number {slide_number} is out of range. Presentation has {len(self.slides)} slides."
             )
 
-        requests = [
+        requests: list[dict[str, Any]] = [
             {
                 "createShape": {
                     "objectId": element_id,
@@ -747,20 +752,22 @@ class Slides(object):
                                 "foregroundColor": (
                                     {}
                                     if colour is None
-                                    else {
-                                        "opaqueColor": {
-                                            "rgbColor": {
-                                                "red": parsed_colour.r / 255,
-                                                "green": parsed_colour.g / 255,
-                                                "blue": parsed_colour.b / 255,
+                                    else (
+                                        {
+                                            "opaqueColor": {
+                                                "rgbColor": {
+                                                    "red": parsed_colour.r / 255,
+                                                    "green": parsed_colour.g / 255,
+                                                    "blue": parsed_colour.b / 255,
+                                                }
                                             }
                                         }
-                                    }
-                                    if not (
-                                        isinstance(colour, str)
-                                        and colour.startswith("theme-")
+                                        if not (
+                                            isinstance(colour, str)
+                                            and colour.startswith("theme-")
+                                        )
+                                        else {"themeColor": theme_color}
                                     )
-                                    else {"themeColor": theme_color}
                                 )
                             }
                             if colour
@@ -1510,7 +1517,7 @@ class Sheets(object):
         ]:
             raise ValueError(f"Sheet title {new_title} is already used")
 
-        sheet_properties = {}
+        sheet_properties: dict[str, str | int] = {}
         if to_position is not None:
             sheet_properties["index"] = target_index
 

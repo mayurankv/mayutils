@@ -1,7 +1,7 @@
 import os
 from math import isqrt, ceil
 from pathlib import Path
-from typing import Literal, Optional, Self, final
+from typing import Any, Literal, Optional, Self, final
 from dataclasses import dataclass, field
 from mayutils.export.images import IMAGES_FOLDER
 import numpy as np
@@ -14,7 +14,7 @@ from plotly._subplots import _build_subplot_title_annotations
 
 from mayutils.objects.colours import TRANSPARENT, Colour
 
-from mayutils.objects.functions import null, set_inline
+from mayutils.objects.functions import set_inline
 
 from mayutils.visualisation.graphs.plotly.templates import (
     non_primary_axis_dict,
@@ -217,7 +217,6 @@ class SubPlotConfig:
         cls,
         plots: tuple[Optional[PlotConfig], ...],
         cols: Optional[int],
-        *args,
         **kwargs,
     ) -> "SubPlotConfig":
         if cols is None:
@@ -232,7 +231,6 @@ class SubPlotConfig:
                 tuple(extended_plots[idx : idx + cols])
                 for idx in range(0, len(extended_plots), cols)
             ),
-            *args,
             **kwargs,
         )
 
@@ -588,7 +586,7 @@ class Plot(go.Figure):
         *args,
         **kwargs,
     ) -> Self:
-        self.data = []
+        self.data: list[Trace] = []
 
         return self
 
@@ -707,7 +705,11 @@ class Plot(go.Figure):
                 **kwargs,
             )
 
-        return IMAGES_FOLDER / f"{filename}.{image_format}"
+        return (
+            IMAGES_FOLDER / f"{filename}.{image_formats[0]}"
+            if len(image_formats) > 0
+            else IMAGES_FOLDER
+        )
 
     def modifications(
         self,
@@ -729,7 +731,7 @@ class Plot(go.Figure):
                     opacity = 0.1 if trace.meta == "ecdf" else 0.4  # type: ignore
                     trace.fillcolor = colour.to_str(opacity=opacity)  # type: ignore
 
-        bound_groups = {}
+        bound_groups: dict[str, tuple[tuple[Optional[str], int], list[Trace]]] = {}
         for idx, trace in enumerate(self.data):
             if (
                 hasattr(trace, "legendgroup")
@@ -737,7 +739,7 @@ class Plot(go.Figure):
                 and trace.legendgroup.startswith("bounds")  # type: ignore
             ):
                 if trace.legendgroup not in bound_groups:  # type: ignore
-                    bound_groups[trace.legendgroup] = [None, []]  # type: ignore
+                    bound_groups[trace.legendgroup] = ((None, 0), [])  # type: ignore
 
                 if trace.fill == "toself":  # type: ignore
                     bound_groups[trace.legendgroup][1].append(trace)  # type: ignore
@@ -750,7 +752,7 @@ class Plot(go.Figure):
                     colour=shuffled_colourscale[idx % len(shuffled_colourscale)]
                 )
 
-                opacity = Colour.parse(colour=bound_traces[0].fillcolor).a
+                opacity = Colour.parse(colour=bound_traces[0].fillcolor).a  # type: ignore
                 for bound_trace in bound_traces:
                     bound_trace.fillcolor = colour.to_str(opacity=opacity)  # type: ignore
 
@@ -791,8 +793,15 @@ class Plot(go.Figure):
                         xaxis=self.data[idx].xaxis,  # type: ignore
                         yaxis=self.data[idx].yaxis,  # type: ignore
                         legendgroup=self.data[idx].legendgroup  # type: ignore
-                        or null(set_inline(self.data[idx], "legendgroup", idx))
-                        or idx,
+                        or getattr(
+                            set_inline(
+                                self.data[idx],
+                                "legendgroup",
+                                idx,
+                            ),
+                            "legendgroup",
+                            idx,
+                        ),
                         showlegend=False,
                         label_name=False,
                     )
@@ -837,8 +846,15 @@ class Plot(go.Figure):
                             else f"trace {idx} Rug"
                         ),
                         legendgroup=self.data[idx].legendgroup  # type: ignore
-                        or null(set_inline(self.data[idx], "legendgroup", idx))
-                        or idx,
+                        or getattr(
+                            set_inline(
+                                self.data[idx],
+                                "legendgroup",
+                                idx,
+                            ),
+                            "legendgroup",
+                            idx,
+                        ),
                         showlegend=False,
                         marker=dict(
                             color=self.data[idx].marker.line.color,  # type: ignore
@@ -862,8 +878,15 @@ class Plot(go.Figure):
                             else f"trace {idx} Rug"
                         ),
                         legendgroup=self.data[idx].legendgroup  # type: ignore
-                        or null(set_inline(self.data[idx], "legendgroup", idx))
-                        or idx,
+                        or getattr(
+                            set_inline(
+                                self.data[idx],
+                                "legendgroup",
+                                idx,
+                            ),
+                            "legendgroup",
+                            idx,
+                        ),
                         showlegend=False,
                         line=dict(
                             color=TRANSPARENT.to_str(),
@@ -898,8 +921,15 @@ class Plot(go.Figure):
                             else f"trace {idx} Rug"
                         ),
                         legendgroup=self.data[idx].legendgroup  # type: ignore
-                        or null(set_inline(self.data[idx], "legendgroup", idx))
-                        or idx,
+                        or getattr(
+                            set_inline(
+                                self.data[idx],
+                                "legendgroup",
+                                idx,
+                            ),
+                            "legendgroup",
+                            idx,
+                        ),
                         showlegend=False,
                         line=dict(
                             color=self.data[idx].marker.line.color,  # type: ignore
@@ -933,8 +963,15 @@ class Plot(go.Figure):
                             else f"trace {idx} Rug"
                         ),
                         legendgroup=self.data[idx].legendgroup  # type: ignore
-                        or null(set_inline(self.data[idx], "legendgroup", idx))
-                        or idx,
+                        or getattr(
+                            set_inline(
+                                self.data[idx],
+                                "legendgroup",
+                                idx,
+                            ),
+                            "legendgroup",
+                            idx,
+                        ),
                         showlegend=False,
                         line=dict(
                             color=self.data[idx].marker.line.color,  # type: ignore
@@ -968,8 +1005,15 @@ class Plot(go.Figure):
                             else f"trace {idx} Rug"
                         ),
                         legendgroup=self.data[idx].legendgroup  # type: ignore
-                        or null(set_inline(self.data[idx], "legendgroup", idx))
-                        or idx,
+                        or getattr(
+                            set_inline(
+                                self.data[idx],
+                                "legendgroup",
+                                idx,
+                            ),
+                            "legendgroup",
+                            idx,
+                        ),
                         showlegend=False,
                         line=dict(
                             color=self.data[idx].marker.line.color,  # type: ignore
@@ -1096,8 +1140,15 @@ class Plot(go.Figure):
                         xaxis=self.data[idx].xaxis,  # type: ignore
                         yaxis=self.data[idx].yaxis,  # type: ignore
                         legendgroup=self.data[idx].legendgroup  # type: ignore
-                        or null(set_inline(self.data[idx], "legendgroup", idx))
-                        or idx,
+                        or getattr(
+                            set_inline(
+                                self.data[idx],
+                                "legendgroup",
+                                idx,
+                            ),
+                            "legendgroup",
+                            idx,
+                        ),
                         showlegend=False,
                         label_name=False,
                     )
@@ -1107,7 +1158,7 @@ class Plot(go.Figure):
                 "layout": dict(),
             },
         }
-        buttons = {
+        buttons: dict[str, list[dict[str, Any]]] = {
             "scatter": [
                 dict(
                     label="Toggle Density",
@@ -1482,6 +1533,8 @@ class SubPlot(Plot):
                 if is_scene:
                     scene_count += 1
                     scene_str = str(scene_count) if scene_count != 1 else ""
+                else:
+                    scene_str = ""
 
                 xaxis_num = (
                     col_idx + row_idx * len(subplot_config.plots[0]) + 1 - scene_count
@@ -1588,12 +1641,17 @@ class SubPlot(Plot):
 
         self.modifications()
 
-    def add_rug(
-        self,
-        *args,
-        **kwargs,
-    ) -> None:
-        pass
+    # def add_rug(
+    #     self,
+    #     rug_type: Literal[
+    #         "scatter", "violin", "box", "strip", "historgram", "ecdf"
+    #     ] = "scatter",
+    #     rug_height: Optional[float] = None,
+    #     *args,
+    #     **kwargs,
+    # ) -> Self:
+    #     raise NotImplementedError("Rug not implemented for SubPlot")
+    #     return self
 
 
 def pop_axis_config_title(
@@ -1641,7 +1699,7 @@ def get_domains(
 def sort_traces_by_axes(
     traces: list[Trace],
 ) -> dict:
-    traces_axes = {}
+    traces_axes: dict[tuple[str, str], list[Trace]] = {}
     for trace in traces:
         if (trace.xaxis, trace.yaxis) in traces_axes:  # type: ignore
             traces_axes[(trace.xaxis, trace.yaxis)].append(trace)  # type: ignore

@@ -145,7 +145,7 @@ def bump() -> None:
         new_version=new_version,
     )
 
-    logger.log(f"Bumped version to {new_version}")
+    logger.report(f"Bumped version to {new_version}")
 
 
 if __name__ == "__main__":

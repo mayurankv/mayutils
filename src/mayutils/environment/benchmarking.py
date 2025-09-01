@@ -33,7 +33,7 @@ def timing(
 
         length = end - start
 
-        logger.log(
+        logger.report(
             f"{func.__name__} took {length:.4f} seconds",
             show=show,
         )

@@ -28,7 +28,7 @@ def flexwrap(
             def true_deco(
                 func: T,
             ) -> T:
-                decorated_func = update_wrapper(
+                decorated_func: T = update_wrapper(  # type: ignore[assignment]
                     wrapped=func,
                     wrapper=deco(
                         func,

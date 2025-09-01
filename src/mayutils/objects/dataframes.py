@@ -243,7 +243,6 @@ class DataframeUtilsAccessor(object):
     def save(
         self,
         path: Path | str,
-        *args,
         **kwargs,
     ) -> Path:
         path = Path(path)
@@ -251,22 +250,25 @@ class DataframeUtilsAccessor(object):
         if path.suffix in [".png", ".jpeg", ".jpg", ".pdf", ".svg", ".eps"]:
             return self.styler.save(
                 path=path,
-                *args,
                 **kwargs,
             )
+
         elif path.suffix == ".parquet":
             self.df.to_parquet(
                 path=path,
                 index=True,
             )
+
         elif path.suffix == ".feather":
             raise NotImplementedError("Feather not implemented")
             self.df.to_feather(path)
+
         elif path.suffix == ".csv":
             self.df.to_csv(
                 path_or_buf=path,
                 index=True,
             )
+
         elif path.suffix == ".xlsx":
             with ExcelWriter(path=path) as excel_writer:
                 self.df.to_excel(
@@ -379,21 +381,22 @@ class DataframeUtilsAccessor(object):
                 return to_datetime(series, format=date_format).dt.date
             elif datetime_type == "time":
                 return to_datetime(series, format=time_format).dt.time
-            else:
-                raise ValueError(f"Unknown datetime_type: {datetime_type}")
+
+            raise ValueError(f"Unknown datetime_type: {datetime_type}")
 
         for col, dtype in mapper.items():
             try:
                 self.df[col] = (
                     convert_datetime(
-                        series=self.df[col],
+                        series=self.df.loc[:, col],
                         datetime_type=dtype,  # type: ignore
                     )
                     if dtype in ["datetime", "date", "time"]
-                    else to_numeric(self.df[col])
+                    else to_numeric(self.df.loc[:, col])
                     if dtype == "numeric"
-                    else self.df[col].astype(dtype)  # type: ignore
+                    else self.df.loc[:, col].astype(dtype)  # type: ignore
                 )
+
             except (
                 KeyError,
                 ValueError,

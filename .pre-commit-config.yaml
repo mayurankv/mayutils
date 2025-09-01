@@ -5,6 +5,13 @@ repos:
     - id: check-yaml
     - id: end-of-file-fixer
     - id: trailing-whitespace
+# - repo: local
+#   hooks:
+#     - id: sort_pyproject
+#       name: sort_pyproject
+#       entry: toml-sort -i --sort-table-keys --sort-inline-tables
+#       language: python
+#       files: ^pyproject\.toml$
 - repo: https://github.com/astral-sh/ruff-pre-commit
   # Ruff version.
   rev: v0.12.11
@@ -14,3 +21,25 @@ repos:
       args: [ --fix ]
     # Run the formatter.
     - id: ruff-format
+- repo: https://github.com/RobertCraigie/pyright-python
+  rev: v1.1.404
+  hooks:
+    - id: pyright
+      additional_dependencies:
+        [
+          beartype,
+          einops,
+          jax,
+          jaxtyping,
+          optax,
+          pytest,
+          typing_extensions,
+          wadler_lindig,
+        ]
+-   repo: https://github.com/pre-commit/mirrors-mypy
+    rev: 'v1.17.1'
+    hooks:
+    -   id: mypy
+        additional_dependencies: [
+          'types-six'
+        ]

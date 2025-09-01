@@ -259,7 +259,7 @@ class Icicle(go.Icicle):
             if path in node_values:
                 return node_values[path]
 
-            total = 0
+            total = 0.0
             for key, value in d.items():
                 new_path = f"{path}/{key}" if path else key
                 if isinstance(value, dict):
@@ -470,7 +470,6 @@ class Bar3d(go.Mesh3d):
         value_weights: bool = False,
         x_mapping: Optional[ArrayLike] = None,
         y_mapping: Optional[ArrayLike] = None,
-        *args,
         **kwargs,
     ) -> Self:
         if not df.columns.is_unique:
@@ -490,7 +489,6 @@ class Bar3d(go.Mesh3d):
             y=y,
             z=z,
             w=z if value_weights else kwargs.pop("w", None),
-            *args,
             **kwargs,
         )
 

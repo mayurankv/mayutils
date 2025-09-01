@@ -268,7 +268,7 @@ class DateTime(BaseDateTime):
         )
 
     @classmethod
-    def naive(
+    def as_naive(
         cls,
         year: int,
         month: int,
@@ -440,8 +440,8 @@ class Intervals(object):
     def sort(
         self,
     ) -> Self:
-        self.intervals = sorted(
-            self.intervals, key=lambda interval: (interval.start, interval.end)
+        self.intervals = tuple(
+            sorted(self.intervals, key=lambda interval: (interval.start, interval.end))
         )
 
         return self
