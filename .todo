@@ -6,12 +6,15 @@ Tooling: @critical
 			- https://github.com/MartinPacker/md2pptx/blob/master/docs/user-guide.md
 			- https://python-pptx.readthedocs.io/en/latest/search.html?q=bullet&check_keywords=yes&area=default
 			- https://python-pptx.readthedocs.io/en/latest/dev/analysis/shp-movie.html?highlight=animation
+
 	Tables:
 		☐ Add `itables` support
 		☐ https://mwouts.github.io/itables/quick_start.html
 		☐ https://mwouts.github.io/itables/formatting.html
+
 	Numbers:
 		☐ To prettify, add SI units and decimal places
+
 	Plots: @critical
 		☐ `trace_info` @property to infer the colours (and trace type and other info) by traces for easy access to guessing colours (and refactor code to use this) @critical
 		☐ `Subplot.from_plots` @classmethod using double nested array notation for rows and columns @critical
@@ -72,6 +75,7 @@ Tooling: @critical
 			☐ https://plotly.com/python/scatter-plots-on-maps/
 			☐ https://plotly.com/python/density-heatmaps/
 			☐ https://plotly.com/python/choropleth-maps/
+
 
 	Logging: @critical
 		☐ Make classmethod or staticmethod to change logging default level
