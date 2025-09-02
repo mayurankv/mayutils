@@ -16,6 +16,7 @@ def setup(
     try:
         from mayutils.objects.dataframes import setup_dataframes
         from mayutils.visualisation.notebook import setup_notebooks
+        import mayutils.visualisation.graphs.plotly.templates  # noqa: F401
 
         setup_notebooks()
         setup_dataframes()
