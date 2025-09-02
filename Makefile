@@ -1,4 +1,5 @@
 ROOT := $(shell git rev-parse --show-toplevel)
+VERSION := $(shell uv version | awk '{print $$2}')
 
 .phony: uncache
 uncache:
@@ -21,6 +22,15 @@ fmt:
 .phony: clean
 clean:
 	find . -type d \( -name "__pycache__" -o -name ".ruff_cache" -o -name ".mypy_cache" -o -name ".pytest_cache" \) -exec rm -rf {} +
+
+.phony: release
+release:
+	@echo "Releasing version $(VERSION)"
+	git add pyproject.toml uv.lock || true
+	-git commit -m "Release v$(VERSION)" || true
+	git tag "v$(VERSION)"
+	git push origin main --tags
+	gh release create "v$(VERSION)" --title "v$(VERSION)" --notes "Release v$(VERSION)"
 
 .phony: publish
 publish:
