@@ -390,13 +390,15 @@ class Interval(BaseInterval):
     def start(
         self,
     ) -> DateTime:
-        return self._start if not (self._invert and self._absolute) else self._end
+        return DateTime.from_base(super().start)
+        # return self._start if not (self._invert and self._absolute) else self._end
 
     @property
     def end(
         self,
     ) -> DateTime:
-        return self._end if not (self._invert and self._absolute) else self._start
+        return DateTime.from_base(super().end)
+        # return self._end if not (self._invert and self._absolute) else self._start
 
     @classmethod
     def from_base(
