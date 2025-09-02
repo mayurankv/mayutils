@@ -49,6 +49,12 @@ class Presentation:
             len(self.internal.slide_layouts) - 1
         ]
 
+    # TODO: Implement display/__repr__/_repr_mimebundle_
+    # def __repr__(
+    #     self,
+    #     text: str,
+    # ) -> Self:
+
     @property
     def layouts(
         self,
@@ -88,6 +94,12 @@ class Presentation:
         value: Length,
     ) -> None:
         self.internal.slide_width = value
+
+    # TODO: Implement
+    # @property
+    # def title(
+    #     self,
+    # ) -> str:
 
     @property
     def slides(
@@ -305,6 +317,24 @@ class Presentation:
             textbox.text_frame.paragraphs[0].hyperlink.address = URI(link)
 
         return self
+
+    # TODO: Implement
+    # def insert_markdown(
+    #     self,
+    #     text: str,
+    # ) -> Self:
+
+    # TODO: Implement
+    # def insert_image(
+    #     self,
+    #     image_path: Path | str,
+    # ) -> Self:
+
+    # TODO: Implement
+    # def insert_table(
+    #     self,
+    #     table: DataFrame | Styler,
+    # ) -> Self:
 
     def save(
         self,
