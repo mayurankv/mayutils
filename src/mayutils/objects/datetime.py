@@ -1,3 +1,4 @@
+from __future__ import annotations
 from contextlib import _GeneratorContextManager
 from sqlite3 import register_adapter
 from typing import Any, Optional, Self, Literal
@@ -94,6 +95,125 @@ class Timezone(BaseTimezone):
 
 
 UTC = Timezone(key="UTC")
+
+
+class Date(BaseDate):
+    @classmethod
+    def from_base(
+        cls,
+        base: BaseDate,
+    ) -> Self:
+        return cls(
+            year=base.year,
+            month=base.month,
+            day=base.day,
+        )
+
+    @classmethod
+    def from_datetime(
+        cls,
+        date: _datetime.date,
+    ) -> Self:
+        return cls(
+            year=date.year,
+            month=date.month,
+            day=date.day,
+        )
+
+    @classmethod
+    def parse(
+        cls,
+        input,
+    ) -> Self:
+        output = parse(input=input)
+
+        if not isinstance(output, cls):
+            raise ValueError("Could not parse to date")
+
+        return output
+
+    def to_datetime(
+        self,
+        tz: str | Timezone = UTC,
+    ) -> DateTime:
+        return DateTime.create(
+            year=self.year,
+            month=self.month,
+            day=self.day,
+            hour=0,
+            minute=0,
+            second=0,
+            microsecond=0,
+            tz=tz,
+        )
+
+    def to_numpy(
+        self,
+    ) -> np.datetime64:
+        return np.datetime64(self)
+
+
+class Time(BaseTime):
+    @classmethod
+    def from_base(
+        cls,
+        base: BaseTime,
+    ) -> Self:
+        return cls(
+            hour=base.hour,
+            minute=base.minute,
+            second=base.second,
+            microsecond=base.microsecond,
+            tzinfo=base.tzinfo,
+        )
+
+    @classmethod
+    def from_datetime(
+        cls,
+        time: _datetime.time,
+        tz: str | Timezone | FixedTimezone | _datetime.tzinfo | None = UTC,
+    ) -> Self:
+        return cls.instance(
+            t=time,
+            tz=tz,
+        )
+
+    @classmethod
+    def parse(
+        cls,
+        input,
+    ) -> Self:
+        output = parse(input=input)
+
+        if not isinstance(output, cls):
+            raise ValueError("Could not parse to time")
+
+        return output
+
+    def today(
+        self,
+    ) -> DateTime:
+        return DateTime.now(tz=self.tzinfo).at(
+            hour=self.hour,
+            minute=self.minute,
+            second=self.second,
+            microsecond=self.microsecond,
+        )
+
+    def on(
+        self,
+        date: Date,
+    ) -> DateTime:
+        return DateTime(
+            year=date.year,
+            month=date.month,
+            day=date.day,
+            hour=self.hour,
+            minute=self.minute,
+            second=self.second,
+            microsecond=self.microsecond,
+            tzinfo=self.tzinfo,
+        )
 
 
 class DateTime(BaseDateTime):
@@ -277,129 +397,25 @@ class DateTime(BaseDateTime):
             microsecond=self.microsecond,
         )
 
-    def numpy(
-        self,
-    ) -> np.datetime64:
-        return np.datetime64(self)
-
-
-class Date(BaseDate):
-    @classmethod
-    def from_base(
-        cls,
-        base: BaseDate,
-    ) -> Self:
-        return cls(
-            year=base.year,
-            month=base.month,
-            day=base.day,
-        )
-
-    @classmethod
-    def from_datetime(
-        cls,
-        date: _datetime.date,
-    ) -> Self:
-        return cls(
-            year=date.year,
-            month=date.month,
-            day=date.day,
-        )
-
-    @classmethod
-    def parse(
-        cls,
-        input,
-    ) -> Self:
-        output = parse(input=input)
-
-        if not isinstance(output, cls):
-            raise ValueError("Could not parse to date")
-
-        return output
-
-    def to_datetime(
-        self,
-        tz: str | Timezone = UTC,
-    ) -> DateTime:
-        return DateTime.create(
+    def date(self) -> Date:
+        return Date(
             year=self.year,
             month=self.month,
             day=self.day,
-            hour=0,
-            minute=0,
-            second=0,
-            microsecond=0,
-            tz=tz,
         )
 
-    def numpy(
+    def time(self) -> Time:
+        return Time(
+            hour=self.hour,
+            minute=self.minute,
+            second=self.second,
+            microsecond=self.microsecond,
+        )
+
+    def to_numpy(
         self,
     ) -> np.datetime64:
         return np.datetime64(self)
-
-
-class Time(BaseTime):
-    @classmethod
-    def from_base(
-        cls,
-        base: BaseTime,
-    ) -> Self:
-        return cls(
-            hour=base.hour,
-            minute=base.minute,
-            second=base.second,
-            microsecond=base.microsecond,
-            tzinfo=base.tzinfo,
-        )
-
-    @classmethod
-    def from_datetime(
-        cls,
-        time: _datetime.time,
-        tz: str | Timezone | FixedTimezone | _datetime.tzinfo | None = UTC,
-    ) -> Self:
-        return cls.instance(
-            t=time,
-            tz=tz,
-        )
-
-    @classmethod
-    def parse(
-        cls,
-        input,
-    ) -> Self:
-        output = parse(input=input)
-
-        if not isinstance(output, cls):
-            raise ValueError("Could not parse to time")
-
-        return output
-
-    def today(
-        self,
-    ) -> DateTime:
-        return DateTime.now(tz=self.tzinfo).at(
-            hour=self.hour,
-            minute=self.minute,
-            second=self.second,
-            microsecond=self.microsecond,
-        )
-
-    def on(
-        self,
-        date: Date,
-    ) -> DateTime:
-        return DateTime(
-            year=date.year,
-            month=date.month,
-            day=date.day,
-            hour=self.hour,
-            minute=self.minute,
-            second=self.second,
-            microsecond=self.microsecond,
-            tzinfo=self.tzinfo,
-        )
 
 
 # TODO: NewInterval for working with pandas? nah add to pandas accessor? Or maybe to convert to pandas indexable thing
