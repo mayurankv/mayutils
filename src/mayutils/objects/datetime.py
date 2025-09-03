@@ -1,7 +1,7 @@
 from __future__ import annotations
 from contextlib import _GeneratorContextManager
 from sqlite3 import register_adapter
-from typing import Any, Optional, Self, Literal
+from typing import Any, Iterator, Optional, Self, Literal, overload
 import datetime as _datetime
 import numpy as np
 from pendulum import (
@@ -514,6 +514,46 @@ class Intervals(object):
         )
 
         return self
+
+    def __repr__(
+        self,
+    ) -> str:
+        return f"Intervals(\n\t{'\n\t'.join([repr(interval) for interval in self.intervals])}\n)"
+
+    def __iter__(
+        self,
+    ) -> Iterator[Interval]:
+        return iter(self.intervals)
+
+    def __len__(
+        self,
+    ) -> int:
+        return len(self.intervals)
+
+    @overload
+    def __getitem__(
+        self,
+        key: int,
+    ) -> Interval: ...
+
+    @overload
+    def __getitem__(
+        self,
+        key: slice,
+    ) -> Intervals: ...
+
+    def __getitem__(
+        self,
+        key: int | slice,
+    ) -> Intervals | Interval:
+        if isinstance(key, slice):
+            return Intervals(*self.intervals[key])
+
+        elif isinstance(key, int):
+            return self.intervals[key]
+
+        else:
+            raise TypeError("Invalid key type")
 
 
 class Traveller(BaseTraveller):
