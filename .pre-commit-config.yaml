@@ -43,3 +43,15 @@ repos:
         additional_dependencies: [
           'types-six'
         ]
+- repo: https://github.com/sqlfluff/sqlfluff
+  rev: 3.4.2
+  hooks:
+    - id: sqlfluff-lint
+      args: [--dialect, snowflake] #[--exclude-rules, L014,L016]
+      # For dbt projects, this installs the dbt "extras".
+      # You will need to select the relevant dbt adapter for your dialect
+      # (https://docs.getdbt.com/docs/available-adapters):
+      # additional_dependencies: ['<dbt-adapter>', 'sqlfluff-templater-dbt']
+    - id: sqlfluff-fix
+      args: [--dialect, snowflake] #[--rules, "LT02,CP02"]
+      # additional_dependencies: ['<dbt-adapter>', 'sqlfluff-templater-dbt']
