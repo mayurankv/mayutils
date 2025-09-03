@@ -1,7 +1,7 @@
 from __future__ import annotations
 from contextlib import _GeneratorContextManager
 from sqlite3 import register_adapter
-from typing import Any, Iterator, Optional, Self, Literal, overload
+from typing import Any, Iterator, Mapping, Optional, Self, Literal, overload
 import datetime as _datetime
 import numpy as np
 from pendulum import (
@@ -451,6 +451,16 @@ class Interval(BaseInterval):
             start=self._start,
             end=self._end,
             absolute=absolute,
+        )
+
+    def __deepcopy__(
+        self,
+        _memo: Mapping,
+    ) -> Self:
+        return self.__class__(
+            start=self._start,
+            end=self._end,
+            absolute=self._absolute,
         )
 
     @property
