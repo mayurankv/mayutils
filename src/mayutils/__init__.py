@@ -1,7 +1,5 @@
-import sys
 import warnings
 from importlib import metadata
-from pathlib import Path
 
 __version__ = metadata.version(distribution_name="mayutils")
 
@@ -32,7 +30,5 @@ def setup(
         module="snowflake.connector.options",
     )
 
-
-print(Path(sys.argv[0]).parent)
 
 setup()
