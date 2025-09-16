@@ -1,9 +1,8 @@
-from functools import _lru_cache_wrapper
 from pathlib import Path
-from typing import Literal, overload
+from typing import TYPE_CHECKING, Literal, overload
 
-from pandas import DataFrame
 import polars as pl
+from pandas import DataFrame
 
 from mayutils.data import CACHE_FOLDER
 from mayutils.data.queries import QUERIES_FOLDERS, get_formatted_query
@@ -12,11 +11,14 @@ from mayutils.environment.memoisation import DataframeBackends
 from mayutils.objects.dataframes import DataFrames, read_parquet, to_parquet
 from mayutils.objects.hashing import hash_inputs
 
+if TYPE_CHECKING:
+    from functools import _lru_cache_wrapper as LRUCacheWrapper
+
 
 @overload
 def get_query_data(
     query_name: Path | str,
-    read_query: _lru_cache_wrapper[DataFrames],
+    read_query: LRUCacheWrapper[DataFrames],
     dataframe_backend: Literal["pandas"],
     queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
     cache: bool | Literal["persistent"] = True,
@@ -27,7 +29,7 @@ def get_query_data(
 @overload
 def get_query_data(
     query_name: Path | str,
-    read_query: _lru_cache_wrapper[DataFrames],
+    read_query: LRUCacheWrapper[DataFrames],
     dataframe_backend: Literal["polars"],
     queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
     cache: bool | Literal["persistent"] = True,
@@ -37,7 +39,7 @@ def get_query_data(
 
 def get_query_data(
     query_name: Path | str,
-    read_query: _lru_cache_wrapper[DataFrames],
+    read_query: LRUCacheWrapper[DataFrames],
     dataframe_backend: DataframeBackends = "pandas",
     queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
     cache: bool | Literal["persistent"] = True,
