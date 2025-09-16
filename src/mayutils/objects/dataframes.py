@@ -1,8 +1,9 @@
 from pathlib import Path
-from typing import Callable, Literal, Optional, Self
+from typing import Callable, Literal, Optional, Self, TypeAlias, get_args
 
 from itables import show
 from great_tables import GT
+import pandas as pd
 from pandas import (
     DataFrame,
     ExcelWriter,
@@ -24,9 +25,13 @@ from dataframe_image._pandas_accessor import (
     prepare_converter,
     save_image,
 )
+import polars as pl
+from mayutils.environment.memoisation import DataframeBackends
 import numpy as np
 from mayutils.objects.colours import Colour
 from mayutils.export import OUTPUT_FOLDER
+
+DataFrames: TypeAlias = pd.DataFrame | pl.DataFrame
 
 DATA_FOLDER = OUTPUT_FOLDER / "Data"
 
@@ -522,6 +527,62 @@ class IndexUtilsAccessor(object):
 #             df.compute().to_feather(path)  # must convert to pandas
 #     else:
 #         raise TypeError(f"Unsupported DataFrame type: {type(df)}")
+
+
+def to_parquet(
+    df: DataFrames,
+    path: Path | str,
+    dataframe_backend: Optional[DataframeBackends] = None,
+    **kwargs,
+) -> None:
+    path = Path(path)
+
+    if dataframe_backend is None:
+        module = type(df).__module__
+
+        if module not in get_args(DataframeBackends):
+            raise TypeError(f"Unsupported DataFrame type: {module}")
+
+        dataframe_backend = module  # type: ignore
+
+    if dataframe_backend == "pandas":
+        assert isinstance(df, pd.DataFrame)
+
+        df.to_parquet(
+            path=path,
+            index=kwargs.pop("index", True),
+            **kwargs,
+        )
+    elif dataframe_backend == "polars":
+        assert isinstance(df, pl.DataFrame)
+
+        df.write_parquet(
+            file=path,
+            **kwargs,
+        )
+
+    raise TypeError(f"Unsupported DataFrame backend: {dataframe_backend}")
+
+
+def read_parquet(
+    path: Path | str,
+    dataframe_backend: DataframeBackends = "pandas",
+    **kwargs,
+) -> DataFrames:
+    path = Path(path)
+
+    if dataframe_backend == "pandas":
+        return pd.read_parquet(
+            path=path,
+            **kwargs,
+        )
+    elif dataframe_backend == "polars":
+        return pl.read_parquet(
+            source=path,
+            **kwargs,
+        )
+
+    raise TypeError(f"Unsupported DataFrame backend: {dataframe_backend}")
 
 
 def setup_dataframes() -> None:

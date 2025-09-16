@@ -24,7 +24,7 @@ QUERIES_FOLDERS = get_queries_folders()
 
 def get_query(
     query_name: Path | str,
-    queries_folders: tuple[Path, ...],
+    queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
 ) -> str:
     path = Path(query_name)
     for queries_folder in queries_folders:
@@ -33,7 +33,12 @@ def get_query(
         except ValueError:
             continue
 
-    return read_file(path=path)
+    try:
+        return read_file(path=path)
+    except ValueError:
+        raise ValueError(
+            f"No such query {query_name} found in the query folders {', '.join(list(map(str, queries_folders)))} or at the path {path}"
+        )
 
 
 def get_formatted_query(

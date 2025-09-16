@@ -15,6 +15,8 @@ from mayutils.objects.hashing import hash_inputs
 
 T = TypeVar("T", bound=Callable[..., Any])
 
+DataframeBackends = Literal["pandas", "polars"]
+
 
 @flexwrap
 class cache(object):
@@ -139,7 +141,7 @@ class cache_df(object):
         *,
         format: Literal["parquet", "csv", "feather", "xlsx"] = "parquet",
         cache_folder: Path | str = CACHE_FOLDER,
-        dataframe_backend: Literal["pandas", "polars"] = "pandas",
+        dataframe_backend: DataframeBackends = "pandas",
     ) -> None:
         if func is None:
             raise ValueError("No function provided")
