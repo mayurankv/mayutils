@@ -22,6 +22,7 @@ dependencies = [
     "html2image>=2.0.7",
     "ipykernel>=6.30.1",
     "itables>=2.4.5",
+    "jupysql>=0.11.1",
     "jupyter>=1.1.1",
     "kaleido>=1.0.0",
     "keyring>=25.6.0",
