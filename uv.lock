@@ -8,9 +8,6 @@ resolution-markers = [
     "python_full_version < '3.12'",
 ]
 
-[options]
-prerelease-mode = "allow"
-
 [[package]]
 name = "aiohappyeyeballs"
 version = "2.6.1"
@@ -2298,7 +2295,7 @@ wheels = [
 
 [[package]]
 name = "mayutils"
-version = "1.2.8"
+version = "1.2.9"
 source = { editable = "." }
 dependencies = [
     { name = "asyncer" },
