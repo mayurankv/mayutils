@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from numpy.typing import ArrayLike
-from pandas import DataFrame
+from pandas import DataFrame, Series
 from plotly.basedatatypes import BaseTraceType as Trace
 from scipy.stats import gaussian_kde
 
@@ -64,6 +64,20 @@ class Line(go.Scatter):
 
         type(self)._counter += 1
         self._count = type(self)._counter
+
+    @classmethod
+    def from_series(
+        cls,
+        series: Series,
+        *args,
+        **kwargs,
+    ) -> Self:
+        return cls(
+            x=series.index,
+            y=series.values,
+            *args,
+            **kwargs,
+        )
 
     @classmethod
     def with_bounds(
