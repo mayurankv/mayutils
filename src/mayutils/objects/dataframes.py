@@ -26,11 +26,11 @@ from dataframe_image._pandas_accessor import (
     save_image,
 )
 import polars as pl
-from mayutils.environment.memoisation import DataframeBackends
 import numpy as np
 from mayutils.objects.colours import Colour
 from mayutils.export import OUTPUT_FOLDER
 
+DataframeBackends = Literal["pandas", "polars"]
 DataFrames: TypeAlias = pd.DataFrame | pl.DataFrame
 
 DATA_FOLDER = OUTPUT_FOLDER / "Data"

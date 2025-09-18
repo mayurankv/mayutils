@@ -10,12 +10,11 @@ from pandas import DataFrame
 
 from mayutils.data import CACHE_FOLDER
 from mayutils.data.local import DataFile
+from mayutils.objects.dataframes import DataframeBackends
 from mayutils.objects.decorators import flexwrap
 from mayutils.objects.hashing import hash_inputs
 
 T = TypeVar("T", bound=Callable[..., Any])
-
-DataframeBackends = Literal["pandas", "polars"]
 
 
 @flexwrap
