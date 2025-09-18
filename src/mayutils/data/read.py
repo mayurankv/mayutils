@@ -21,8 +21,8 @@ def get_query_data(
     query_name: Path | str,
     read_query: LRUCacheWrapper[DataFrames],
     dataframe_backend: Literal["pandas"],
-    queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
-    cache: bool | Literal["persistent"] = True,
+    queries_folders: tuple[Path, ...],
+    cache: bool | Literal["persistent"],
     **format_kwargs,
 ) -> DataFrame: ...
 
@@ -32,10 +32,21 @@ def get_query_data(
     query_name: Path | str,
     read_query: LRUCacheWrapper[DataFrames],
     dataframe_backend: Literal["polars"],
-    queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
-    cache: bool | Literal["persistent"] = True,
+    queries_folders: tuple[Path, ...],
+    cache: bool | Literal["persistent"],
     **format_kwargs,
 ) -> pl.DataFrame: ...
+
+
+@overload
+def get_query_data(
+    query_name: Path | str,
+    read_query: LRUCacheWrapper[DataFrames],
+    dataframe_backend: DataframeBackends,
+    queries_folders: tuple[Path, ...],
+    cache: bool | Literal["persistent"],
+    **format_kwargs,
+) -> DataFrames: ...
 
 
 def get_query_data(
