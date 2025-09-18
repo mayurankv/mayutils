@@ -5,7 +5,7 @@ from typing import Any, Literal, Optional, Self, final
 from dataclasses import dataclass, field
 from mayutils.export.images import IMAGES_FOLDER
 import numpy as np
-from scipy.stats import gaussian_kde, norm
+from scipy.stats import gaussian_kde, norm  # pyright: ignore[reportAttributeAccessIssue]
 
 import plotly.graph_objects as go
 import plotly.io as pio

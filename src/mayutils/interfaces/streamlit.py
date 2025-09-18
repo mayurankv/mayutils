@@ -32,4 +32,4 @@ class StreamlitManager(object):
 
     @staticmethod
     def run() -> None:
-        subprocess.run(args="poetry run streamlit run main.py")
+        subprocess.run(args="uv run streamlit run main.py")

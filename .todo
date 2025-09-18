@@ -116,7 +116,7 @@ Tooling: @critical
 		☐ streamlit
 
 	Package: @medium
-		☐ Set `[tool.poetry.optional-dependencies]`
+		☐ Set `[optional-dependencies]`
 			- Ensure safe to use without additional dependencies though or when using in python, not IPython
 
 Productivity: @medium

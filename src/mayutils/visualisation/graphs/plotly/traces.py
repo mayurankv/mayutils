@@ -11,7 +11,7 @@ import plotly.graph_objects as go
 from numpy.typing import ArrayLike
 from pandas import DataFrame, Series
 from plotly.basedatatypes import BaseTraceType as Trace
-from scipy.stats import gaussian_kde
+from scipy.stats import gaussian_kde  # pyright: ignore[reportAttributeAccessIssue]
 
 from mayutils.objects.colours import Colour
 from mayutils.objects.types import RecursiveDict
