@@ -15,7 +15,7 @@ def get_queries_folders() -> tuple[Path, ...]:
             ROOT / "src" / module / "data" / "queries"
             for module in os.listdir(path=ROOT / "src")
         ],
-        Path(__file__).parent / "queries",
+        Path(__file__).parent,
     )
 
 
