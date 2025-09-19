@@ -525,6 +525,8 @@ def to_parquet(
 
         dataframe_backend = module  # type: ignore
 
+    assert dataframe_backend is not None
+
     if dataframe_backend == "pandas":
         assert isinstance(df, pd.DataFrame)
 
@@ -533,6 +535,7 @@ def to_parquet(
             index=kwargs.pop("index", True),
             **kwargs,
         )
+
     elif dataframe_backend == "polars":
         assert isinstance(df, pl.DataFrame)
 
@@ -541,7 +544,8 @@ def to_parquet(
             **kwargs,
         )
 
-    raise TypeError(f"Unsupported DataFrame backend: {dataframe_backend}")
+    else:
+        raise TypeError(f"Unsupported DataFrame backend: {dataframe_backend}")
 
 
 def read_parquet(
