@@ -11,10 +11,7 @@ def get_queries_folders() -> tuple[Path, ...]:
     ROOT = get_root()
     return (
         ROOT / "queries",
-        *[
-            ROOT / "src" / module / "data" / "queries"
-            for module in os.listdir(path=ROOT / "src")
-        ],
+        *[ROOT / "src" / module / "data" / "queries" for module in os.listdir(path=ROOT / "src")],
         Path(__file__).parent,
     )
 
@@ -29,16 +26,25 @@ def get_query(
     path = Path(query_name)
     for queries_folder in queries_folders:
         try:
+            if path.suffix == "":
+                path = path.with_suffix(suffix=".sql")
+
             return read_file(path=queries_folder / path)
+
+        except ValueError:
+            pass
+
+        try:
+            return read_file(path=queries_folder / path)
+
         except ValueError:
             continue
 
     try:
         return read_file(path=path)
+
     except ValueError:
-        raise ValueError(
-            f"No such query {query_name} found in the query folders {', '.join(list(map(str, queries_folders)))} or at the path {path}"
-        )
+        raise ValueError(f"No such query {query_name} found in the query folders {', '.join(list(map(str, queries_folders)))} or at the path {path}")
 
 
 def get_formatted_query(
