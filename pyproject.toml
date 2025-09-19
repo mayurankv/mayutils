@@ -59,6 +59,7 @@ dependencies = [
     "typer>=0.16.1",
     "types-six>=1.17.0.20250515",
     "unicodeit>=0.7.5",
+    "watchdog>=6.0.0",
 ]
 
 [project.optional-dependencies]
