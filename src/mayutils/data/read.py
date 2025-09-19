@@ -2,6 +2,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, overload
 
+
 import polars as pl
 from pandas import DataFrame
 
@@ -57,11 +58,7 @@ def get_query_data(
     cache: bool | Literal["persistent"] = True,
     **format_kwargs,
 ) -> DataFrames:
-    if (
-        cache is False
-        and hasattr(read_query, "cache_clear")
-        and callable(getattr(read_query, "cache_clear"))
-    ):
+    if cache is False and hasattr(read_query, "cache_clear") and callable(getattr(read_query, "cache_clear")):
         read_query.cache_clear()
 
     cache_name = f"{encode_path(path=query_name)}_data_{
@@ -85,10 +82,16 @@ def get_query_data(
         )
 
         if cache == "persistent":
+            kwargs = {
+                "pandas": dict(index=True),
+                "polars": dict(),
+            }
+
             to_parquet(
                 df=query_data,
                 path=cache_file,
-                index=True,
+                dataframe_backend=dataframe_backend,
+                **kwargs.get(dataframe_backend, dict()),
             )
 
     else:
