@@ -1,12 +1,10 @@
-import warnings
+# import warnings
 from importlib import metadata
 
 __version__ = metadata.version(distribution_name="mayutils")
 
 
-def setup(
-    is_script: bool = False,
-) -> None:
+def setup() -> None:
     from mayutils.environment.logging import Logger
 
     Logger.configure()
@@ -22,13 +20,13 @@ def setup(
     except ImportError as err:
         Logger.spawn().warning(f"Error occurred during setup imports: {err}")
 
-    # TODO: Remove when dependency is upgraded
-    warnings.filterwarnings(
-        action="ignore",
-        message="You have an incompatible version of 'pyarrow' installed.*",
-        category=UserWarning,
-        module="snowflake.connector.options",
-    )
+    # # TODO: Remove when dependency is upgraded
+    # warnings.filterwarnings(
+    #     action="ignore",
+    #     message="You have an incompatible version of 'pyarrow' installed.*",
+    #     category=UserWarning,
+    #     module="snowflake.connector.options",
+    # )
 
 
 setup()
