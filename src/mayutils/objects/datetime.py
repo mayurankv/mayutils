@@ -41,6 +41,7 @@ type NormalDurations = Literal["second", "minute", "hour", "day", "month", "year
 
 FORMATTER = Formatter()
 DIFFERENCE_FORMATTER = DifferenceFormatter()
+DAY_SECONDS = 24 * 60 * 60
 
 
 class Timezone(BaseTimezone):
@@ -214,6 +215,12 @@ class Time(BaseTime):
             microsecond=self.microsecond,
             tzinfo=self.tzinfo,
         )
+
+    @property
+    def fractional_completion(
+        self,
+    ) -> float:
+        return (self.hour * 3600 + self.minute * 60 + self.second + self.microsecond * 1e-6) / DAY_SECONDS
 
 
 class DateTime(BaseDateTime):
