@@ -133,6 +133,11 @@ class Date(BaseDate):
 
         return output
 
+    def is_weekend(
+        self,
+    ) -> bool:
+        return self.day_of_week in (5, 6)
+
     def to_datetime(
         self,
         tz: str | Timezone = UTC,
@@ -194,7 +199,9 @@ class Time(BaseTime):
     def today(
         self,
     ) -> DateTime:
-        return DateTime.now(tz=self.tzinfo).at(
+        return DateTime.now(
+            tz=self.tzinfo,
+        ).at(
             hour=self.hour,
             minute=self.minute,
             second=self.second,

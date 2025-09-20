@@ -1,11 +1,11 @@
 from pathlib import Path
 from typing import Optional
-from datetime import date
 from subprocess import call
 import os
 from shlex import quote as escape
 from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
+from mayutils.objects.datetime import Date
 from mayutils.visualisation.notebook import (
     not_nbconvert,
     write_markdown,
@@ -35,7 +35,7 @@ def is_slides() -> bool:
 def subtitle_text(
     authors: list[str] = ["Mayuran Visakan"],
     confidential: bool = False,
-    updated: date = date.today(),
+    updated: Date = Date.today(),
 ) -> None:
     if not is_slides():
         return
@@ -60,19 +60,13 @@ def export_slides(
     if not not_nbconvert():
         return None
 
-    today = date.today().strftime(
+    today = Date.today().strftime(
         format="%Y_%m_%d",
     )
 
-    filepath = (
-        os.path.dirname(p=os.path.realpath(filename="__file__")) + "/" + file_name
-    )
+    filepath = os.path.dirname(p=os.path.realpath(filename="__file__")) + "/" + file_name
 
-    file_title = (
-        f"{title}_{today}"
-        if title is not None
-        else f"{file_name.split(sep='.')[0]}_{today}"
-    )
+    file_title = f"{title}_{today}" if title is not None else f"{file_name.split(sep='.')[0]}_{today}"
     output_filepath = SLIDES_FOLDER / file_title
 
     with Progress(

@@ -1,7 +1,7 @@
 import logging
 
 # from logging.handlers import RotatingFileHandler
-# from datetime import datetime
+# from mayutils.objects.datetime import DateTime
 from pathlib import Path
 import time
 from rich.logging import RichHandler
@@ -51,7 +51,7 @@ class Logger(logging.Logger):
                 show_path=True,
             ),
             # file=RotatingFileHandler(
-            #     filename=log_dir / f"{datetime.now():%Y-%m-%d}.log",
+            #     filename=log_dir / f"{DateTime.now().to_datetime_string()}.log",
             #     maxBytes=10_485_760,
             #     backupCount=5,
             #     encoding="utf-8",
@@ -146,9 +146,7 @@ class Logger(logging.Logger):
         level: Optional[Level] = None,
         **kwargs,
     ) -> str:
-        level_int = (
-            logging._nameToLevel.get(level, None) if isinstance(level, str) else level
-        )
+        level_int = logging._nameToLevel.get(level, None) if isinstance(level, str) else level
         if level_int is None:
             level_int = self.getEffectiveLevel()
 

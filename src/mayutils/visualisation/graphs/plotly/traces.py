@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Literal, Optional, Self
 
 from mayutils.visualisation.graphs.plotly.utilities import (
@@ -14,6 +13,7 @@ from plotly.basedatatypes import BaseTraceType as Trace
 from scipy.stats import gaussian_kde  # pyright: ignore[reportAttributeAccessIssue]
 
 from mayutils.objects.colours import Colour
+from mayutils.objects.datetime import DateTime
 from mayutils.objects.types import RecursiveDict
 
 
@@ -25,7 +25,7 @@ class Null(go.Scatter):
         **kwargs,
     ) -> None:
         super().__init__(
-            x=[] if not x_datetime else pd.to_datetime([datetime.today()]),
+            x=[] if not x_datetime else pd.to_datetime([DateTime.today()]),
             y=[],
             showlegend=False,
             meta="null",
@@ -45,15 +45,11 @@ class Line(go.Scatter):
         **kwargs,
     ) -> None:
         mode: str = kwargs.pop("mode", "lines")
-        mode += (
-            "+text" if label_name is not False and not mode.endswith("+text") else ""
-        )
+        mode += "+text" if label_name is not False and not mode.endswith("+text") else ""
         kwargs["mode"] = mode
         kwargs["textposition"] = textposition
 
-        label_name = (
-            kwargs.get("name", None) if label_name is True else label_name
-        ) or ""
+        label_name = (kwargs.get("name", None) if label_name is True else label_name) or ""
         kwargs["text"] = [""] * (len(kwargs.get("x", [])) - 1) + [label_name]
 
         super().__init__(
@@ -97,9 +93,7 @@ class Line(go.Scatter):
         for lower, upper in zip(y_lower, y_upper):
             if len(lower) != len(y) or len(upper) != len(y):  # type: ignore
                 raise ValueError("Y Values of different length provided")
-            elif np.any(np.asarray(lower) > last_lower) or np.any(
-                np.asarray(upper) < last_upper
-            ):
+            elif np.any(np.asarray(lower) > last_lower) or np.any(np.asarray(upper) < last_upper):
                 raise ValueError("Monotonic bounds not passed")
 
             last_lower = lower
@@ -130,11 +124,7 @@ class Line(go.Scatter):
                     legendgroup=legendgroup,
                     hoverinfo="skip",
                     *[*args],
-                    **{
-                        key: value
-                        for key, value in kwargs.items()
-                        if key != "line_color"
-                    },
+                    **{key: value for key, value in kwargs.items() if key != "line_color"},
                 )
                 for lower, upper in zip(y_lower, y_upper)
             ],
@@ -194,9 +184,7 @@ class Ecdf(Line):
 
         _y += y_shift
 
-        kwargs["line_shape"] = (
-            "hv" if ((mode != "reversed") ^ (not left_inclusive)) else "vh"
-        )
+        kwargs["line_shape"] = "hv" if ((mode != "reversed") ^ (not left_inclusive)) else "vh"
         kwargs["fill"] = fill
 
         if fill == "toself":
@@ -384,11 +372,7 @@ class Bar3d(go.Mesh3d):
         x_arr = np.asarray(x)
         y_arr = np.asarray(y)
         z_arr = np.asarray(z, dtype=np.float64)
-        w_arr = (
-            np.asarray(w, dtype=np.float64)
-            if w is not None
-            else np.ones(z_arr.shape, dtype=np.float64)
-        )
+        w_arr = np.asarray(w, dtype=np.float64) if w is not None else np.ones(z_arr.shape, dtype=np.float64)
 
         if any(len(arr) != len(w_arr) for arr in [x_arr, y_arr, z_arr]):
             raise ValueError("Input arrays are not same length")
@@ -406,12 +390,7 @@ class Bar3d(go.Mesh3d):
             )
             * dx
         )
-        self._x = (
-            np.stack([x_arr_numerical - dx / 2, x_arr_numerical + dx / 2], axis=1)[
-                np.arange(x_arr_numerical.size)[:, None], [0, 0, 1, 1, 0, 0, 1, 1]
-            ].reshape(-1)
-            + x_start
-        )
+        self._x = np.stack([x_arr_numerical - dx / 2, x_arr_numerical + dx / 2], axis=1)[np.arange(x_arr_numerical.size)[:, None], [0, 0, 1, 1, 0, 0, 1, 1]].reshape(-1) + x_start
         y_arr_numerical = (
             map_categorical_array(
                 arr=self._y_arr,
@@ -419,34 +398,18 @@ class Bar3d(go.Mesh3d):
             )
             * dy
         )
-        self._y = (
-            np.stack([y_arr_numerical - dy / 2, y_arr_numerical + dy / 2], axis=1)[
-                np.arange(y_arr_numerical.size)[:, None], [0, 1, 1, 0, 0, 1, 1, 0]
-            ].reshape(-1)
-            + y_start
-        )
+        self._y = np.stack([y_arr_numerical - dy / 2, y_arr_numerical + dy / 2], axis=1)[np.arange(y_arr_numerical.size)[:, None], [0, 1, 1, 0, 0, 1, 1, 0]].reshape(-1) + y_start
         self._z = np.ones(self._z_arr.size * 8, dtype=self._z_arr.dtype) * z0
-        self._z[(np.arange(self._z_arr.size) * 8)[:, None] + np.array([4, 5, 6, 7])] = (
-            self._z_arr[:, None]
-        )
+        self._z[(np.arange(self._z_arr.size) * 8)[:, None] + np.array([4, 5, 6, 7])] = self._z_arr[:, None]
         self._z += z_start
         self._w = np.repeat(
             self._w_arr,
             repeats=8,
         )
 
-        i = (
-            np.tile([7, 0, 0, 0, 4, 4, 6, 6, 4, 0, 3, 2], (len(self._x_arr), 1))
-            + np.arange(len(self._x_arr))[:, np.newaxis] * 8
-        ).flatten()
-        j = (
-            np.tile([3, 4, 1, 2, 5, 6, 5, 2, 0, 1, 6, 3], (len(self._x_arr), 1))
-            + np.arange(len(self._x_arr))[:, np.newaxis] * 8
-        ).flatten()
-        k = (
-            np.tile([0, 7, 2, 3, 6, 7, 1, 1, 5, 5, 7, 6], (len(self._x_arr), 1))
-            + np.arange(len(self._x_arr))[:, np.newaxis] * 8
-        ).flatten()
+        i = (np.tile([7, 0, 0, 0, 4, 4, 6, 6, 4, 0, 3, 2], (len(self._x_arr), 1)) + np.arange(len(self._x_arr))[:, np.newaxis] * 8).flatten()
+        j = (np.tile([3, 4, 1, 2, 5, 6, 5, 2, 0, 1, 6, 3], (len(self._x_arr), 1)) + np.arange(len(self._x_arr))[:, np.newaxis] * 8).flatten()
+        k = (np.tile([0, 7, 2, 3, 6, 7, 1, 1, 5, 5, 7, 6], (len(self._x_arr), 1)) + np.arange(len(self._x_arr))[:, np.newaxis] * 8).flatten()
 
         return super().__init__(
             x=self._x,
@@ -459,10 +422,7 @@ class Bar3d(go.Mesh3d):
             showscale=showscale,
             alphahull=alphahull,
             flatshading=flatshading,
-            hovertemplate="x: %{customdata[0]}<br>"
-            "y: %{customdata[1]}<br>"
-            "z: %{customdata[2]}<br>"
-            "w: %{customdata[3]}<extra></extra>",
+            hovertemplate="x: %{customdata[0]}<br>y: %{customdata[1]}<br>z: %{customdata[2]}<br>w: %{customdata[3]}<extra></extra>",
             customdata=np.stack(
                 [
                     np.repeat(self._x_arr, repeats=8),
@@ -514,18 +474,9 @@ def merge_cuboids(
     y = np.zeros(len(cuboids) * 8)
     z = np.zeros(len(cuboids) * 8)
     intensity = np.zeros(len(cuboids) * 8)
-    i = (
-        np.tile([7, 0, 0, 0, 4, 4, 6, 6, 4, 0, 3, 2], (len(cuboids), 1))
-        + np.arange(len(cuboids))[:, np.newaxis] * 8
-    ).flatten()
-    j = (
-        np.tile([3, 4, 1, 2, 5, 6, 5, 2, 0, 1, 6, 3], (len(cuboids), 1))
-        + np.arange(len(cuboids))[:, np.newaxis] * 8
-    ).flatten()
-    k = (
-        np.tile([0, 7, 2, 3, 6, 7, 1, 1, 5, 5, 7, 6], (len(cuboids), 1))
-        + np.arange(len(cuboids))[:, np.newaxis] * 8
-    ).flatten()
+    i = (np.tile([7, 0, 0, 0, 4, 4, 6, 6, 4, 0, 3, 2], (len(cuboids), 1)) + np.arange(len(cuboids))[:, np.newaxis] * 8).flatten()
+    j = (np.tile([3, 4, 1, 2, 5, 6, 5, 2, 0, 1, 6, 3], (len(cuboids), 1)) + np.arange(len(cuboids))[:, np.newaxis] * 8).flatten()
+    k = (np.tile([0, 7, 2, 3, 6, 7, 1, 1, 5, 5, 7, 6], (len(cuboids), 1)) + np.arange(len(cuboids))[:, np.newaxis] * 8).flatten()
 
     for idx, cuboid in enumerate(cuboids):
         x[idx * 8 : (idx + 1) * 8] = cuboid.x  # type: ignore
