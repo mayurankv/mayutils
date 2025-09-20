@@ -7,7 +7,7 @@ authors = [
 ]
 license = { file = "LICENSE" }
 readme = "README.md"
-requires-python = ">=3.11,<4.0"
+requires-python = ">=3.12,<4.0"
 dependencies = [
     "asyncer>=0.0.8",
     "chromedriver-autoinstaller>=0.6.4",

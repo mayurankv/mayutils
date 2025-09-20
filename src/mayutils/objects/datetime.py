@@ -397,20 +397,29 @@ class DateTime(BaseDateTime):
             microsecond=self.microsecond,
         )
 
-    def date(self) -> Date:
+    def date(
+        self,
+    ) -> Date:
         return Date(
             year=self.year,
             month=self.month,
             day=self.day,
         )
 
-    def time(self) -> Time:
+    def time(
+        self,
+    ) -> Time:
         return Time(
             hour=self.hour,
             minute=self.minute,
             second=self.second,
             microsecond=self.microsecond,
         )
+
+    def is_weekend(
+        self,
+    ) -> bool:
+        return self.day_of_week in (5, 6)
 
     def to_numpy(
         self,
@@ -453,6 +462,9 @@ class Interval(BaseInterval):
             absolute=absolute,
         )
 
+        self._weekends: Optional[int] = None
+        self._weekdays: Optional[int] = None
+
     def __deepcopy__(
         self,
         _memo: Mapping,
@@ -476,6 +488,41 @@ class Interval(BaseInterval):
     ) -> DateTime:
         return DateTime.from_base(super().end)
         # return self._end if not (self._invert and self._absolute) else self._start
+
+    def count_weekdays(
+        self,
+    ) -> tuple[int, int]:
+        weekends = 0
+        weekdays = 0
+
+        for datetime in self.range(unit="days"):
+            if datetime.is_weekend():
+                weekends += 1
+            else:
+                weekdays += 1
+
+        self._weekdays = weekdays
+        self._weekends = weekends
+
+        return weekdays, weekends
+
+    @property
+    def weekends(
+        self,
+    ) -> Optional[int]:
+        if self._weekends is None:
+            self.count_weekdays()
+
+        return self._weekends
+
+    @property
+    def weekdays(
+        self,
+    ) -> Optional[int]:
+        if self._weekdays is None:
+            self.count_weekdays()
+
+        return self._weekdays
 
     @classmethod
     def from_base(
@@ -519,9 +566,7 @@ class Intervals(object):
     def sort(
         self,
     ) -> Self:
-        self.intervals = tuple(
-            sorted(self.intervals, key=lambda interval: (interval.start, interval.end))
-        )
+        self.intervals = tuple(sorted(self.intervals, key=lambda interval: (interval.start, interval.end)))
 
         return self
 
