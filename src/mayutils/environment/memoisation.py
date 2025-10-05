@@ -116,6 +116,8 @@ class cache(object):
                 with open(file=self.path, mode="wb") as file:
                     pickle.dump(obj=self.persistent_cache, file=file)
 
+                return self.persistent_cache[key]
+
             else:
                 return self.cached_func(
                     *args,
