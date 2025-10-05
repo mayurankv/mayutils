@@ -91,7 +91,11 @@ class cache(object):
         if cache:
             if self.path is not None:
                 key = hash_inputs(
-                    func=self.func, paramers=dict(args=args, kwargs=kwargs)
+                    func=self.func.__name__,
+                    paramers=dict(
+                        args=args,
+                        kwargs=kwargs,
+                    ),
                 )
                 if key in self.persistent_cache:
                     self.persistent_cache.move_to_end(key)
@@ -103,10 +107,7 @@ class cache(object):
                     **kwargs,
                 )
 
-                if (
-                    self.maxsize is not None
-                    and len(self.persistent_cache) >= self.maxsize
-                ):
+                if self.maxsize is not None and len(self.persistent_cache) >= self.maxsize:
                     self.persistent_cache.popitem(last=False)
 
                 self.misses += 1
