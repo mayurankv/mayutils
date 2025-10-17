@@ -51,3 +51,9 @@ def prettify(
         raise
 
     return "{}{}".format("{:f}".format(num).rstrip("0").rstrip("."), suffix)
+
+
+def ordinal(
+    n: int,
+) -> str:
+    return "%d%s" % (n, "tsnrhtdd"[(n // 10 % 10 != 1) * (n % 10 < 4) * n % 10 :: 4])
