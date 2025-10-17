@@ -1,36 +1,36 @@
 ROOT := $(shell git rev-parse --show-toplevel)
-MODULE_NAME := $(shell uv version | awk '{print $$1}' | sed 's/-/_/g')
+PACKAGE_NAME := $(shell uv version | awk '{print $$1}' | sed 's/-/_/g')
 VERSION := $(shell uv version --short)
 
-.phony: uncache
+.PHONY: uncache
 uncache:
 	uv run clear_cache
 
-.phony: env
+.PHONY: env
 env:
 	uv sync
 
-.phony: init
+.PHONY: init
 init:
 	uv venv
 	uv sync
 
-.phony: update
+.PHONY: update
 update:
 	uv lock --upgrade --prerelease=allow
 	uv sync
 
-.phony: lint
+.PHONY: lint
 lint:
 	uv run ruff check
 	uv run ruff format --check
 
-.phony: fmt
+.PHONY: format
 fmt:
 	uv run ruff check --fix
 	uv run ruff format
 
-.phony: release
+.PHONY: release
 release:
 	$(MAKE) update
 	@echo "Releasing version $(VERSION)"
@@ -40,18 +40,18 @@ release:
 	git push origin main --tags
 	gh release create "v$(VERSION)" --title "v$(VERSION)" --notes "Release v$(VERSION)"
 
-.phony: publish
+.PHONY: publish
 publish:
 	uv build
 	uv publish
 
-.phony: clean
+.PHONY: clean
 clean:
 	clean-build
 	clean-pyc
 	clean-test
 
-.phony: clean-build
+.PHONY: clean-build
 clean-build:
 	# Remove build artifacts
 	rm -fr build/
@@ -60,7 +60,7 @@ clean-build:
 	find . -name '*.egg-info' -exec rm -fr {} +
 	find . -name '*.egg' -exec rm -f {} +
 
-.phony: clean-pyc
+.PHONY: clean-pyc
 clean-pyc:
 	# Remove Python file artifacts
 	find . -name '*.pyc' -exec rm -f {} +
@@ -69,9 +69,36 @@ clean-pyc:
 	find . -name '__pycache__' -exec rm -fr {} +
 	find . -type d \( -name "__pycache__" -o -name ".ruff_cache" -o -name ".mypy_cache" -o -name ".pytest_cache" \) -exec rm -rf {} +
 
-.phony: clean-test
+.PHONY: clean-test
 clean-test:
 	# Remove test and coverage artifacts
 	rm -f .coverage
 	rm -fr htmlcov/
 	rm -fr .pytest_cache
+
+.PHONY: run
+run:
+    uv run main.py
+
+.PHONY: cli
+cli:
+	uv run src/$(PACKAGE_NAME)/cli/main.py
+
+.PHONY: app
+app:
+    uv run streamlit run src/$(PACKAGE_NAME)/app/main.py
+
+.PHONY: dev
+dev:
+    uv run streamlit run src/$(PACKAGE_NAME)/app/main.py --server.runOnSave=true
+
+.PHONY: containerise
+containerise:
+    podman build \
+        --secret id=GITHUB_PAT_TOKEN,src=./.secrets/GITHUB_PAT_TOKEN.token \
+        -t $(PACKAGE_NAME) \
+        .
+
+.PHONY: run_container
+run_container:
+    podman run -p 8501:8501 $(PACKAGE_NAME):latest

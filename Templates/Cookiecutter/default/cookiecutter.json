@@ -6,7 +6,8 @@
 	"project_short_description": "",
 	"first_version": "0.1.0",
 	"python_version": "3.13.7",
-	"__package_name": "{{ cookiecutter.project_name.lower().replace(' ', '-') }}",
-	"__project_slug": "{{ cookiecutter.package_name.replace('-', '_') }}",
-	"__gh_slug": "{{ cookiecutter.github_username }}/{{ cookiecutter.project_slug }}"
+	"license": [ "MIT", "BSD-3", "GNU GPL v3.0", "Apache Software License 2.0", "None" ],
+	"__package_slug": "{{ cookiecutter.project_name | slugify}}",
+	"__package_snake": "{{ cookiecutter.__package_slug.replace('-', '_') }}",
+	"__gh_slug": "{{ cookiecutter.github_username }}/{{ cookiecutter.__package_slug }}"
 }

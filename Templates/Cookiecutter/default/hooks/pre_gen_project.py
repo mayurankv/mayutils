@@ -18,9 +18,16 @@ if project_short_description.strip() == "":
 
     sys.exit(1)
 
-package_name = "{{ cookiecutter.package_name }}"
+package_name = "{{ cookiecutter.__package_slug }}"
 
 if not re.match(pattern=MODULE_REGEX, string=package_name):
     print(f"ERROR: {package_name} is not a valid Python package name")
+
+    sys.exit(1)
+
+module_name = "{{ cookiecutter.__package_snake }}"
+
+if not re.match(pattern=MODULE_REGEX, string=module_name):
+    print(f"ERROR: {module_name} is not a valid Python module name")
 
     sys.exit(1)

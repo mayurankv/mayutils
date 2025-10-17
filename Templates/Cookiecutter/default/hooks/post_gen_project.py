@@ -1,7 +1,12 @@
 import os
 
 
-os.mkdir(path=".secrets")
+for dir in [".secrets"]:
+    os.mkdir(path=dir)
 
-with open(file=".env", mode="a") as env_file:
-    pass
+for paths in [".env", ".streamlit/secrets.toml"]:
+    with open(
+        file=paths,
+        mode="a",
+    ) as env_file:
+        pass

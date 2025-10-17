@@ -42,7 +42,7 @@ If you are proposing a feature:
 
 Ready to contribute?
 
-1. Set up `{{ cookiecutter.project_slug }}` for local development following the \[installation docs\](#TODO: link here)
+1. Set up `{{ cookiecutter.__package_slug }}` for local development following the \[installation docs\](#TODO: link here)
 
 1. Create a branch for local development:
 

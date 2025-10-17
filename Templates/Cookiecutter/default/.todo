@@ -1,8 +1,13 @@
 Add:
-	☐ License details
-		- https://cookiecutter.readthedocs.io/en/1.7.0/advanced/choice_variables.html
+	☐ Add license details
 	☐ Required arguments for `project_name` and `project_short_description`
 	☐ Links to `docs` in `CONTRIBUTING.md` file
 	☐ Make easier for optional dependencies
-
-	☐ Package details
+	☐ Make different versions (highly configurable) based on:
+		- streamlit
+		- conatainerisation
+		- machine learning
+	☐ Use
+		- https://cookiecutter.readthedocs.io/en/stable/advanced/templates.html
+		- https://cookiecutter.readthedocs.io/en/stable/advanced/boolean_variables.html
+		- https://cookiecutter.readthedocs.io/en/stable/advanced/dict_variables.html

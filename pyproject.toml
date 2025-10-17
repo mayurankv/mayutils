@@ -61,7 +61,7 @@ dependencies = [
     "snowflake-sqlalchemy>=1.7.6",
     "sqlalchemy>=2.0.43",
     "streamlit>=1.49.0",
-    "typer>=0.16.1",
+    "typer",
     "types-six>=1.17.0.20250515",
     "unicodeit>=0.7.5",
     "watchdog>=6.0.0",

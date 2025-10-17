@@ -1,9 +1,9 @@
 from importlib import metadata
 import re
 
-data = metadata.metadata(distribution_name="mayutils")
+data = metadata.metadata(distribution_name="{{ cookiecutter.__package_snake }}")
 
-__version__ = metadata.version(distribution_name="{{ cookiecutter.package_name }}")
+__version__ = metadata.version(distribution_name="{{ cookiecutter.__package_snake }}")
 
 author = data.get(name="author")
 if author is not None:

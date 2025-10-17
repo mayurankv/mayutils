@@ -1,5 +1,5 @@
 [project]
-name = "{{cookiecutter.package_name}}"
+name = "{{cookiecutter.__package_slug}}"
 version = "{{ cookiecutter.first_version }}"
 description = "{{cookiecutter.project_short_description}}"
 readme = "README.md"
@@ -36,7 +36,7 @@ changelog = "https://github.com/{{cookiecutter.__gh_slug}}/blob/master/CHANGELOG
 homepage = "https://github.com/{{cookiecutter.__gh_slug}}"
 
 [project.scripts]
-{{cookiecutter.project_slug}} = "{{cookiecutter.project_slug}}.cli.main:app"
+{{cookiecutter.__package_snake}} = "{{cookiecutter.__package_snake}}.cli.main:app"
 
 [tool.ty]
 # All rules are enabled as "error" by default; no need to specify unless overriding.

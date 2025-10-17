@@ -1,0 +1,10 @@
+[runner]
+enforceSerializableSessionState = true
+
+[theme]
+base="dark"
+primaryColor="rgb(36, 255, 182)"
+font = "'Mona Sans', sans-serif"
+
+[browser]
+gatherUsageStats = false
