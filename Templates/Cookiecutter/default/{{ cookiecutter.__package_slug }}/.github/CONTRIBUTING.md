@@ -8,7 +8,7 @@ You can contribute in many ways:
 
 ### Report Bugs
 
-Report bugs at https://github.com/{{ cookiecutter.\_\_gh_slug }}/issues.
+Report bugs at https://github.com/{{ cookiecutter.__gh_slug }}/issues.
 
 If you are reporting a bug, please include:
 
@@ -30,7 +30,7 @@ Look through the GitHub issues for features. Anything tagged with "enhancement" 
 
 ### Submit Feedback
 
-The best way to send feedback is to file an issue at \[https://github.com/{{ cookiecutter.\_\_gh_slug }}/issues\](https://github.com/{{ cookiecutter.\_\_gh_slug }}/issues).
+The best way to send feedback is to file an issue at \[https://github.com/{{ cookiecutter.__gh_slug }}/issues\](https://github.com/{{ cookiecutter.__gh_slug }}/issues).
 
 If you are proposing a feature:
 

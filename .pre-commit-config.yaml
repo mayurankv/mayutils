@@ -73,5 +73,6 @@ repos:
   rev: 0.7.13 # Use the ref you want to point at
   hooks:
     - id: mdformat
+      exclude: 'Templates/Cookiecutter/'
       additional_dependencies:
         - mdformat-ruff
