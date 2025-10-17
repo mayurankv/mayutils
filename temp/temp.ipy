@@ -1,0 +1,336 @@
+import plotly.graph_objs as go
+from collections import OrderedDict
+
+import math
+import pandas as pd
+
+cartesians = [go.Scatter, go.Scattergl, go.Bar, go.Funnel, go.Box, go.Violin]
+cartesians += [go.Histogram, go.Histogram2d, go.Histogram2dContour]
+
+
+def make_trace_kwargs(args, trace_spec, trace_data, mapping_labels, sizeref):
+    if "line_close" in args and args["line_close"]:
+        trace_data = pd.concat([trace_data, trace_data.iloc[:1]])
+    trace_patch = trace_spec.trace_patch.copy() or {}
+    fit_results = None
+    hover_header = ""
+    for attr_name in trace_spec.attrs:
+        attr_value = args[attr_name]
+        attr_label = get_decorated_label(args, attr_value, attr_name)
+        if attr_name == "dimensions":
+            dims = [
+                (name, column)
+                for (name, column) in trace_data.items()
+                if ((not attr_value) or (name in attr_value))
+                and (
+                    trace_spec.constructor != go.Parcoords
+                    or _is_continuous(args["data_frame"], name)
+                )
+                and (
+                    trace_spec.constructor != go.Parcats
+                    or (attr_value is not None and name in attr_value)
+                    or len(args["data_frame"][name].unique())
+                    <= args["dimensions_max_cardinality"]
+                )
+            ]
+            trace_patch["dimensions"] = [
+                dict(label=get_label(args, name), values=column)
+                for (name, column) in dims
+            ]
+            if trace_spec.constructor == go.Splom:
+                for d in trace_patch["dimensions"]:
+                    d["axis"] = dict(matches=True)
+                mapping_labels["%{xaxis.title.text}"] = "%{x}"
+                mapping_labels["%{yaxis.title.text}"] = "%{y}"
+
+        elif attr_value is not None:
+            if attr_name == "size":
+                if "marker" not in trace_patch:
+                    trace_patch["marker"] = dict()
+                trace_patch["marker"]["size"] = trace_data[attr_value]
+                trace_patch["marker"]["sizemode"] = "area"
+                trace_patch["marker"]["sizeref"] = sizeref
+                mapping_labels[attr_label] = "%{marker.size}"
+            elif attr_name == "marginal_x":
+                if trace_spec.constructor == go.Histogram:
+                    mapping_labels["count"] = "%{y}"
+            elif attr_name == "marginal_y":
+                if trace_spec.constructor == go.Histogram:
+                    mapping_labels["count"] = "%{x}"
+            elif attr_name.startswith("error"):
+                error_xy = attr_name[:7]
+                arr = "arrayminus" if attr_name.endswith("minus") else "array"
+                if error_xy not in trace_patch:
+                    trace_patch[error_xy] = {}
+                trace_patch[error_xy][arr] = trace_data[attr_value]
+            elif attr_name == "custom_data":
+                if len(attr_value) > 0:
+                    # here we store a data frame in customdata, and it's serialized
+                    # as a list of row lists, which is what we want
+                    trace_patch["customdata"] = trace_data[attr_value]
+            elif attr_name == "hover_name":
+                if trace_spec.constructor not in [
+                    go.Histogram,
+                    go.Histogram2d,
+                    go.Histogram2dContour,
+                ]:
+                    trace_patch["hovertext"] = trace_data[attr_value]
+                    if hover_header == "":
+                        hover_header = "<b>%{hovertext}</b><br><br>"
+            elif attr_name == "hover_data":
+                if trace_spec.constructor not in [
+                    go.Histogram,
+                    go.Histogram2d,
+                    go.Histogram2dContour,
+                ]:
+                    hover_is_dict = isinstance(attr_value, dict)
+                    customdata_cols = args.get("custom_data") or []
+                    for col in attr_value:
+                        if hover_is_dict and not attr_value[col]:
+                            continue
+                        if col in [
+                            args.get("x"),
+                            args.get("y"),
+                            args.get("z"),
+                            args.get("base"),
+                        ]:
+                            continue
+                        try:
+                            position = args["custom_data"].index(col)
+                        except (ValueError, AttributeError, KeyError):
+                            position = len(customdata_cols)
+                            customdata_cols.append(col)
+                        attr_label_col = get_decorated_label(args, col, None)
+                        mapping_labels[attr_label_col] = "%%{customdata[%d]}" % (
+                            position
+                        )
+
+                    if len(customdata_cols) > 0:
+                        # here we store a data frame in customdata, and it's serialized
+                        # as a list of row lists, which is what we want
+                        trace_patch["customdata"] = trace_data[customdata_cols]
+    return trace_patch, fit_results
+
+
+def configure_cartesian_marginal_axes(args, fig, orders):
+    if "histogram" in [args["marginal_x"], args["marginal_y"]]:
+        fig.layout["barmode"] = "overlay"
+
+    nrows = len(fig._grid_ref)
+    ncols = len(fig._grid_ref[0])
+
+    # Configure axis ticks on marginal subplots
+    if args["marginal_x"]:
+        fig.update_yaxes(
+            showticklabels=False, showline=False, ticks="", range=None, row=nrows
+        )
+        if args["template"].layout.yaxis.showgrid is None:
+            fig.update_yaxes(showgrid=args["marginal_x"] == "histogram", row=nrows)
+        if args["template"].layout.xaxis.showgrid is None:
+            fig.update_xaxes(showgrid=True, row=nrows)
+
+    if args["marginal_y"]:
+        fig.update_xaxes(
+            showticklabels=False, showline=False, ticks="", range=None, col=ncols
+        )
+        if args["template"].layout.xaxis.showgrid is None:
+            fig.update_xaxes(showgrid=args["marginal_y"] == "histogram", col=ncols)
+        if args["template"].layout.yaxis.showgrid is None:
+            fig.update_yaxes(showgrid=True, col=ncols)
+
+    # Configure axis type across all x-axes
+    if "log_x" in args and args["log_x"]:
+        fig.update_xaxes(type="log")
+
+    # Configure axis type across all y-axes
+    if "log_y" in args and args["log_y"]:
+        fig.update_yaxes(type="log")
+
+    # Configure matching and axis type for marginal y-axes
+    matches_y = "y" + str(ncols + 1)
+    if args["marginal_x"]:
+        for row in range(2, nrows + 1, 2):
+            fig.update_yaxes(matches=matches_y, type=None, row=row)
+
+    if args["marginal_y"]:
+        for col in range(2, ncols + 1, 2):
+            fig.update_xaxes(matches="x2", type=None, col=col)
+
+
+def configure_3d_axes(args, fig, orders):
+    patch = dict(
+        xaxis=dict(),
+        yaxis=dict(),
+        zaxis=dict(),
+    )
+
+    for letter in ["x", "y", "z"]:
+        axis = patch[letter + "axis"]
+        if args["log_" + letter]:
+            axis["type"] = "log"
+            if args["range_" + letter]:
+                axis["range"] = [math.log(x, 10) for x in args["range_" + letter]]
+        else:
+            if args["range_" + letter]:
+                axis["range"] = args["range_" + letter]
+        if args[letter] in orders:
+            axis["categoryorder"] = "array"
+            axis["categoryarray"] = orders[args[letter]]
+    fig.update_scenes(patch)
+
+
+def make_trace_spec(args):
+    # Add marginal trace specifications
+    for letter in ["x", "y"]:
+        if "marginal_" + letter in args and args["marginal_" + letter]:
+            axis_map = dict(
+                xaxis="x1" if letter == "x" else "x2",
+                yaxis="y1" if letter == "y" else "y2",
+            )
+            if args["marginal_" + letter] == "histogram":
+                TraceSpec(
+                    constructor=go.Histogram,
+                    attrs=[letter, "marginal_" + letter],
+                    trace_patch=dict(opacity=0.5, bingroup=letter, **axis_map),
+                    marginal=letter,
+                )
+            elif args["marginal_" + letter] == "violin":
+                TraceSpec(
+                    constructor=go.Violin,
+                    attrs=[letter, "hover_name", "hover_data"],
+                    trace_patch=dict(scalegroup=letter),
+                    marginal=letter,
+                )
+            elif args["marginal_" + letter] == "box":
+                TraceSpec(
+                    constructor=go.Box,
+                    attrs=[letter, "hover_name", "hover_data"],
+                    trace_patch=dict(notched=True),
+                    marginal=letter,
+                )
+            elif args["marginal_" + letter] == "rug":
+                symbols = {"x": "line-ns-open", "y": "line-ew-open"}
+                TraceSpec(
+                    constructor=go.Box,
+                    attrs=[letter, "hover_name", "hover_data"],
+                    trace_patch=dict(
+                        fillcolor="rgba(255,255,255,0)",
+                        line={"color": "rgba(255,255,255,0)"},
+                        boxpoints="all",
+                        jitter=0,
+                        hoveron="points",
+                        marker={"symbol": symbols[letter]},
+                    ),
+                    marginal=letter,
+                )
+
+
+def infer_config(args, constructor, trace_patch):
+    if "orientation" in args:
+        if args["orientation"] is None:
+            if constructor in [go.Histogram, go.Scatter]:
+                if y and not x:
+                    args["orientation"] = "h"
+
+        if args["orientation"] is None and x and y:
+            x_is_continuous = _is_continuous(args["data_frame"], args["x"])
+            y_is_continuous = _is_continuous(args["data_frame"], args["y"])
+            if x_is_continuous and not y_is_continuous:
+                args["orientation"] = "h"
+            if y_is_continuous and not x_is_continuous:
+                args["orientation"] = "v"
+
+        if args["orientation"] is None:
+            args["orientation"] = "v"
+
+        if constructor == go.Histogram:
+            if has_x and has_y and args["histfunc"] is None:
+                args["histfunc"] = trace_patch["histfunc"] = "sum"
+
+            orientation = args["orientation"]
+            nbins = args["nbins"]
+            trace_patch["nbinsx"] = nbins if orientation == "v" else None
+            trace_patch["nbinsy"] = None if orientation == "v" else nbins
+            trace_patch["bingroup"] = "x" if orientation == "v" else "y"
+        trace_patch["orientation"] = args["orientation"]
+
+    if "marginal" in args:
+        position = "marginal_x" if args["orientation"] == "v" else "marginal_y"
+        other_position = "marginal_x" if args["orientation"] == "h" else "marginal_y"
+        args[position] = args["marginal"]
+        args[other_position] = None
+
+
+def get_groups_and_orders(args, grouper):
+    orders = {} if "category_orders" not in args else args["category_orders"].copy()
+
+    # figure out orders and what the single group name would be if there were one
+    single_group_name = []
+    unique_cache = dict()
+    for col in grouper:
+        if col == one_group:
+            single_group_name.append("")
+        else:
+            if col not in unique_cache:
+                unique_cache[col] = list(args["data_frame"][col].unique())
+            uniques = unique_cache[col]
+            if len(uniques) == 1:
+                single_group_name.append(uniques[0])
+            if col not in orders:
+                orders[col] = uniques
+            else:
+                orders[col] = list(OrderedDict.fromkeys(list(orders[col]) + uniques))
+    df = args["data_frame"]
+    if len(single_group_name) == len(grouper):
+        # we have a single group, so we can skip all group-by operations!
+        groups = {tuple(single_group_name): df}
+    else:
+        required_grouper = [g for g in grouper if g != one_group]
+        grouped = df.groupby(
+            required_grouper, sort=False, observed=True
+        )  # skip one_group groupers
+        group_indices = grouped.indices
+        sorted_group_names = [
+            g if len(required_grouper) != 1 else (g,) for g in group_indices
+        ]
+
+        for i, col in reversed(list(enumerate(required_grouper))):
+            sorted_group_names = sorted(
+                sorted_group_names,
+                key=lambda g: orders[col].index(g[i]) if g[i] in orders[col] else -1,
+            )
+
+        # calculate the full group_names by inserting "" in the tuple index for one_group groups
+        full_sorted_group_names = [list(t) for t in sorted_group_names]
+        for i, col in enumerate(grouper):
+            if col == one_group:
+                for g in full_sorted_group_names:
+                    g.insert(i, "")
+        full_sorted_group_names = [tuple(g) for g in full_sorted_group_names]
+
+        groups = {}
+        for sf, s in zip(full_sorted_group_names, sorted_group_names):
+            if len(s) > 1:
+                groups[sf] = grouped.get_group(s)
+            else:
+                if pandas_2_2_0:
+                    groups[sf] = grouped.get_group((s[0],))
+                else:
+                    groups[sf] = grouped.get_group(s[0])
+    return groups, orders
+
+
+def init_figure(args):
+    if args.get("marginal_x") is not None:
+        if args["marginal_x"] == "histogram" or ("color" in args and args["color"]):
+            main_size = 0.74
+        else:
+            main_size = 0.84
+
+    if args.get("marginal_y") is not None:
+        if args["marginal_y"] == "histogram" or ("color" in args and args["color"]):
+            main_size = 0.74
+        else:
+            main_size = 0.84
+
+    return main_size

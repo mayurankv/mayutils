@@ -1,0 +1,8 @@
+Add:
+	☐ License details
+		- https://cookiecutter.readthedocs.io/en/1.7.0/advanced/choice_variables.html
+	☐ Required arguments for `project_name` and `project_short_description`
+	☐ Links to `docs` in `CONTRIBUTING.md` file
+	☐ Make easier for optional dependencies
+
+	☐ Package details

@@ -9,7 +9,7 @@ Avoid generating code verbatim from public code examples. Always modify public c
 All code you write MUST use safe and secure coding practices. ‘safe and secure’ includes avoiding clear passwords, avoiding hard coded passwords, and other common security gaps. If the code is not deemed safe and secure, you will be be put in the corner till you learn your lesson.
 
 If modiying Python code only, follow the following rules:
-\- Use modern Python 3.11+ syntax
+\- Use modern Python 3.13+ syntax
 \- Prefer f-strings for formatting strings rather than .format or % formatting
 \- When generating union types, use the union operator, | , not the typing.Union type
 \- When merging dictionaries, use the union operator

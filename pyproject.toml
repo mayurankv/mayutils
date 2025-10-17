@@ -5,12 +5,16 @@ description = "Utilities for Python from Mayuran Visakan"
 authors = [
     { name = "Mayuran Visakan", email = "mayuran.k.v@gmail.com" }
 ]
+maintainers = [
+	{ name = "Mayuran Visakan", email = "mayuran.k.v@gmail.com" }
+]
 license = { file = "LICENSE" }
 readme = "README.md"
 requires-python = ">=3.12,<4.0"
 dependencies = [
     "asyncer>=0.0.8",
     "chromedriver-autoinstaller>=0.6.4",
+    "cookiecutter>=2.6.0",
     "dataframe-image>=0.2.7",
     "gitpython>=3.1.45",
     "google-api-python-client>=2.179.0",
@@ -45,6 +49,7 @@ dependencies = [
     "pydantic>=2.11.7",
     "pydantic-settings>=2.10.1",
     "pymupdf>=1.26.4",
+    "pytest>=8.4.2",
     "python-dotenv>=1.1.1",
     "python-pptx>=1.0.2",
     "requests>=2.32.5",
@@ -64,10 +69,12 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "ruff>=0.9.6",
-  "mypy>=1.15.0",
-  "pytest>=8.3.4",
-  "hatch>=1.14.0"
+    "coverage",  # testing
+    "pytest",  # testing
+    "ruff",  # linting
+    "ty", # checking types
+    "mypy", # checking types
+    "ipdb", # debugging
 ]
 
 [project.scripts]
