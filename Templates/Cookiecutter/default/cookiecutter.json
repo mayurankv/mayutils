@@ -9,5 +9,9 @@
 	"license": [ "MIT", "BSD-3", "GNU GPL v3.0", "Apache Software License 2.0", "None" ],
 	"__package_slug": "{{ cookiecutter.project_name | slugify}}",
 	"__package_snake": "{{ cookiecutter.__package_slug.replace('-', '_') }}",
-	"__gh_slug": "{{ cookiecutter.github_username }}/{{ cookiecutter.__package_slug }}"
+	"__gh_slug": "{{ cookiecutter.github_username }}/{{ cookiecutter.__package_slug }}",
+	"_stale_days": {
+		"issue_stale": 120,
+		"pr_stale": 120
+	}
 }
