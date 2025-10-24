@@ -107,7 +107,10 @@ class cache(object):
                     **kwargs,
                 )
 
-                if self.maxsize is not None and len(self.persistent_cache) >= self.maxsize:
+                if (
+                    self.maxsize is not None
+                    and len(self.persistent_cache) >= self.maxsize
+                ):
                     self.persistent_cache.popitem(last=False)
 
                 self.misses += 1

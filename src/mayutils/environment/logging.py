@@ -146,7 +146,9 @@ class Logger(logging.Logger):
         level: Optional[Level] = None,
         **kwargs,
     ) -> str:
-        level_int = logging._nameToLevel.get(level, None) if isinstance(level, str) else level
+        level_int = (
+            logging._nameToLevel.get(level, None) if isinstance(level, str) else level
+        )
         if level_int is None:
             level_int = self.getEffectiveLevel()
 

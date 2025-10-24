@@ -1,0 +1,3 @@
+from selenium.webdriver.safari.webdriver import WebDriver as WebDriver
+
+def get_driver() -> WebDriver: ...

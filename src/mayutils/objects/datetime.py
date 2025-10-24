@@ -227,7 +227,9 @@ class Time(BaseTime):
     def fractional_completion(
         self,
     ) -> float:
-        return (self.hour * 3600 + self.minute * 60 + self.second + self.microsecond * 1e-6) / DAY_SECONDS
+        return (
+            self.hour * 3600 + self.minute * 60 + self.second + self.microsecond * 1e-6
+        ) / DAY_SECONDS
 
 
 class DateTime(BaseDateTime):
@@ -580,7 +582,9 @@ class Intervals(object):
     def sort(
         self,
     ) -> Self:
-        self.intervals = tuple(sorted(self.intervals, key=lambda interval: (interval.start, interval.end)))
+        self.intervals = tuple(
+            sorted(self.intervals, key=lambda interval: (interval.start, interval.end))
+        )
 
         return self
 

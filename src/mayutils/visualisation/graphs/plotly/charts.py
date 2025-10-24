@@ -5,7 +5,7 @@ from typing import Any, Literal, Optional, Self, final
 from dataclasses import dataclass, field
 from mayutils.export.images import IMAGES_FOLDER
 import numpy as np
-from scipy.stats import gaussian_kde, norm  # pyright: ignore[reportAttributeAccessIssue]
+from scipy.stats import gaussian_kde, norm
 
 import plotly.graph_objects as go
 import plotly.io as pio
@@ -21,13 +21,13 @@ from mayutils.visualisation.graphs.plotly.templates import (
     axis_dict,
     shuffled_colourscale,
 )
+from plotly.basedatatypes import BaseTraceType as Trace
 from mayutils.visualisation.graphs.plotly.traces import (
     Null,
     Line,
     Scatter,
     Ecdf,
     Bar3d,
-    Trace,
     is_trace_3d,
 )
 
@@ -586,7 +586,7 @@ class Plot(go.Figure):
         *args,
         **kwargs,
     ) -> Self:
-        self.data: list[Trace] = []
+        self.data: Any = []  #  pyright: ignore[reportIncompatibleMethodOverride]
 
         return self
 

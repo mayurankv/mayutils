@@ -92,13 +92,17 @@ class LiveData(object):
         engine: EngineWrapper,
     ) -> None:
         new_interval = Interval(
-            start=(now - self.interval.as_duration()) if self.rolling else self.interval.start,
+            start=(now - self.interval.as_duration())
+            if self.rolling
+            else self.interval.start,
             end=now,
         )
 
         if self.rolling:
             # elapsed_period = (previous_period[0], self.period[0])
-            self.data = self.data.loc[self.data[self.index_column] >= new_interval.start.naive()]
+            self.data = self.data.loc[
+                self.data[self.index_column] >= new_interval.start.naive()
+            ]
 
         # new_period = (previous_period[1], self.period[1])»
         additional_data = engine.read_pandas(
@@ -132,7 +136,11 @@ class LiveData(object):
         if engine is None:
             engine = self.engine
 
-        if force or self.update_frequency is None or ((now - self.interval.end) > self.update_frequency):
+        if (
+            force
+            or self.update_frequency is None
+            or ((now - self.interval.end) > self.update_frequency)
+        ):
             self._update(
                 now=now,
                 engine=engine,
@@ -143,7 +151,10 @@ class LiveData(object):
     def _get_aggregated_data(
         self,
     ) -> dict[str, DataFrame]:
-        self.aggregated_data = {aggregation_name: aggregation(self.data) for aggregation_name, aggregation in self.aggregations.items()}
+        self.aggregated_data = {
+            aggregation_name: aggregation(self.data)
+            for aggregation_name, aggregation in self.aggregations.items()
+        }
 
         return self.aggregated_data
 

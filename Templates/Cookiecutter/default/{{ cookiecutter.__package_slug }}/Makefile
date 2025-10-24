@@ -26,7 +26,7 @@ lint:
 	uv run ruff format --check
 
 .PHONY: format
-fmt:
+format:
 	uv run ruff check --fix
 	uv run ruff format
 
@@ -76,9 +76,18 @@ clean-test:
 	rm -fr htmlcov/
 	rm -fr .pytest_cache
 
+.PHONY: stubs
+stubs:
+	PYTHONPATH=src uv run stubgen -p $(PACKAGE_NAME) --include-docstrings --output typings
+	$(MAKE) format
+
+.PHONY: type
+type:
+	uv run mypy --strict src/$(PACKAGE_NAME)
+
 .PHONY: run
 run:
-    uv run main.py
+	uv run main.py
 
 .PHONY: cli
 cli:
@@ -86,19 +95,19 @@ cli:
 
 .PHONY: app
 app:
-    uv run streamlit run src/$(PACKAGE_NAME)/app/main.py
+	uv run streamlit run src/$(PACKAGE_NAME)/app/main.py
 
 .PHONY: dev
 dev:
-    uv run streamlit run src/$(PACKAGE_NAME)/app/main.py --server.runOnSave=true
+	uv run streamlit run src/$(PACKAGE_NAME)/app/main.py --server.runOnSave=true
 
 .PHONY: containerise
 containerise:
-    podman build \
-        --secret id=GITHUB_PAT_TOKEN,src=./.secrets/GITHUB_PAT_TOKEN.token \
-        -t $(PACKAGE_NAME) \
-        .
+	podman build \
+		--secret id=GITHUB_PAT_TOKEN,src=./.secrets/GITHUB_PAT_TOKEN.token \
+		-t $(PACKAGE_NAME) \
+		.
 
 .PHONY: run_container
 run_container:
-    podman run -p 8501:8501 $(PACKAGE_NAME):latest
+	podman run -p 8501:8501 $(PACKAGE_NAME):latest

@@ -10,8 +10,8 @@ from mayutils.data import CACHE_FOLDER
 from mayutils.data.queries import QUERIES_FOLDERS, get_formatted_query
 from mayutils.environment.filesystem import encode_path
 from mayutils.environment.memoisation import DataframeBackends
-from mayutils.objects.dataframes import DataFrames, read_parquet, to_parquet
 from mayutils.objects.hashing import hash_inputs
+from mayutils.objects.dataframes import read_parquet, to_parquet, DataFrames
 
 if TYPE_CHECKING:
     from functools import _lru_cache_wrapper as LRUCacheWrapper
@@ -58,7 +58,11 @@ def get_query_data(
     cache: bool | Literal["persistent"] = True,
     **format_kwargs,
 ) -> DataFrames:
-    if cache is False and hasattr(read_query, "cache_clear") and callable(getattr(read_query, "cache_clear")):
+    if (
+        cache is False
+        and hasattr(read_query, "cache_clear")
+        and callable(getattr(read_query, "cache_clear"))
+    ):
         read_query.cache_clear()
 
     cache_name = f"{encode_path(path=query_name)}_data_{

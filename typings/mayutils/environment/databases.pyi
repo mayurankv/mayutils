@@ -1,0 +1,16 @@
+from _typeshed import Incomplete
+from pandas import DataFrame
+from sqlalchemy import Engine as Engine
+from typing import Self
+
+class EngineWrapper:
+    engine: Incomplete
+    def __init__(self, engine: Engine) -> None: ...
+    @classmethod
+    def create(cls, *args, **kwargs) -> Self: ...
+    @classmethod
+    def via_snowflake(cls, *args, **kwargs) -> Self: ...
+    def read_pandas(
+        self, query_string: str, lower_case: bool = True, *args, **kwargs
+    ) -> DataFrame: ...
+    def __call__(self) -> Engine: ...

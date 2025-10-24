@@ -1,0 +1,3 @@
+def combine_figures(
+    files: list[str], title: str, cols: int, rows: int, filetype: str = "pdf"
+) -> None: ...

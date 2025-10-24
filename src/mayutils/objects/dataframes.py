@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Callable, Literal, Optional, Self, TypeAlias, get_args
+from typing import Callable, Literal, Optional, Self, get_args
 
 from itables import show
 from great_tables import GT
@@ -31,7 +31,7 @@ from mayutils.objects.colours import Colour
 from mayutils.export import OUTPUT_FOLDER
 
 DataframeBackends = Literal["pandas", "polars"]
-DataFrames: TypeAlias = pd.DataFrame | pl.DataFrame
+DataFrames = pd.DataFrame | pl.DataFrame
 
 DATA_FOLDER = OUTPUT_FOLDER / "Data"
 
@@ -59,7 +59,12 @@ class Styler(Style):
         self,
     ) -> Self:
         def style_map(value):
-            return "color: rgba(0,0,0,0); background-color: rgba(0, 0, 0, 0);" if isinstance(value, (float, int, np.floating, np.integer)) and np.isnan(value) else ""
+            return (
+                "color: rgba(0,0,0,0); background-color: rgba(0, 0, 0, 0);"
+                if isinstance(value, (float, int, np.floating, np.integer))
+                and np.isnan(value)
+                else ""
+            )
 
         return self.map(style_map=style_map)
 
@@ -97,7 +102,9 @@ class Styler(Style):
 
                 for col_num in range(len(self.columns)):
                     self._display_funcs[(row_num, col_num)] = (  # type: ignore
-                        row_formatter if not isinstance(row_formatter, str) else lambda x: format(x, row_formatter)  # type: ignore
+                        row_formatter
+                        if not isinstance(row_formatter, str)
+                        else lambda x: format(x, row_formatter)  # type: ignore
                     )
 
         return self
@@ -324,9 +331,13 @@ class DataframeUtilsAccessor(object):
     ) -> DataFrame:
         df_cut = self.df.loc[self.df.index < cutoff].copy()
         if aggregation is not None:
-            df_cut.loc[f"{cutoff}+", :] = aggregation(self.df.loc[self.df.index >= cutoff])
+            df_cut.loc[f"{cutoff}+", :] = aggregation(
+                self.df.loc[self.df.index >= cutoff]
+            )
             df_cut.index = df_cut.index.astype(dtype=str)
-            df_cut = df_cut.sort_index(key=lambda x: x.str.split(pat="+").str[0].astype(dtype=int))
+            df_cut = df_cut.sort_index(
+                key=lambda x: x.str.split(pat="+").str[0].astype(dtype=int)
+            )
 
         return df_cut
 
@@ -413,7 +424,9 @@ class SeriesUtilsAccessor(object):
         path: Path | str,
     ) -> Path:
         # TODO: Finish
-        raise NotImplementedError("Not implemented for series yet: leverage existing df methods")
+        raise NotImplementedError(
+            "Not implemented for series yet: leverage existing df methods"
+        )
 
 
 class IndexUtilsAccessor(object):
@@ -430,7 +443,14 @@ class IndexUtilsAccessor(object):
         if not isinstance(self.index, MultiIndex):
             raise TypeError("Index is not of type MultiIndex")
 
-        return list(map(list, self.index)) if not transpose else list(list(self.index.get_level_values(level=level)) for level in range(len(self.index.names)))
+        return (
+            list(map(list, self.index))
+            if not transpose
+            else list(
+                list(self.index.get_level_values(level=level))
+                for level in range(len(self.index.names))
+            )
+        )
 
 
 # def save_dataframe(
@@ -510,7 +530,7 @@ class IndexUtilsAccessor(object):
 
 
 def to_parquet(
-    df: DataFrames,
+    df: DataFrames,  # type: ignore
     path: Path | str,
     dataframe_backend: Optional[DataframeBackends] = None,
     **kwargs,
@@ -552,7 +572,7 @@ def read_parquet(
     path: Path | str,
     dataframe_backend: DataframeBackends = "pandas",
     **kwargs,
-) -> DataFrames:
+) -> DataFrames:  # type: ignore
     path = Path(path)
 
     if dataframe_backend == "pandas":

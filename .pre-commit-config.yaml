@@ -24,22 +24,6 @@ repos:
     # Run the formatter.
     - id: ruff-format
       exclude: 'Templates/Cookiecutter/'
-- repo: https://github.com/RobertCraigie/pyright-python
-  rev: v1.1.404
-  hooks:
-    - id: pyright
-      exclude: 'Templates/Cookiecutter/'
-      additional_dependencies:
-        [
-          beartype,
-          einops,
-          jax,
-          jaxtyping,
-          optax,
-          pytest,
-          typing_extensions,
-          wadler_lindig,
-        ]
 -   repo: https://github.com/pre-commit/mirrors-mypy
     rev: 'v1.17.1'
     hooks:
@@ -76,3 +60,19 @@ repos:
       exclude: 'Templates/Cookiecutter/'
       additional_dependencies:
         - mdformat-ruff
+- repo: https://github.com/RobertCraigie/pyright-python
+  rev: v1.1.404
+  hooks:
+    - id: pyright
+      exclude: 'Templates/Cookiecutter/'
+      additional_dependencies:
+        [
+          beartype,
+          einops,
+          jax,
+          jaxtyping,
+          optax,
+          pytest,
+          typing_extensions,
+          wadler_lindig,
+        ]

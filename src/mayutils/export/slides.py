@@ -64,9 +64,15 @@ def export_slides(
         format="%Y_%m_%d",
     )
 
-    filepath = os.path.dirname(p=os.path.realpath(filename="__file__")) + "/" + file_name
+    filepath = (
+        os.path.dirname(p=os.path.realpath(filename="__file__")) + "/" + file_name
+    )
 
-    file_title = f"{title}_{today}" if title is not None else f"{file_name.split(sep='.')[0]}_{today}"
+    file_title = (
+        f"{title}_{today}"
+        if title is not None
+        else f"{file_name.split(sep='.')[0]}_{today}"
+    )
     output_filepath = SLIDES_FOLDER / file_title
 
     with Progress(
