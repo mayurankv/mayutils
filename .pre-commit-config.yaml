@@ -61,7 +61,7 @@ repos:
       additional_dependencies:
         - mdformat-ruff
 - repo: https://github.com/RobertCraigie/pyright-python
-  rev: v1.1.404
+  rev: v1.1.407
   hooks:
     - id: pyright
       exclude: 'Templates/Cookiecutter/'
