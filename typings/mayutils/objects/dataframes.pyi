@@ -70,6 +70,7 @@ class DataframeUtilsAccessor:
         date_format: str = "%Y-%m-%d %H:%M:%S",
         time_format: str = "%H:%M:%S",
     ) -> DataFrame: ...
+    def ground(self, interval: Interval | None = None) -> DataFrame: ...
 
 class SeriesUtilsAccessor:
     series: Incomplete

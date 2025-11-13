@@ -2,6 +2,7 @@ import plotly.graph_objects as go
 from dataclasses import dataclass, field
 from mayutils.export.images import IMAGES_FOLDER as IMAGES_FOLDER
 from mayutils.objects.colours import Colour as Colour, TRANSPARENT as TRANSPARENT
+from mayutils.objects.datetime import Interval as Interval
 from mayutils.objects.functions import set_inline as set_inline
 from mayutils.visualisation.graphs.plotly.templates import (
     axis_dict as axis_dict,
@@ -155,6 +156,7 @@ class Plot(go.Figure):
         **kwargs,
     ) -> Self: ...
     def add_defaults(self, **kwargs) -> Self: ...
+    def add_interval(self, interval: Interval | None, **kwargs) -> Self: ...
     def __call__(self, save: bool = True, show: bool = True) -> Self: ...
 
 class SubPlot(Plot):

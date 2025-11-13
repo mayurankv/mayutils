@@ -14,6 +14,7 @@ from plotly._subplots import _build_subplot_title_annotations
 
 from mayutils.objects.colours import TRANSPARENT, Colour
 
+from mayutils.objects.datetime import Interval
 from mayutils.objects.functions import set_inline
 
 from mayutils.visualisation.graphs.plotly.templates import (
@@ -1272,6 +1273,24 @@ class Plot(go.Figure):
                     ],
                 )
             ]
+        )
+
+        return self
+
+    def add_interval(
+        self,
+        interval: Optional[Interval],
+        **kwargs,
+    ) -> Self:
+        if interval is None:
+            return self
+
+        kwargs = {"line_width": 0, "opacity": 0.1} | kwargs
+
+        self.add_vrect(
+            x0=interval.start.simple,
+            x1=interval.end.simple,
+            **kwargs,
         )
 
         return self
