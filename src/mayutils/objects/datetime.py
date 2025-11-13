@@ -121,6 +121,16 @@ class Date(BaseDate):
             day=date.day,
         )
 
+    @property
+    def simple(
+        self,
+    ) -> _datetime.date:
+        return _datetime.date(
+            year=self.year,
+            month=self.month,
+            day=self.day,
+        )
+
     @classmethod
     def parse(
         cls,
@@ -182,6 +192,17 @@ class Time(BaseTime):
         return cls.instance(
             t=time,
             tz=tz,
+        )
+
+    @property
+    def simple(
+        self,
+    ) -> _datetime.time:
+        return _datetime.time(
+            hour=self.hour,
+            minute=self.minute,
+            second=self.second,
+            microsecond=self.microsecond,
         )
 
     @classmethod
@@ -568,6 +589,32 @@ class Interval(BaseInterval):
                 self.end.simple,
                 self.start.simple,
             )
+        )
+
+    @property
+    def as_date_slice(
+        self,
+    ) -> slice:
+        return (
+            slice(
+                self.start.date().simple,
+                self.end.date().simple,
+            )
+            if not self._invert
+            else slice(
+                self.end.date().simple,
+                self.start.date().simple,
+            )
+        )
+
+    def to_interval_string(
+        self,
+        datetime: bool = False,
+    ) -> str:
+        return (
+            f"{self.start.to_datetime_string()} to {self.end.to_datetime_string()}"
+            if datetime
+            else f"{self.start.to_date_string()} to {self.end.to_date_string()}"
         )
 
 
