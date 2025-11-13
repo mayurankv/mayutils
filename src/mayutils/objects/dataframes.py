@@ -27,6 +27,7 @@ from dataframe_image._pandas_accessor import (
 )
 import polars as pl
 import numpy as np
+from mayutils.objects.datetime import Interval
 from mayutils.objects.colours import Colour
 from mayutils.export import OUTPUT_FOLDER
 
@@ -427,6 +428,24 @@ class SeriesUtilsAccessor(object):
         raise NotImplementedError(
             "Not implemented for series yet: leverage existing df methods"
         )
+
+    def ground(
+        self,
+        interval: Optional[Interval] = None,
+    ) -> Series:
+        if interval is None:
+            return self.series
+
+        if self.series.index.inferred_type == "datetime":
+            grounding_value = self.series.loc[interval.as_slice].mean()
+        elif self.series.index.inferred_type == "date":
+            grounding_value = self.series.loc[interval.as_date_slice].mean()
+        else:
+            raise TypeError("Series index must be datetime or date type for grounding")
+
+        grounded_series = self.series.div(grounding_value)
+
+        return grounded_series
 
 
 class IndexUtilsAccessor(object):

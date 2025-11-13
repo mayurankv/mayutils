@@ -2,6 +2,7 @@ from _typeshed import Incomplete
 from great_tables import GT
 from mayutils.export import OUTPUT_FOLDER as OUTPUT_FOLDER
 from mayutils.objects.colours import Colour as Colour
+from mayutils.objects.datetime import Interval as Interval
 from pandas import DataFrame, Index, Series
 from pandas.io.formats.style import Styler as Style
 from pathlib import Path
@@ -74,6 +75,7 @@ class SeriesUtilsAccessor:
     series: Incomplete
     def __init__(self, series: Series) -> None: ...
     def save(self, path: Path | str) -> Path: ...
+    def ground(self, interval: Interval | None = None) -> Series: ...
 
 class IndexUtilsAccessor:
     index: Incomplete
