@@ -412,6 +412,25 @@ class DataframeUtilsAccessor(object):
 
         return self.df
 
+    def ground(
+        self,
+        interval: Optional[Interval] = None,
+    ) -> DataFrame:
+        if interval is None:
+            return self.df
+
+        raise NotImplementedError("Grounding not implemented for DataFrames yet")
+        # if self.df.index.inferred_type == "datetime":
+        #     grounding_value = self.df.loc[interval.as_slice].mean()
+        # elif self.df.index.inferred_type == "date":
+        #     grounding_value = self.df.loc[interval.as_date_slice].mean()
+        # else:
+        #     raise TypeError("Series index must be datetime or date type for grounding")
+
+        # grounded_series = self.series.div(grounding_value)
+
+        # return grounded_series
+
 
 class SeriesUtilsAccessor(object):
     def __init__(
