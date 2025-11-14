@@ -19,7 +19,7 @@ from mayutils.visualisation.graphs.plotly.traces import (
 )
 from pathlib import Path
 from plotly.basedatatypes import BaseTraceType as Trace
-from typing import Any, Literal, Self, final
+from typing import Any, Literal, Mapping, Self, Sequence, final
 
 AxisConfig = dict
 
@@ -90,7 +90,7 @@ class Plot(go.Figure):
         self,
         description: str,
         plot_config: PlotConfig,
-        layout: dict = {},
+        layout: Mapping = {},
         *args,
         **kwargs,
     ) -> None: ...
@@ -121,6 +121,7 @@ class Plot(go.Figure):
     data: Any
     def empty_traces(self, *args, **kwargs) -> Self: ...
     def update_layout(self, *args, **kwargs) -> Self: ...
+    def update_traces(self, *args, **kwargs) -> Self: ...
     def add_title(
         self,
         title: str,
@@ -132,12 +133,14 @@ class Plot(go.Figure):
         **kwargs,
     ) -> Self: ...
     def shift_title(self, offset: int) -> Self: ...
-    def show(self, show: bool = True, layout: dict = {}, *args, **kwargs) -> None: ...
+    def show(
+        self, show: bool = True, layout: Mapping = {}, *args, **kwargs
+    ) -> None: ...
     def copy(self, description: str | None = None) -> Plot: ...
     def save(
         self,
         filename: str,
-        image_formats: list[str] = ["png"],
+        image_formats: Sequence[str] = ["png"],
         scale: int | None = 5,
         template: str | None = None,
         *args,
@@ -157,6 +160,7 @@ class Plot(go.Figure):
     ) -> Self: ...
     def add_defaults(self, **kwargs) -> Self: ...
     def add_interval(self, interval: Interval | None, **kwargs) -> Self: ...
+    def hide_traces(self, trace_names: Sequence[str]) -> Self: ...
     def __call__(self, save: bool = True, show: bool = True) -> Self: ...
 
 class SubPlot(Plot):
@@ -164,13 +168,13 @@ class SubPlot(Plot):
         self,
         description: str,
         subplot_config: SubPlotConfig,
-        layout: dict = {},
+        layout: Mapping = {},
         x_datetime: bool = False,
-        x_spacing: dict[str, float] = {},
-        y_spacing: dict[str, float] = {},
+        x_spacing: Mapping[str, float] = {},
+        y_spacing: Mapping[str, float] = {},
         line_title_offsets: tuple[float, float] = (22.5, 22.5),
-        line_title_styles: dict = ...,
-        plot_title_styles: dict = ...,
+        line_title_styles: Mapping = ...,
+        plot_title_styles: Mapping = ...,
         fill_nulls: bool = True,
         *args,
         **kwargs,
@@ -181,4 +185,4 @@ def get_domain_fraction(axis_idx: int, max_yaxis: int) -> float: ...
 def get_domains(
     spacing: float, num_axes: int, fraction: float = 1
 ) -> list[list[float]]: ...
-def sort_traces_by_axes(traces: list[Trace]) -> dict: ...
+def sort_traces_by_axes(traces: Sequence[Trace]) -> dict: ...

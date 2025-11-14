@@ -1,7 +1,7 @@
 import os
 from math import isqrt, ceil
 from pathlib import Path
-from typing import Any, Literal, Optional, Self, final
+from typing import Any, Literal, Mapping, Optional, Self, final, Sequence
 from dataclasses import dataclass, field
 from mayutils.export.images import IMAGES_FOLDER
 import numpy as np
@@ -241,7 +241,7 @@ class Plot(go.Figure):
         self,
         description: str,
         plot_config: PlotConfig,
-        layout: dict = {},
+        layout: Mapping = {},
         *args,
         **kwargs,
     ) -> None:
@@ -603,6 +603,18 @@ class Plot(go.Figure):
 
         return self
 
+    def update_traces(
+        self,
+        *args,
+        **kwargs,
+    ) -> Self:
+        super().update_traces(
+            *args,
+            **kwargs,
+        )
+
+        return self
+
     def add_title(
         self,
         title: str,
@@ -653,7 +665,7 @@ class Plot(go.Figure):
     def show(
         self,
         show: bool = True,
-        layout: dict = {},
+        layout: Mapping = {},
         *args,
         **kwargs,
     ) -> None:
@@ -684,7 +696,7 @@ class Plot(go.Figure):
     def save(
         self,
         filename: str,
-        image_formats: list[str] = ["png"],  # ["png", "jpeg", "pdf"]
+        image_formats: Sequence[str] = ["png"],  # ["png", "jpeg", "pdf"]
         scale: Optional[int] = 5,
         template: Optional[str] = None,
         *args,
@@ -1295,6 +1307,18 @@ class Plot(go.Figure):
 
         return self
 
+    def hide_traces(
+        self,
+        trace_names: Sequence[str],
+    ) -> Self:
+        for name in trace_names:
+            self = self.update_traces(
+                visible="showlegend",
+                selector=dict(name=name),
+            )
+
+        return self
+
     def __call__(
         self,
         save: bool = True,
@@ -1317,16 +1341,16 @@ class SubPlot(Plot):
         self,
         description: str,
         subplot_config: SubPlotConfig,
-        layout: dict = {},
+        layout: Mapping = {},
         x_datetime: bool = False,
-        x_spacing: dict[str, float] = {},
-        y_spacing: dict[str, float] = {},
+        x_spacing: Mapping[str, float] = {},
+        y_spacing: Mapping[str, float] = {},
         line_title_offsets: tuple[float, float] = (22.5, 22.5),
-        line_title_styles: dict = dict(
+        line_title_styles: Mapping = dict(
             font_weight=700,
             font_size=12,
         ),
-        plot_title_styles: dict = dict(),
+        plot_title_styles: Mapping = dict(),
         fill_nulls: bool = True,
         *args,
         **kwargs,
@@ -1716,7 +1740,7 @@ def get_domains(
 
 
 def sort_traces_by_axes(
-    traces: list[Trace],
+    traces: Sequence[Trace],
 ) -> dict:
     traces_axes: dict[tuple[str, str], list[Trace]] = {}
     for trace in traces:
