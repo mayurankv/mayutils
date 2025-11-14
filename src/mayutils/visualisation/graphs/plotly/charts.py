@@ -1319,6 +1319,39 @@ class Plot(go.Figure):
 
         return self
 
+    def set_visible_yrange(
+        self,
+        y_min: float,
+        y_max: float,
+        y_padding: float = 0.05,
+    ) -> Self:
+        trace_limits = [
+            (
+                np.nanmin(trace.y[visible_mask]),
+                np.nanmax(trace.y[visible_mask]),
+            )
+            for trace in self.data
+            if (trace.visible is None or trace.visible is True)
+            and (
+                visible_mask := (trace.x < self.layout.xaxis.range[1])  # type: ignore
+                & (trace.x > self.layout.xaxis.range[0])  # type: ignore
+            ).any()
+        ]
+
+        traces_min = min(map(min, trace_limits))
+        traces_max = max(map(max, trace_limits))
+        span = traces_max - traces_min
+
+        y_range = (
+            (traces_min - span * y_padding).clip(min=y_min),
+            (traces_max + span * y_padding).clip(max=y_max),
+        )
+        self.update_layout(
+            yaxis_range=y_range,
+        )
+
+        return self
+
     def __call__(
         self,
         save: bool = True,
