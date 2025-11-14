@@ -2322,7 +2322,7 @@ wheels = [
 
 [[package]]
 name = "mayutils"
-version = "1.2.35"
+version = "1.2.36"
 source = { editable = "." }
 dependencies = [
     { name = "asyncer" },
@@ -2834,7 +2834,7 @@ wheels = [
 
 [[package]]
 name = "notebook"
-version = "7.5.0rc0"
+version = "7.5.0rc1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jupyter-server" },
@@ -2843,9 +2843,9 @@ dependencies = [
     { name = "notebook-shim" },
     { name = "tornado" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/70/03/7b696ed6b9bcc896de552466f4f3d76448f31db39cfe9b11d4bb858dd067/notebook-7.5.0rc0.tar.gz", hash = "sha256:ee4727cd50821c9581667bc3a5d3242cfac9b9b021bf81361bb0d78fe8555eba", size = 13960122, upload-time = "2025-11-03T19:38:27.319Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a4/b7/f0b1c320392ba4812e652b3477d186009c4dc57af4b0017959b0dbd3267e/notebook-7.5.0rc1.tar.gz", hash = "sha256:a9780c8ee5d1371b5d4bd5c1a56366648a6774e60ed6b7777a920b834a265912", size = 13958958, upload-time = "2025-11-14T15:47:45.597Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/28/a3/473755e13b662523df75e9db0dc630e7b6842d2db0d07a55fbf6fa09c830/notebook-7.5.0rc0-py3-none-any.whl", hash = "sha256:e95b765e0b11f9796694e85a2bc2518950315461acb193587a89f4118bef0c2d", size = 14368076, upload-time = "2025-11-03T19:38:23.452Z" },
+    { url = "https://files.pythonhosted.org/packages/06/f5/5c065708f59f30d6ff6015d78003e96fdd6524d5de4c998a97db7180e178/notebook-7.5.0rc1-py3-none-any.whl", hash = "sha256:ce134d03cc6d1aed03f11b69d5c7150d83daecad303c21aff2507f02bed10221", size = 14369559, upload-time = "2025-11-14T15:47:41.543Z" },
 ]
 
 [[package]]

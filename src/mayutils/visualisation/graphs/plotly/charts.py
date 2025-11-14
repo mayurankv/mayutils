@@ -1325,30 +1325,36 @@ class Plot(go.Figure):
         y_max: Optional[float] = None,
         y_padding: float = 0.05,
     ) -> Self:
-        trace_limits = [
-            (
-                np.nanmin(trace.y[visible_mask]),
-                np.nanmax(trace.y[visible_mask]),
+        for yaxis in [prop for prop in self.layout if prop.startswith("yaxis")]:
+            yaxis_suffix = yaxis.removeprefix("yaxis")
+
+            trace_limits = [
+                (
+                    np.nanmin(trace.y[visible_mask]),
+                    np.nanmax(trace.y[visible_mask]),
+                )
+                for trace in self.data
+                if (trace.visible is None or trace.visible is True)
+                and trace.yaxis == f"y{yaxis_suffix}"
+                and (
+                    visible_mask := (trace.x < self.layout.xaxis.range[1])  # type: ignore
+                    & (trace.x > self.layout.xaxis.range[0])  # type: ignore
+                ).any()
+            ]
+
+            traces_min = min(map(min, trace_limits))
+            traces_max = max(map(max, trace_limits))
+            span = traces_max - traces_min
+
+            y_range = (
+                (traces_min - span * y_padding).clip(min=y_min),
+                (traces_max + span * y_padding).clip(max=y_max),
             )
-            for trace in self.data
-            if (trace.visible is None or trace.visible is True)
-            and (
-                visible_mask := (trace.x < self.layout.xaxis.range[1])  # type: ignore
-                & (trace.x > self.layout.xaxis.range[0])  # type: ignore
-            ).any()
-        ]
-
-        traces_min = min(map(min, trace_limits))
-        traces_max = max(map(max, trace_limits))
-        span = traces_max - traces_min
-
-        y_range = (
-            (traces_min - span * y_padding).clip(min=y_min),
-            (traces_max + span * y_padding).clip(max=y_max),
-        )
-        self.update_layout(
-            yaxis_range=y_range,
-        )
+            self.update_layout(
+                {
+                    f"yaxis{yaxis_suffix}_range": y_range,
+                }
+            )
 
         return self
 
