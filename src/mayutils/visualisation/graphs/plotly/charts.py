@@ -1321,8 +1321,8 @@ class Plot(go.Figure):
 
     def set_visible_yrange(
         self,
-        y_min: float,
-        y_max: float,
+        y_min: Optional[float] = None,
+        y_max: Optional[float] = None,
         y_padding: float = 0.05,
     ) -> Self:
         trace_limits = [
