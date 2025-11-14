@@ -1313,7 +1313,7 @@ class Plot(go.Figure):
     ) -> Self:
         for name in trace_names:
             self = self.update_traces(
-                visible="showlegend",
+                visible="legendonly",
                 selector=dict(name=name),
             )
 
