@@ -1328,28 +1328,48 @@ class Plot(go.Figure):
         for yaxis in [prop for prop in self.layout if prop.startswith("yaxis")]:
             yaxis_suffix = yaxis.removeprefix("yaxis")
 
-            trace_limits = [
-                (
-                    np.nanmin(trace.y[visible_mask]),
-                    np.nanmax(trace.y[visible_mask]),
-                )
-                for trace in self.data
-                if (trace.visible is None or trace.visible is True)
-                and trace.yaxis == f"y{yaxis_suffix}"
-                and (
-                    visible_mask := (trace.x < self.layout.xaxis.range[1])  # type: ignore
-                    & (trace.x > self.layout.xaxis.range[0])  # type: ignore
-                ).any()
-            ]
-
-            traces_min = min(map(min, trace_limits))
-            traces_max = max(map(max, trace_limits))
-            span = traces_max - traces_min
-
-            y_range = (
-                (traces_min - span * y_padding).clip(min=y_min),
-                (traces_max + span * y_padding).clip(max=y_max),
+            trace_limits = np.asarray(
+                [
+                    (
+                        np.nanmin(visible_y)
+                        if not (np.isnan(visible_y := trace.y[visible_mask])).all()
+                        and not visible_y.shape == (0,)
+                        else np.nan,
+                        np.nanmax(visible_y)
+                        if not (np.isnan(visible_y)).all()
+                        and not visible_y.shape == (0,)
+                        else np.nan,
+                    )
+                    for trace in self.data
+                    if (trace.visible is None or trace.visible is True)
+                    and trace.yaxis == f"y{yaxis_suffix}"
+                    and (
+                        visible_mask := (trace.x < self.layout.xaxis.range[1])  # type: ignore
+                        & (trace.x > self.layout.xaxis.range[0])  # type: ignore
+                    ).any()
+                ]
             )
+
+            traces_min = (
+                np.nanmin(trace_limits) if not np.isnan(trace_limits).all() else None
+            )
+            traces_max = (
+                np.nanmax(trace_limits) if not np.isnan(trace_limits).all() else None
+            )
+
+            if traces_min is not None and traces_max is not None:
+                span = traces_max - traces_min
+
+                y_range = (
+                    (traces_min - span * y_padding).clip(min=y_min),
+                    (traces_max + span * y_padding).clip(max=y_max),
+                )
+            else:
+                y_range = (
+                    traces_min * (1 - y_padding) if traces_min is not None else None,
+                    traces_max * (1 + y_padding) if traces_max is not None else None,
+                )
+
             self.update_layout(
                 {
                     f"yaxis{yaxis_suffix}_range": y_range,
