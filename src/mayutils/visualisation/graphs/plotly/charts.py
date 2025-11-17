@@ -1319,7 +1319,7 @@ class Plot(go.Figure):
 
         return self
 
-    def set_visible_yrange(
+    def set_visible_y_range(
         self,
         y_min: Optional[float] = None,
         y_max: Optional[float] = None,
@@ -1342,6 +1342,7 @@ class Plot(go.Figure):
                     )
                     for trace in self.data
                     if (trace.visible is None or trace.visible is True)
+                    and isinstance(trace.y, np.ndarray)
                     and trace.yaxis == f"y{yaxis_suffix}"
                     and (
                         visible_mask := (trace.x < self.layout.xaxis.range[1])  # type: ignore
