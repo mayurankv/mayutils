@@ -1790,8 +1790,8 @@ def get_domains(
     gap = (1 - spacing * (num_axes - 1)) / num_axes
     domains = [
         [
-            min((gap + spacing) * idx * fraction, 0),
-            max((gap + spacing) * idx * fraction + gap * fraction, 1),
+            max((gap + spacing) * idx * fraction, 0),
+            min((gap + spacing) * idx * fraction + gap * fraction, 1),
         ]
         for idx in range(num_axes)
     ]
