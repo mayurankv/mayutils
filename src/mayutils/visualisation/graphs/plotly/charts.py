@@ -1363,7 +1363,20 @@ class Plot(go.Figure):
             if len(limits) > 0
         }
 
-        self.update_layout(trace_limits)
+        padded_trace_limits = {
+            yaxis_range: (
+                y_min - (y_max - y_min) * y_padding,
+                y_max + (y_max - y_min) * y_padding,
+            )
+            if y_max is not None and y_min is not None
+            else (
+                y_min * (1 - y_padding) if y_min is not None else None,
+                y_max * (1 + y_padding) if y_max is not None else None,
+            )
+            for yaxis_range, (y_min, y_max) in trace_limits.items()
+        }
+
+        self.update_layout(padded_trace_limits)
 
         return self
 
