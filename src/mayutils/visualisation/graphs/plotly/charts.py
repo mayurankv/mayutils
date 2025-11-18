@@ -1321,8 +1321,6 @@ class Plot(go.Figure):
 
     def set_visible_y_range(
         self,
-        y_min: Optional[float] = None,
-        y_max: Optional[float] = None,
         y_padding: float = 0.05,
     ) -> Self:
         yaxes = sorted([prop for prop in self.layout if prop.startswith("yaxis")])
@@ -1341,10 +1339,16 @@ class Plot(go.Figure):
                     for trace in self.data
                     if trace.visible in [None, True]
                     and isinstance(trace.y, np.ndarray)
-                    and getattr(
-                        self.layout, trace.yaxis.replace("y", "yaxis")
-                    ).matches.replace("y", "yaxis")
-                    == yaxis
+                    and (
+                        trace_yaxis_obj := getattr(
+                            self.layout,
+                            trace.yaxis.replace("y", "yaxis"),
+                            None,
+                        )
+                    )
+                    is not None
+                    and (matching_yaxis := trace_yaxis_obj.matches) is not None
+                    and matching_yaxis.replace("y", "yaxis") == yaxis
                     and (
                         visible_mask := (trace.x < self.layout.xaxis.range[1])  # type: ignore
                         & (trace.x > self.layout.xaxis.range[0])  # type: ignore
