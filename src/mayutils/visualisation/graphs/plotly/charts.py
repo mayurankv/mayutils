@@ -1347,8 +1347,13 @@ class Plot(go.Figure):
                         )
                     )
                     is not None
-                    and (matching_yaxis := trace_yaxis_obj.matches) is not None
-                    and matching_yaxis.replace("y", "yaxis") == yaxis
+                    and (
+                        (
+                            (matching_yaxis := trace_yaxis_obj.matches) is not None
+                            and matching_yaxis.replace("y", "yaxis") == yaxis
+                        )
+                        or (trace.yaxis.replace("y", "yaxis") == yaxis)
+                    )
                     and (
                         visible_mask := (trace.x < self.layout.xaxis.range[1])  # type: ignore
                         & (trace.x > self.layout.xaxis.range[0])  # type: ignore
