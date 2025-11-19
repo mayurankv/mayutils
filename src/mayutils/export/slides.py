@@ -14,16 +14,16 @@ from mayutils.export import OUTPUT_FOLDER
 
 WARNING = "Not an ipython notebook"
 
-try:
-    from IPython import get_ipython  # type: ignore
+# try:
+#     from IPython import get_ipython  # type: ignore
 
-    ipython = get_ipython()
+#     ipython = get_ipython()
 
-    if ipython is None:
-        raise ValueError(WARNING)
+#     if ipython is None:
+#         raise ValueError(WARNING)
 
-except ImportError:
-    raise ValueError(WARNING)
+# except ImportError:
+#     raise ValueError(WARNING)
 
 SLIDES_FOLDER = OUTPUT_FOLDER / "Slides"
 
