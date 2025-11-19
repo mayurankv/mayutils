@@ -56,6 +56,7 @@ def export_slides(
     theme: Optional[tuple[str, str]] = None,
     serve: bool = False,
     light: bool = False,
+    rerun: bool = True,
 ) -> Path | None:
     if not not_nbconvert():
         return None
@@ -86,7 +87,7 @@ def export_slides(
             total=None,
         )
         call(
-            args=f"_NBCONVERT_OUTPUT_FORMAT=slides jupyter nbconvert {escape(filepath)} --output {escape(str(output_filepath))} --execute {'' if theme is None else ('--template=' + theme[0])} --to slides --no-input --no-prompt{'' if not serve else ' --post serve'} --SlidesExporter.reveal_scroll=True --SlidesExporter.reveal_number=c/t --SlidesExporter.reveal_theme={'simple' if light else 'night'} {'' if theme is None else ('--TemplateExporter.extra_template_basedirs=' + theme[1])}",
+            args=f"_NBCONVERT_OUTPUT_FORMAT=slides jupyter nbconvert {escape(filepath)} --output {escape(str(output_filepath))}{' --execute' if rerun else ''} {'' if theme is None else ('--template=' + theme[0])} --to slides --no-input --no-prompt{'' if not serve else ' --post serve'} --SlidesExporter.reveal_scroll=True --SlidesExporter.reveal_number=c/t --SlidesExporter.reveal_theme={'simple' if light else 'night'} {'' if theme is None else ('--TemplateExporter.extra_template_basedirs=' + theme[1])}",
             shell=True,
         )
 
