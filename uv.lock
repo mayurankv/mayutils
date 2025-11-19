@@ -2331,7 +2331,7 @@ wheels = [
 
 [[package]]
 name = "mayutils"
-version = "1.2.44"
+version = "1.2.45"
 source = { editable = "." }
 dependencies = [
     { name = "asyncer" },
