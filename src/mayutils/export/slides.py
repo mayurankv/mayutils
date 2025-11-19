@@ -52,7 +52,7 @@ def subtitle_text(
 
 def export_slides(
     title: Optional[str] = None,
-    file_name: str = "report.ipynb",
+    file_path: Path | str = "report.ipynb",
     theme: Optional[tuple[str, str]] = None,
     serve: bool = False,
     light: bool = False,
@@ -61,18 +61,14 @@ def export_slides(
     if not not_nbconvert():
         return None
 
+    file_path = Path(file_path)
+
     today = Date.today().strftime(
         format="%Y_%m_%d",
     )
 
-    filepath = (
-        os.path.dirname(p=os.path.realpath(filename="__file__")) + "/" + file_name
-    )
-
     file_title = (
-        f"{title}_{today}"
-        if title is not None
-        else f"{file_name.split(sep='.')[0]}_{today}"
+        f"{title}_{today}" if title is not None else f"{file_path.stem}_{today}"
     )
     output_filepath = SLIDES_FOLDER / file_title
 
@@ -87,7 +83,7 @@ def export_slides(
             total=None,
         )
         call(
-            args=f"_NBCONVERT_OUTPUT_FORMAT=slides jupyter nbconvert {escape(filepath)} --output {escape(str(output_filepath))}{' --execute' if rerun else ''} {'' if theme is None else ('--template=' + theme[0])} --to slides --no-input --no-prompt{'' if not serve else ' --post serve'} --SlidesExporter.reveal_scroll=True --SlidesExporter.reveal_number=c/t --SlidesExporter.reveal_theme={'simple' if light else 'night'} {'' if theme is None else ('--TemplateExporter.extra_template_basedirs=' + theme[1])}",
+            args=f"_NBCONVERT_OUTPUT_FORMAT=slides jupyter nbconvert {escape(str(file_path))} --output {escape(str(output_filepath))}{' --execute' if rerun else ''} {'' if theme is None else ('--template=' + theme[0])} --to slides --no-input --no-prompt{'' if not serve else ' --post serve'} --SlidesExporter.reveal_scroll=True --SlidesExporter.reveal_number=c/t --SlidesExporter.reveal_theme={'simple' if light else 'night'} {'' if theme is None else ('--TemplateExporter.extra_template_basedirs=' + theme[1])}",
             shell=True,
         )
 
