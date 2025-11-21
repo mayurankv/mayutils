@@ -1,7 +1,21 @@
 from typing import Optional
+from pathlib import Path
 from pandas import DataFrame
 import numpy as np
+import plotly
 from numpy.typing import ArrayLike, NDArray
+
+
+def include_plotly_js() -> str:
+    pkg_path = Path(plotly.__path__[0])
+    js_path = pkg_path / "package_data" / "plotly.min.js"
+    plotly_js = js_path.read_text(encoding="utf-8")
+
+    return f"""
+    <script type="text/javascript">
+    {plotly_js}
+    </script>
+    """
 
 
 def map_categorical_array(
