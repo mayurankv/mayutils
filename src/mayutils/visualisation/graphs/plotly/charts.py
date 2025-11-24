@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from mayutils.export.images import IMAGES_FOLDER
 import numpy as np
 from scipy.stats import gaussian_kde, norm
+import datetime
+from pandas import to_datetime as to_pandas_datetime
 
 import plotly.graph_objects as go
 import plotly.io as pio
@@ -1355,8 +1357,19 @@ class Plot(go.Figure):
                         or (trace.yaxis.replace("y", "yaxis") == yaxis)
                     )
                     and (
-                        visible_mask := (trace.x < self.layout.xaxis.range[1])  # type: ignore
-                        & (trace.x > self.layout.xaxis.range[0])  # type: ignore
+                        len(
+                            (
+                                x_trace := trace.x
+                                if len(trace.x) > 0
+                                and isinstance(trace.x[0], datetime.date)
+                                else to_pandas_datetime(trace.x).date
+                            )
+                        )
+                        > 0
+                    )
+                    and (
+                        visible_mask := (x_trace < self.layout.xaxis.range[1])  # type: ignore
+                        & (x_trace > self.layout.xaxis.range[0])  # type: ignore
                     ).any()
                 ]
             )

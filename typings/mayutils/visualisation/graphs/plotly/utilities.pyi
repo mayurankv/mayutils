@@ -2,6 +2,7 @@ import numpy as np
 from numpy.typing import ArrayLike as ArrayLike, NDArray as NDArray
 from pandas import DataFrame
 
+def include_plotly_js() -> str: ...
 def map_categorical_array(
     arr: NDArray, mapping: ArrayLike | None = None
 ) -> NDArray[np.int64]: ...

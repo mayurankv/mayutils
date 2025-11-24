@@ -8,7 +8,6 @@ from mayutils.visualisation.notebook import (
 from pathlib import Path
 
 WARNING: str
-ipython: Incomplete
 SLIDES_FOLDER: Incomplete
 
 def is_slides() -> bool: ...
@@ -19,8 +18,9 @@ def subtitle_text(
 ) -> None: ...
 def export_slides(
     title: str | None = None,
-    file_name: str = "report.ipynb",
+    file_path: Path | str = "report.ipynb",
     theme: tuple[str, str] | None = None,
     serve: bool = False,
     light: bool = False,
+    rerun: bool = True,
 ) -> Path | None: ...
