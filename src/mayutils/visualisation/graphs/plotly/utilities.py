@@ -6,16 +6,22 @@ import plotly
 from numpy.typing import ArrayLike, NDArray
 
 
-def include_plotly_js() -> str:
+def include_plotly_js(
+    include_tags: bool = True,
+) -> str:
     pkg_path = Path(plotly.__path__[0])
     js_path = pkg_path / "package_data" / "plotly.min.js"
     plotly_js = js_path.read_text(encoding="utf-8")
 
-    return f"""
+    return (
+        f"""
     <script type="text/javascript">
     {plotly_js}
     </script>
     """
+        if include_tags
+        else plotly_js
+    )
 
 
 def map_categorical_array(
