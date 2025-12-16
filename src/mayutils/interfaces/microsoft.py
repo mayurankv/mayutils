@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pathlib import Path
 from typing import Optional, Self
 from pptx import Presentation as Init
@@ -17,6 +18,32 @@ class Length(BaseLength):
         value: float,
     ) -> Self:
         return cls(value)  # type: ignore
+
+
+class SlideContext:
+    def __init__(
+        self,
+        presentation: Presentation,
+        layout: Optional[SlideLayout] = None,
+    ) -> None:
+        self.presentation = presentation
+        self.layout = layout if layout is not None else presentation.blank_layout
+
+    def __enter__(
+        self,
+    ) -> Slide:
+        self.presentation.new_slide(layout=self.layout)
+        return self.presentation.slides[-1]
+
+    def __exit__(
+        self,
+        exc_type,
+        exc_value,
+        traceback,
+    ) -> None:
+        if exc_type is not None:
+            self.presentation.delete_slide(slide_number=len(self.presentation.slides))
+            raise exc_value
 
 
 class Presentation:
@@ -127,6 +154,15 @@ class Presentation:
         )
 
         return self
+
+    def enter_new_slide(
+        self,
+        layout: Optional[SlideLayout] = None,
+    ) -> SlideContext:
+        return SlideContext(
+            presentation=self,
+            layout=layout,
+        )
 
     def empty(
         self,

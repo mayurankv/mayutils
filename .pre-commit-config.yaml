@@ -61,19 +61,19 @@ repos:
       exclude: 'Templates/Cookiecutter/'
       additional_dependencies:
         - mdformat-ruff
-- repo: https://github.com/RobertCraigie/pyright-python
-  rev: v1.1.407
-  hooks:
-    - id: pyright
-      exclude: 'Templates/Cookiecutter/'
-      additional_dependencies:
-        [
-          beartype,
-          einops,
-          jax,
-          jaxtyping,
-          optax,
-          pytest,
-          typing_extensions,
-          wadler_lindig,
-        ]
+# - repo: https://github.com/RobertCraigie/pyright-python
+#   rev: v1.1.407
+#   hooks:
+#     - id: pyright
+#       exclude: 'Templates/Cookiecutter/'
+#       additional_dependencies:
+#         [
+#           beartype,
+#           einops,
+#           jax,
+#           jaxtyping,
+#           optax,
+#           pytest,
+#           typing_extensions,
+#           wadler_lindig,
+#         ]
