@@ -28,12 +28,12 @@ class SlideContext:
     ) -> None:
         self.presentation = presentation
         self.layout = layout if layout is not None else presentation.blank_layout
+        self.slide = self.presentation.new_slide(layout=self.layout).slides[-1]
 
     def __enter__(
         self,
     ) -> Slide:
-        self.presentation.new_slide(layout=self.layout)
-        return self.presentation.slides[-1]
+        return self.slide
 
     def __exit__(
         self,
@@ -42,7 +42,7 @@ class SlideContext:
         traceback,
     ) -> None:
         if exc_type is not None:
-            self.presentation.delete_slide(slide_number=len(self.presentation.slides))
+            # self.presentation.delete_slide(slide_number=len(self.presentation.slides))
             raise exc_value
 
 
