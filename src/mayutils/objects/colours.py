@@ -6,6 +6,7 @@ from colorsys import rgb_to_hsv, rgb_to_hls
 from mayutils.objects.classes import (
     readonlyclassonlyproperty,
 )
+from pptx.dml.color import RGBColor
 
 reverse_colourmap: dict[str, str] = {value: key for key, value in colormap.items()}  # type: ignore
 
@@ -318,6 +319,16 @@ class Colour:
         )
 
         return blended
+
+    @property
+    def pptx_colour(
+        self,
+    ) -> RGBColor:
+        return RGBColor(
+            r=self.r,
+            g=self.g,
+            b=self.b,
+        )
 
 
 def hex_to_rgba(
