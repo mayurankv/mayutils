@@ -728,6 +728,7 @@ class Plot(go.Figure):
 
     def modifications(
         self,
+        fill_opacity: float = 0.1,
     ) -> Self:
         for idx, trace in enumerate(self.data):
             if isinstance(trace, go.Histogram) or trace.meta in ["kde"]:  # type: ignore
@@ -743,7 +744,7 @@ class Plot(go.Figure):
                 )
                 if trace.meta in ["ecdf", "kde"]:  # type: ignore
                     colour = Colour.parse(colour=trace.textfont.color)  # type: ignore
-                    opacity = 0.1 if trace.meta == "ecdf" else 0.4  # type: ignore
+                    opacity = Colour.parse(colour=trace.fillcolor).a if trace.fillcolor is not None else trace.opacity or fill_opacity  # type: ignore
                     trace.fillcolor = colour.to_str(opacity=opacity)  # type: ignore
 
         bound_groups: dict[str, tuple[tuple[Optional[str], int], list[Trace]]] = {}
