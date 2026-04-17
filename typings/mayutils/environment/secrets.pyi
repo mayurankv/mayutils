@@ -1,3 +1,0 @@
-from pathlib import Path
-
-def load_secrets(env_file: Path | str | None = None) -> bool: ...

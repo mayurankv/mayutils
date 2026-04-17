@@ -1,79 +1,77 @@
 repos:
-- repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v6.0.0
-  hooks:
-    - id: check-yaml
-      exclude: 'Templates/Cookiecutter/'
-    - id: end-of-file-fixer
-    - id: trailing-whitespace
-# - repo: local
-#   hooks:
-#     - id: sort_pyproject
-#       name: sort_pyproject
-#       entry: toml-sort -i --sort-table-keys --sort-inline-tables
-#       language: python
-#       files: ^pyproject\.toml$
-- repo: https://github.com/astral-sh/ruff-pre-commit
-  # Ruff version.
-  rev: v0.12.11
-  hooks:
-    # Run the linter.
-    - id: ruff-check
-      exclude: 'Templates/Cookiecutter/'
-      args: [ --fix ]
-    # Run the formatter.
-    - id: ruff-format
-      exclude: 'Templates/Cookiecutter/'
--   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: 'v1.17.1'
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.11
     hooks:
-    -   id: mypy
-        additional_dependencies: [
-          'types-six',
-          'types-markdown'
-        ]
+    -   id: ruff-check
         exclude: 'Templates/Cookiecutter/'
-- repo: https://github.com/sqlfluff/sqlfluff
-  rev: 3.4.2
-  hooks:
-    - id: sqlfluff-lint
-      args: [--dialect, snowflake] #[--exclude-rules, L014,L016]
-      # For dbt projects, this installs the dbt "extras".
-      # You will need to select the relevant dbt adapter for your dialect
-      # (https://docs.getdbt.com/docs/available-adapters):
-      # additional_dependencies: ['<dbt-adapter>', 'sqlfluff-templater-dbt']
-    - id: sqlfluff-fix
-      args: [--dialect, snowflake] #[--rules, "LT02,CP02"]
-      # additional_dependencies: ['<dbt-adapter>', 'sqlfluff-templater-dbt']
-- repo: local
-  hooks:
-    - id: uv-sync
-      name: UV Sync Dependencies
-      entry: uv sync --dev --locked
-      language: system
-      pass_filenames: false
-      stages: [pre-push]
+        args: [--fix]
+    -   id: ruff-format
+        exclude: 'Templates/Cookiecutter/'
 
-- repo: https://github.com/executablebooks/mdformat
-  rev: 0.7.13 # Use the ref you want to point at
-  hooks:
-    - id: mdformat
-      exclude: 'Templates/Cookiecutter/'
-      additional_dependencies:
-        - mdformat-ruff
-# - repo: https://github.com/RobertCraigie/pyright-python
-#   rev: v1.1.407
-#   hooks:
-#     - id: pyright
-#       exclude: 'Templates/Cookiecutter/'
-#       additional_dependencies:
-#         [
-#           beartype,
-#           einops,
-#           jax,
-#           jaxtyping,
-#           optax,
-#           pytest,
-#           typing_extensions,
-#           wadler_lindig,
-#         ]
+-   repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.13.10
+    hooks:
+    -   id: commitizen
+        stages: [commit-msg]
+-   repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.11.7
+    hooks:
+    -   id: uv-lock
+-   repo: local
+    hooks:
+    -   id: uv-sync
+        name: UV Sync Dependencies
+        entry: uv sync --locked
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+-   repo: local
+    hooks:
+    -   id: sort-pyproject
+        name: Sort pyproject.toml
+        entry: toml-sort -i --sort-table-keys --sort-inline-tables
+        language: python
+        files: ^pyproject\.toml$
+-   repo: https://github.com/executablebooks/mdformat
+    rev: 1.0.0
+    hooks:
+    -   id: mdformat
+        exclude: 'Templates/Cookiecutter/'
+        additional_dependencies:
+        -   "mdformat-mkdocs[recommended]>=5.2.0b2"
+        -   mdformat-pyproject
+        # -   mdformat-ruff
+        # -   mdformat-gfm
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+    -   id: check-yaml
+        exclude: '(^|/)mkdocs\.yml$|Templates/Cookiecutter/'
+    -   id: end-of-file-fixer
+    -   id: trailing-whitespace
+-   repo: https://gitlab.com/vojko.pribudic.foss/pre-commit-update
+    rev: v0.9.0
+    hooks:
+    -   id: pre-commit-update
+-   repo: local
+    hooks:
+    -   id: ty
+        name: ty check
+        entry: uv run ty check src/ tests/
+        language: system
+        types: [python, jupyter]
+-   repo: https://github.com/sqlfluff/sqlfluff
+    rev: 4.1.0
+    hooks:
+    -   id: sqlfluff-lint
+        args: [--dialect, snowflake] #[--exclude-rules, L014,L016]
+        # additional_dependencies: ['<dbt-adapter>', 'sqlfluff-templater-dbt']
+    -   id: sqlfluff-fix
+        args: [--dialect, snowflake] #[--rules, "LT02,CP02"]
+        exclude: src/uk_loans_pricing_update_packs/data/queries/testing/
+        # additional_dependencies: ['<dbt-adapter>', 'sqlfluff-templater-dbt']
+-   repo: https://github.com/renovatebot/pre-commit-hooks
+    rev: 43.127.3
+    hooks:
+    -   id: renovate-config-validator
+        args: [--strict]
