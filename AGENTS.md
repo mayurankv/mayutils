@@ -30,7 +30,7 @@ Agent context for the `mayutils` repository.
 
 Heavy dependencies live in `[project.optional-dependencies]` — never add a heavy import to a core runtime module without declaring the matching extra. See `docs/guides/dependency-groups.md` for the current mapping.
 
-Any submodule that imports from an optional extra at module level **must** wrap those imports with `mayutils._extras.requires_extras("<group>", ...)` — pass the extras explicitly so users get an actionable install hint (`mayutils[<group>]`) instead of a bare `ModuleNotFoundError`, regardless of whether the missing dist has a non-obvious import name.
+Any submodule that imports from an optional extra at module level **must** wrap those imports with `mayutils.core.extras.requires_extras("<group>", ...)` — pass the extras explicitly so users get an actionable install hint (`mayutils[<group>]`) instead of a bare `ModuleNotFoundError`, regardless of whether the missing dist has a non-obvious import name.
 
 ## Commits
 

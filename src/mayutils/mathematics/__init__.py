@@ -1,15 +1,9 @@
-from typing import get_args, Literal
+"""Mathematical helpers.
 
-type Scale = Literal["relative", "absolute", "percentage"]
-type Operation = Literal[
-    "division",
-    "normalise",
-    "standardise",
-    "dot_product",
-    "inverse",
-    "constant",
-    "drop",
-]
-type Calculations = dict[Operation, dict[str, tuple[str, ...]]]
-
-OPERATIONS: tuple = get_args(Operation.__value__)
+Submodules
+----------
+numpy
+    NumPy-based utilities (always available — numpy is a core dependency).
+numba
+    JIT-compiled helpers. Requires the ``stats`` extra (``numba``).
+"""

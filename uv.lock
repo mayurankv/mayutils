@@ -1303,6 +1303,20 @@ wheels = [
 ]
 
 [[package]]
+name = "google-api-python-client-stubs"
+version = "1.34.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "google-api-python-client" },
+    { name = "types-httplib2" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f6/c4/070ddb7c68771e4e28dd97efa90e78d17a95785f19768df1f860a5409fe9/google_api_python_client_stubs-1.34.0.tar.gz", hash = "sha256:ef24fb960a47164407bbb30b3c3608e022c767c8d354b8ac1a961e35155d99f3", size = 2562858, upload-time = "2026-03-11T18:21:45.821Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f5/8d/0f9107bd1838b5d8f0156aaffaed4cb19d39761c3661b970880d77147a42/google_api_python_client_stubs-1.34.0-py3-none-any.whl", hash = "sha256:bc6224826112e28d085566834edb69582e0d6a94c9ecdb3399386f8cfbf3e0d8", size = 3551441, upload-time = "2026-03-11T18:21:43.838Z" },
+]
+
+[[package]]
 name = "google-auth"
 version = "2.49.1"
 source = { registry = "https://pypi.org/simple" }
@@ -2604,6 +2618,7 @@ all = [
     { name = "polars" },
     { name = "pymupdf" },
     { name = "python-pptx" },
+    { name = "quarto-cli" },
     { name = "scikit-learn" },
     { name = "scipy" },
     { name = "selenium" },
@@ -2658,6 +2673,7 @@ notebook = [
 pdf = [
     { name = "pillow" },
     { name = "pymupdf" },
+    { name = "quarto-cli" },
 ]
 plotting = [
     { name = "dataframe-image" },
@@ -2710,6 +2726,7 @@ streamlit = [
     { name = "streamlit" },
 ]
 types = [
+    { name = "google-api-python-client-stubs" },
     { name = "pandas-stubs" },
     { name = "scipy-stubs" },
     { name = "types-cachetools" },
@@ -2768,6 +2785,7 @@ requires-dist = [
     { name = "dataframe-image", marker = "extra == 'plotting'", specifier = ">=0.2.7" },
     { name = "gitpython", marker = "extra == 'filesystem'", specifier = ">=3.1.45" },
     { name = "google-api-python-client", marker = "extra == 'google'", specifier = ">=2.179.0" },
+    { name = "google-api-python-client-stubs", marker = "extra == 'types'", specifier = ">=1.34.0" },
     { name = "google-auth", marker = "extra == 'google'", specifier = ">=2.40.3" },
     { name = "google-auth-httplib2", marker = "extra == 'google'", specifier = ">=0.2.0" },
     { name = "google-auth-oauthlib", marker = "extra == 'google'", specifier = ">=1.2.2" },
@@ -2805,6 +2823,7 @@ requires-dist = [
     { name = "pymupdf", marker = "extra == 'pdf'", specifier = ">=1.26.4" },
     { name = "python-dotenv", specifier = ">=1.1.1" },
     { name = "python-pptx", marker = "extra == 'microsoft'", specifier = ">=1.0.2" },
+    { name = "quarto-cli", marker = "extra == 'pdf'", specifier = ">=1.9.37" },
     { name = "requests", specifier = ">=2.32.5" },
     { name = "rich", specifier = ">=14.1.0" },
     { name = "scikit-learn", marker = "extra == 'stats'", specifier = ">=1.7.1" },
@@ -2831,7 +2850,7 @@ requires-dist = [
     { name = "unicodeit", marker = "extra == 'notebook'", specifier = ">=0.7.5" },
     { name = "watchdog", marker = "extra == 'filesystem'", specifier = ">=6.0.0" },
 ]
-provides-extras = ["async", "cli", "dataframes", "datetime", "filesystem", "google", "keyring", "microsoft", "notebook", "pdf", "plotting", "snowflake", "stats", "streamlit", "types", "web", "recommended", "all"]
+provides-extras = ["all", "async", "cli", "dataframes", "datetime", "filesystem", "google", "keyring", "microsoft", "notebook", "pdf", "plotting", "recommended", "snowflake", "stats", "streamlit", "types", "web"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -4765,6 +4784,17 @@ wheels = [
 ]
 
 [[package]]
+name = "quarto-cli"
+version = "1.9.37"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "jupyter" },
+    { name = "nbclient" },
+    { name = "wheel" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/87/37/3bec60f51fd716e690946b16124c2424b742e27be2909563daf69c67c4cc/quarto_cli-1.9.37.tar.gz", hash = "sha256:bc2047e9968684e2ce98a72b7fa986761bfcd64b314b1660ef10e0469346f56b", size = 4630, upload-time = "2026-04-09T10:16:11.808Z" }
+
+[[package]]
 name = "questionary"
 version = "2.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -5713,6 +5743,15 @@ wheels = [
 ]
 
 [[package]]
+name = "types-httplib2"
+version = "0.31.2.20260408"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/6d/04/7237d9b368f67866165244e68bac2332b3c8e3eff2a459c000e887c9f41d/types_httplib2-0.31.2.20260408.tar.gz", hash = "sha256:ebf7ba1b5910500762df8bbafcad8f6e5813403442dc0439d86788d81327f1fe", size = 10670, upload-time = "2026-04-08T04:26:47.038Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ed/30/66440785ca0193e9e5e8126c7ee9f9fd8b9411f675f16b8fa5697cdceeb5/types_httplib2-0.31.2.20260408-py3-none-any.whl", hash = "sha256:a6ef6deea469e71fbde4226c2a79c5ed8f40f201171d9bcd2ba20752dbf3766e", size = 10645, upload-time = "2026-04-08T04:26:46.022Z" },
+]
+
+[[package]]
 name = "types-markdown"
 version = "3.10.2.20260211"
 source = { registry = "https://pypi.org/simple" }
@@ -5937,6 +5976,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/2c/41/aa4bf9664e4cda14c3b39865b12251e8e7d239f4cd0e3cc1b6c2ccde25c1/websocket_client-1.9.0.tar.gz", hash = "sha256:9e813624b6eb619999a97dc7958469217c3176312b3a16a4bd1bc7e08a46ec98", size = 70576, upload-time = "2025-10-07T21:16:36.495Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/34/db/b10e48aa8fff7407e67470363eac595018441cf32d5e1001567a7aeba5d2/websocket_client-1.9.0-py3-none-any.whl", hash = "sha256:af248a825037ef591efbf6ed20cc5faa03d3b47b9e5a2230a529eeee1c1fc3ef", size = 82616, upload-time = "2025-10-07T21:16:34.951Z" },
+]
+
+[[package]]
+name = "wheel"
+version = "0.46.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/89/24/a2eb353a6edac9a0303977c4cb048134959dd2a51b48a269dfc9dde00c8a/wheel-0.46.3.tar.gz", hash = "sha256:e3e79874b07d776c40bd6033f8ddf76a7dad46a7b8aa1b2787a83083519a1803", size = 60605, upload-time = "2026-01-22T12:39:49.136Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/87/22/b76d483683216dde3d67cba61fb2444be8d5be289bf628c13fc0fd90e5f9/wheel-0.46.3-py3-none-any.whl", hash = "sha256:4b399d56c9d9338230118d705d9737a2a468ccca63d5e813e2a4fc7815d8bc4d", size = 30557, upload-time = "2026-01-22T12:39:48.099Z" },
 ]
 
 [[package]]
