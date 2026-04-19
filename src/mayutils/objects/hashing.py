@@ -1,13 +1,24 @@
-"""Deterministic hashing of JSON-serialisable inputs via MD5 — used for cache keys."""
+"""Deterministic hashing utilities for JSON-serialisable inputs.
+
+This module provides helpers for producing stable, reproducible digest
+strings from arbitrary combinations of positional and keyword arguments.
+The digests are intended for use as cache keys, where two invocations
+with the same logical inputs must yield identical identifiers across
+processes and interpreter sessions. Datetime-like values (``datetime``,
+``pendulum.DateTime`` and ``mayutils.objects.datetime.DateTime``) are
+normalised to their ISO-8601 representation prior to hashing so that
+they can participate in the keyspace without triggering JSON encoder
+errors.
+"""
 
 import json
 from datetime import datetime
 from hashlib import sha256
 from typing import Any
 
-from mayutils.core.extras import requires_extras
+from mayutils.core.extras import may_require_extras
 
-with requires_extras("datetime"):
+with may_require_extras():
     from pendulum import DateTime as PendulumDateTime
 
     from mayutils.objects.datetime import DateTime
@@ -17,34 +28,33 @@ def serialise(
     obj: DateTime | PendulumDateTime | datetime | object,
     /,
 ) -> str:
-    """JSON ``default`` hook that serialises datetime-like values via :meth:`isoformat`.
+    """Convert datetime-like objects to ISO-8601 strings for JSON encoding.
 
-    Passed to :func:`json.dumps` so that cache keys generated from
-    function arguments can include pendulum or stdlib datetimes without
-    tripping ``TypeError``.
+    Acts as the ``default`` callback for :func:`json.dumps`, converting
+    any of the supported datetime-like types into their ISO-8601 textual
+    representation so that they can be embedded inside a JSON payload
+    used to compute a deterministic cache key.
 
     Parameters
     ----------
-    obj : Any
-        The value being serialised. Only datetime-like instances
-        (``mayutils.objects.datetime.DateTime``, ``pendulum.DateTime``,
-        ``datetime.datetime``) are handled.
+    obj : DateTime or PendulumDateTime or datetime or object
+        The value the JSON encoder could not natively serialise. Only
+        instances of :class:`mayutils.objects.datetime.DateTime`,
+        :class:`pendulum.DateTime` and :class:`datetime.datetime` are
+        handled; any other input type triggers an error.
 
     Returns
     -------
     str
-        The ISO-8601 representation of ``obj``.
+        The ISO-8601 formatted timestamp produced by calling
+        ``obj.isoformat()`` on the input datetime-like value.
 
     Raises
     ------
     TypeError
-        If ``obj`` is not a recognised datetime-like type.
-
-    Examples
-    --------
-    >>> from datetime import datetime
-    >>> serialise(datetime(2026, 1, 1))
-    '2026-01-01T00:00:00'
+        Raised when ``obj`` is not an instance of one of the supported
+        datetime-like types, indicating that the value cannot be
+        serialised to JSON through this hook.
     """
     if isinstance(obj, (DateTime, PendulumDateTime, datetime)):
         return obj.isoformat()
@@ -57,35 +67,40 @@ def hash_inputs(
     *args: Any,  # noqa: ANN401
     **kwargs: Any,  # noqa: ANN401
 ) -> str:
-    """Return a SHA-256 hex digest of the JSON-encoded ``(args, kwargs)``.
+    """Compute a deterministic SHA-256 digest of the supplied arguments.
 
-    Produces a deterministic, 64-character hexadecimal string suitable
-    for use as a cache-file name. Arguments must be JSON-serialisable
-    (datetimes handled automatically by :func:`serialise`).
+    Bundles the positional and keyword arguments into a single JSON
+    document, encodes that document to UTF-8 bytes, and returns the
+    hexadecimal SHA-256 digest. Keyword argument keys are sorted prior
+    to encoding so that two invocations that differ only by kwarg
+    ordering produce the same digest, making the result suitable as a
+    cache key.
 
     Parameters
     ----------
-    *args
-        Positional arguments to include in the hash.
-    **kwargs
-        Keyword arguments to include in the hash. Keys are sorted
-        before hashing so reordering does not change the digest.
+    *args : Any
+        Positional values to incorporate into the digest. Each value
+        must be JSON-serialisable directly or be one of the datetime
+        types handled by :func:`serialise`.
+    **kwargs : Any
+        Keyword values to incorporate into the digest. Keys are sorted
+        alphabetically before the payload is encoded so that reordering
+        of keyword arguments at the call site does not alter the
+        resulting hash.
 
     Returns
     -------
     str
-        The 64-character hexadecimal SHA-256 digest.
+        A 64-character lowercase hexadecimal string representing the
+        SHA-256 digest of the JSON-encoded ``{"args": args, "kwargs":
+        kwargs}`` payload.
 
     Raises
     ------
     TypeError
-        If any argument isn't JSON-serialisable or a recognised
-        datetime-like type (see :func:`serialise`).
-
-    Examples
-    --------
-    >>> hash_inputs(1, 2)
-    '1d7d98a02a1e2c74d1d61e4e1f7b25f3'  # doctest: +SKIP
+        Propagated from :func:`json.dumps` (via :func:`serialise`) when
+        any argument is neither JSON-serialisable nor a supported
+        datetime-like type.
     """
     return sha256(
         string=json.dumps(

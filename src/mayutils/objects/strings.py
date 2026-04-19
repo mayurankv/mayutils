@@ -1,10 +1,19 @@
-"""``String`` namespace with case-conversion helpers and empty-string coercion.
+"""String case-conversion and empty-value coercion helpers.
 
-The :class:`String` class groups case-style converters
-(``snake_case``, ``kebab-case``, ``camelCase``, ``PascalCase``,
-``Title Case``, ``Sentence case``) and an empty-to-``None`` coercer,
-each exposed as a ``@staticmethod`` that accepts a single positional-only
-string argument.
+This module exposes a single :class:`String` namespace that groups
+stateless utilities for normalising arbitrary input strings into a
+canonical case style (``snake_case``, ``kebab-case``, ``camelCase``,
+``PascalCase``, ``Title Case``, ``Sentence case``) together with a
+coercer that maps empty strings and ``None`` onto a uniform ``None``
+sentinel.
+
+The converters are intentionally tolerant of mixed input: they accept
+any combination of case transitions, whitespace, underscores and
+hyphens, infer word boundaries from case and separator changes, and
+re-emit the tokens in the requested style. All helpers are exposed as
+``@staticmethod`` members so the class itself never needs to be
+instantiated; it serves purely as a namespace that keeps the
+conversion surface discoverable under a single symbol.
 
 Examples
 --------
@@ -23,7 +32,28 @@ from re import sub
 
 
 class String:
-    """Namespace of case-conversion helpers (snake / kebab / camel / pascal / title / sentence)."""
+    """Namespace of stateless string case-conversion and coercion helpers.
+
+    The class is never instantiated; it exists to group a family of
+    related, side-effect-free converters under a single discoverable
+    symbol. Every helper is a ``@staticmethod`` taking a single
+    positional-only string argument and returning a newly allocated
+    string (or ``None`` for :meth:`to_none`).
+
+    Attributes
+    ----------
+    __slots__ : tuple
+        Empty slots declaration preventing per-instance attribute
+        allocation, reinforcing that the class is a pure namespace and
+        instances carry no state.
+
+    Notes
+    -----
+    Word boundaries are inferred consistently across all converters
+    via :meth:`_words`, which delegates to :meth:`to_snake`. Any
+    converter therefore accepts the full range of mixed-case, spaced,
+    underscored and hyphenated inputs.
+    """
 
     __slots__ = ()
 
@@ -32,24 +62,33 @@ class String:
         string: str,
         /,
     ) -> list[str]:
-        """Split ``string`` into lowercase word tokens across case, space, and separator boundaries.
+        """Split an input string into lowercase word tokens.
 
-        Internal helper used by the camel / pascal / title / sentence
-        converters. Delegates to :meth:`String.to_snake` and splits on
-        ``"_"``, discarding empty segments introduced by leading, trailing,
-        or repeated separators.
+        The function funnels the input through :meth:`to_snake` so that
+        case transitions, acronym boundaries, spaces, underscores and
+        hyphens are all normalised to underscore-delimited lowercase
+        segments, then splits on ``"_"`` and drops empty fragments
+        introduced by leading, trailing, or repeated separators.
 
         Parameters
         ----------
         string : str
-            The input string. May contain a mix of cases, spaces,
-            underscores, and hyphens.
+            Source text whose word tokens should be extracted. May use
+            any mix of case styles and separator characters; empty or
+            separator-only inputs are accepted and yield an empty list.
 
         Returns
         -------
         list[str]
-            Lowercase word tokens in order. Empty when ``string`` contains
-            no word characters.
+            Ordered sequence of lowercase word tokens as they appear in
+            the input, with every separator stripped. Empty when the
+            input contains no word characters.
+
+        Notes
+        -----
+        This is an internal helper used by the ``camel`` / ``pascal`` /
+        ``title`` / ``sentence`` converters to obtain a canonical token
+        stream prior to re-casing.
         """
         return [word for word in String.to_snake(string).split(sep="_") if word]
 
@@ -58,22 +97,27 @@ class String:
         string: str,
         /,
     ) -> str:
-        """Convert ``string`` to ``snake_case``.
+        """Convert an arbitrary input string to ``snake_case``.
 
-        Word boundaries are inferred from case transitions
-        (``HelloWorld`` → ``hello world``), runs of uppercase letters
-        followed by a lowercase letter (``XMLParser`` → ``XML Parser``),
-        and hyphens. The result is lower-cased and joined with ``"_"``.
+        Word boundaries are inferred from three signals: case
+        transitions from lowercase to uppercase (``HelloWorld`` becomes
+        ``hello world``), a run of uppercase letters followed by an
+        uppercase-then-lowercase sequence (``XMLParser`` becomes
+        ``XML Parser``), and explicit hyphen separators. The resulting
+        tokens are lower-cased and joined with underscores.
 
         Parameters
         ----------
         string : str
-            The input string in any case style.
+            Source text in any case style. Hyphens are treated as word
+            separators; whitespace and existing underscores are
+            preserved as separators through the split-and-join pass.
 
         Returns
         -------
         str
-            ``string`` normalised to ``snake_case``.
+            The input normalised to lowercase words joined by single
+            underscore characters. Empty input yields an empty string.
 
         Examples
         --------
@@ -101,22 +145,27 @@ class String:
         string: str,
         /,
     ) -> str:
-        """Convert ``string`` to ``kebab-case``.
+        """Convert an arbitrary input string to ``kebab-case``.
 
-        Handles case transitions (``HelloWorld``), acronym-to-word
-        boundaries (``XMLParser`` → ``XML-Parser``), and collapses any
-        runs of whitespace, underscores, and hyphens into a single
-        delimiter.
+        Word boundaries are inferred from lowercase-to-uppercase
+        transitions and from acronym-to-word boundaries such as
+        ``HTTPResponse``, which is split as ``HTTP Response``. Any run
+        of whitespace, underscores or hyphens collapses into a single
+        boundary before the tokens are lower-cased and joined with
+        hyphens.
 
         Parameters
         ----------
         string : str
-            The input string in any case style.
+            Source text in any case style. Mixed separators
+            (``" "``, ``"_"``, ``"-"``) are all accepted and treated
+            uniformly as word boundaries.
 
         Returns
         -------
         str
-            ``string`` normalised to ``kebab-case``.
+            The input normalised to lowercase words joined by single
+            hyphen characters. Empty input yields an empty string.
 
         Examples
         --------
@@ -144,22 +193,26 @@ class String:
         string: str,
         /,
     ) -> str:
-        """Convert ``string`` to ``camelCase``.
+        """Convert an arbitrary input string to ``camelCase``.
 
-        The first word is lower-cased; subsequent words are
-        title-cased and concatenated without a separator. An empty
-        input yields an empty string.
+        Tokens are extracted via :meth:`_words`; the first token is
+        emitted lower-cased to match camel-case convention and every
+        subsequent token is capitalised, then all tokens are
+        concatenated without any separator.
 
         Parameters
         ----------
         string : str
-            The input string in any case style.
+            Source text in any case style. Inputs containing only
+            separators or no word characters are treated as empty.
 
         Returns
         -------
         str
-            ``string`` normalised to ``camelCase``. Empty string when
-            ``string`` contains no word characters.
+            The input re-cased so that the leading word is lowercase
+            and each following word begins with an uppercase letter,
+            with no separators between words. Returns ``""`` when the
+            input yields no word tokens.
 
         Examples
         --------
@@ -180,20 +233,26 @@ class String:
         string: str,
         /,
     ) -> str:
-        """Convert ``string`` to ``PascalCase``.
+        """Convert an arbitrary input string to ``PascalCase``.
 
-        Every word is capitalised and concatenated without a separator.
+        Every word token extracted by :meth:`_words` is capitalised
+        (first character upper, remainder lower) and the tokens are
+        concatenated without a separator. Unlike :meth:`to_camel`, the
+        leading token is also capitalised.
 
         Parameters
         ----------
         string : str
-            The input string in any case style.
+            Source text in any case style. Inputs with no word
+            characters are treated as empty.
 
         Returns
         -------
         str
-            ``string`` normalised to ``PascalCase``. Empty string when
-            ``string`` contains no word characters.
+            The input re-cased so that every word begins with an
+            uppercase letter and the remaining characters are
+            lower-cased, with no separators between words. Returns
+            ``""`` when the input yields no word tokens.
 
         Examples
         --------
@@ -211,19 +270,26 @@ class String:
         string: str,
         /,
     ) -> str:
-        """Convert ``string`` to ``Title Case`` — each word capitalised, space-separated.
+        """Convert an arbitrary input string to ``Title Case``.
+
+        Every word token extracted by :meth:`_words` is capitalised and
+        the tokens are joined by single space characters. The behaviour
+        matches :meth:`to_pascal` but substitutes a space separator for
+        human-readable output.
 
         Parameters
         ----------
         string : str
-            The input string in any case style.
+            Source text in any case style. Inputs with no word
+            characters are treated as empty.
 
         Returns
         -------
         str
-            ``string`` with every word capitalised and joined by single
-            spaces. Empty string when ``string`` contains no word
-            characters.
+            The input re-cased so that every word begins with an
+            uppercase letter and the words are separated by single
+            spaces. Returns ``""`` when the input yields no word
+            tokens.
 
         Examples
         --------
@@ -239,21 +305,26 @@ class String:
         string: str,
         /,
     ) -> str:
-        """Convert ``string`` to ``Sentence case``.
+        """Convert an arbitrary input string to ``Sentence case``.
 
-        Only the first word is capitalised; subsequent words are
-        lower-cased and joined by single spaces.
+        The first word token extracted by :meth:`_words` is capitalised
+        to begin the sentence; all remaining tokens are kept as
+        produced by :meth:`_words` (already lowercase) and the tokens
+        are joined by single space characters.
 
         Parameters
         ----------
         string : str
-            The input string in any case style.
+            Source text in any case style. Inputs with no word
+            characters are treated as empty.
 
         Returns
         -------
         str
-            ``string`` rendered in sentence case. Empty string when
-            ``string`` contains no word characters.
+            The input re-cased so that only the leading word is
+            capitalised and subsequent words are lowercase, separated
+            by single spaces. Returns ``""`` when the input yields no
+            word tokens.
 
         Examples
         --------
@@ -273,21 +344,25 @@ class String:
         string: str | None,
         /,
     ) -> str | None:
-        """Coerce empty or ``None`` input to ``None``; otherwise return the string unchanged.
+        """Coerce an empty string or ``None`` to ``None``, leaving other values untouched.
 
-        Useful when an upstream producer returns ``""`` to mean "absent"
-        and a downstream consumer expects ``None``.
+        Bridges APIs where upstream producers emit ``""`` as a marker
+        for "absent" while downstream consumers expect the dedicated
+        ``None`` sentinel, eliminating ambiguity between an empty
+        string and a missing value.
 
         Parameters
         ----------
-        string : str | None
-            The input string, or ``None``.
+        string : str or None
+            Candidate value that may be ``None``, an empty string, or
+            a non-empty string. Truthiness determines the outcome.
 
         Returns
         -------
-        str | None
-            ``None`` if ``string`` is ``None`` or empty; otherwise
-            ``string`` unchanged.
+        str or None
+            ``None`` when the input is ``None`` or an empty string;
+            otherwise the original string reference is returned
+            unchanged.
 
         Examples
         --------

@@ -1,10 +1,20 @@
-"""Number formatting helpers — SI-style ``prettify`` and English ``ordinal`` suffixing.
+"""Human-readable numeric formatting helpers.
+
+This module provides small, dependency-free routines for turning raw
+numeric values into display-friendly strings. :func:`prettify` collapses
+a magnitude into a compact SI-style token (``1.23M``, ``500µ``) that is
+suitable for chart annotations, table cells, and log messages where the
+full floating-point representation would be unwieldy. :func:`ordinal`
+attaches the correct English ordinal suffix (``st``, ``nd``, ``rd``,
+``th``) to an integer, honouring the irregular behaviour of the teens.
 
 Examples
 --------
 >>> from mayutils.objects.numbers import ordinal, prettify
 >>> prettify(1_234_567)
 '1.23M'
+>>> prettify(1_234_567, sf=2)
+'1.2M'
 >>> ordinal(21)
 '21st'
 """
@@ -13,30 +23,49 @@ Examples
 def prettify(
     n: float,
     /,
+    *,
+    sf: int = 3,
+    si_units: bool = False,
 ) -> str:
-    """Format a number with an SI-style magnitude suffix.
+    """Render a number as a compact magnitude-suffixed string.
 
-    The number is rounded to three significant figures, scaled down or
-    up in multiples of 1000, and suffixed with the appropriate SI
-    letter — ``K``/``M``/``B``/``T``… for large values,
-    ``m``/``µ``/``n``… for small ones.
+    The input is first rounded to ``sf`` significant figures, then
+    repeatedly divided (or multiplied) by one thousand until its
+    absolute value lies in the canonical ``[1, 1000)`` display band.
+    The accumulated magnitude count selects a suffix letter from either
+    the large-number table (``K``, ``M``, ``B``/``G``, ``T``…) or the
+    small-number table (``m``, ``µ``, ``n``…). Trailing zeros and a
+    trailing decimal point are stripped so the result stays terse.
 
     Parameters
     ----------
-    num : float
-        The numeric value to format. Zero is returned as the literal
-        string ``"0"`` with no suffix.
+    n : float
+        Positional-only numeric value to render. The sign is preserved
+        in the output, and zero short-circuits to the literal ``"0"``
+        with no suffix applied.
+    sf : int, optional
+        Number of significant figures retained before scaling. Larger
+        values expose more precision in the mantissa at the cost of a
+        longer string; defaults to ``3``.
+    si_units : bool, optional
+        When ``True``, the large-magnitude suffixes follow strict SI
+        conventions (``G``, ``P``, ``E``, ``Z``, ``Y``). When ``False``
+        (the default), colloquial finance-style suffixes are emitted
+        instead (``B``, ``Qa``, ``Qi``, ``Sx``, ``Sp``).
 
     Returns
     -------
     str
-        The compact string representation (e.g. ``"1.23M"``, ``"500µ"``).
+        The compact rendering of ``n``, consisting of the scaled
+        mantissa immediately followed by the selected magnitude suffix
+        (empty for values already in ``[1, 1000)``).
 
     Raises
     ------
     IndexError
-        If ``num`` is larger than 10³⁶ or smaller than 10⁻²⁷, the
-        magnitude exceeds the available SI-suffix table.
+        Raised when the absolute value of ``n`` is large enough (beyond
+        roughly ``10**36``) or small enough (below roughly ``10**-27``)
+        that no suffix entry exists in the lookup table.
 
     Examples
     --------
@@ -55,7 +84,7 @@ def prettify(
     if n == 0:
         return "0"
 
-    n = float(f"{n:.3g}")
+    n = float(f"{n:.{sf}g}")
     pos_magnitude = 0
     neg_magnitude = 0
 
@@ -73,12 +102,12 @@ def prettify(
                 "",
                 "K",
                 "M",
-                "B",
+                "G" if si_units else "B",
                 "T",
-                "Qa",
-                "Qi",
-                "Sx",
-                "Sp",
+                "P" if si_units else "Qa",
+                "E" if si_units else "Qi",
+                "Z" if si_units else "Sx",
+                "Y" if si_units else "Sp",
                 "Oc",
                 "No",
                 "Dc",
@@ -101,30 +130,40 @@ def prettify(
     except IndexError as err:
         raise err from IndexError("Number magnitude exceeds SI suffix table.")
 
-    return "{}{}".format(f"{n:f}".rstrip("0").rstrip("."), suffix)
+    return f"{f'{n:f}'.rstrip('0').rstrip('.')}{suffix}"
 
 
 def ordinal(
     n: int,
     /,
 ) -> str:
-    """Return an integer's English ordinal form.
+    """Attach the English ordinal suffix to an integer.
 
-    Applies the English rules for ordinal suffixes: ``st`` for values
-    ending in 1 (except 11), ``nd`` for 2 (except 12), ``rd`` for 3
-    (except 13), and ``th`` otherwise.
+    Selects the suffix from the standard English scheme: ``st`` for
+    numbers ending in 1, ``nd`` for 2, ``rd`` for 3, and ``th``
+    otherwise. The tens digit is inspected to override the first three
+    cases in the irregular ``11``, ``12``, ``13`` range so that they
+    correctly resolve to ``th``.
 
     Parameters
     ----------
     n : int
-        The integer to format. Negative and zero inputs are accepted
-        and follow the same last-digit rules.
+        Positional-only integer whose decimal representation is to be
+        suffixed. Negative and zero values are accepted; the suffix is
+        chosen from the final two digits of ``n`` using the same rules
+        as for positive inputs.
 
     Returns
     -------
     str
-        The integer followed by its ordinal suffix (e.g. ``"1st"``,
-        ``"22nd"``, ``"113th"``).
+        The decimal form of ``n`` concatenated with the two-character
+        ordinal suffix appropriate for its final digits.
+
+    Notes
+    -----
+    Implemented as a single indexing expression against the packed
+    lookup string ``"tsnrhtdd"``; the index computation folds in the
+    teens exception so no explicit branching is required.
 
     Examples
     --------
