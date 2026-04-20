@@ -1,18 +1,21 @@
-"""Integrations with external services and file formats.
+"""Adapters for third-party services, document formats, and application runtimes.
 
-Each submodule requires a specific extra — see
-``docs/guides/dependency-groups.md`` for the full mapping.
+This package groups the integration layers that connect ``mayutils`` to
+systems it does not own: filetype-specific document authoring, cloud
+storage clients, and Streamlit applications. Each submodule is guarded
+by an optional dependency extra so that installing the library stays
+lightweight; the full mapping of submodule to extra is documented in
+``docs/guides/dependency-groups.md``.
 
 Submodules
 ----------
-google
-    Google Drive, Sheets and Cloud Storage (``google`` extra).
-markdown
-    Mistune-backed Markdown parsing (``plotting`` extra).
-microsoft
-    PowerPoint / Excel integrations (``microsoft`` extra).
-pdf
-    PDF helpers (``pdf`` extra).
+cloud
+    Cloud storage service facades — e.g. ``google`` for Google Drive.
+filetypes
+    Filetype-dependent authoring and rendering helpers — ``markdown``
+    (Mistune), ``pptx`` (python-pptx), ``pdf`` (PyMuPDF + Pillow),
+    ``sheets`` (Google Sheets), ``slides`` (Google Slides), ``docx``,
+    and ``xlsx``.
 streamlit
-    Streamlit helpers (``streamlit`` extra).
+    Utilities for building Streamlit dashboards (``streamlit`` extra).
 """

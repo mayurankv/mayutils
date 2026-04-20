@@ -54,13 +54,13 @@ The table below is **generated at docs build time** from `[project.optional-depe
 | `mathematics` | `mathematics.numba`, SymPy helpers                                                                                               |
 | `statistics`  | scikit-learn, scipy, statsmodels                                                                                                 |
 | `financials`  | numpy-financial helpers                                                                                                          |
-| `google`      | `interfaces.google` (Drive, Sheets, Cloud Storage) and `environment.oauth`                                                       |
-| `microsoft`   | `interfaces.microsoft.powerpoint`, openpyxl export                                                                               |
+| `google`      | `interfaces.filetypes.sheets`, `interfaces.filetypes.slides`, `interfaces.cloud.google` (Drive), and `environment.oauth`         |
+| `microsoft`   | `interfaces.filetypes.pptx`, openpyxl export                                                                                     |
 | `sql`         | SQLAlchemy engine plumbing in `environment.databases`                                                                            |
 | `snowflake`   | `environment.databases` Snowflake engine (transitively pulls in `sql`)                                                           |
 | `streamlit`   | `interfaces.streamlit`                                                                                                           |
 | `web`         | `environment.webdrivers` (Selenium, Playwright, Chromedriver)                                                                    |
-| `pdf`         | `interfaces.pdf`, `visualisation.graphs.combine` (PyMuPDF + Pillow)                                                              |
+| `pdf`         | `interfaces.filetypes.pdf`, `visualisation.graphs.combine` (PyMuPDF + Pillow)                                                    |
 | `datetime`    | Pendulum-backed helpers in `objects.datetime` and `objects.hashing`                                                              |
 | `cli`         | `scripts.clear_cache` (Typer), cookiecutter scaffolding                                                                          |
 | `filesystem`  | `environment.filesystem` git-aware helpers, watchdog file watchers                                                               |
