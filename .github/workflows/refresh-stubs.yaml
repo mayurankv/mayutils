@@ -1,0 +1,123 @@
+name: Refresh Stubs
+
+on:
+  # Weekly cadence — Monday 06:00 UTC
+  schedule:
+    - cron: "0 6 * * 1"
+  # Manual trigger for on-demand refreshes
+  workflow_dispatch:
+
+# Minimal default permissions — jobs opt into more only when they need it.
+permissions:
+  contents: read
+
+env:
+  PR_BRANCH: chore/refresh-stubs
+  PR_TITLE: "chore: refresh pyright type stubs"
+  PR_BODY: |
+    Automated refresh of third-party type stubs via `uv run refresh_stubs`.
+    Review the diff for any upstream API changes that may break downstream code.
+  STUBS_ARTIFACT: refreshed-typings
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Runs every installed third-party package through pyright + ruff to
+  # regenerate stubs. Intentionally runs with only ``contents: read`` so that
+  # a compromised transitive dependency cannot push to the repo, open PRs or
+  # trigger other workflows. Output is exported to the publish job via an
+  # artefact rather than a direct git operation.
+  # ---------------------------------------------------------------------------
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      changed: ${{ steps.diff.outputs.changed }}
+    steps:
+      - uses: actions/checkout@main
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c0c76fcf76c37099e6a452584d04b015240faefc # main
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Refresh type stubs
+        run: uv run refresh_stubs --verbose
+
+      - name: Detect changes
+        id: diff
+        run: |
+          if [[ -n "$(git status --porcelain typings/)" ]]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload refreshed typings
+        if: steps.diff.outputs.changed == 'true'
+        uses: actions/upload-artifact@main
+        with:
+          name: ${{ env.STUBS_ARTIFACT }}
+          path: typings/
+          include-hidden-files: true
+          retention-days: 1
+
+  # ---------------------------------------------------------------------------
+  # Runs only when ``refresh`` reported drift. Does no third-party package
+  # execution — only a clean checkout, artefact download, git + gh shell
+  # commands — so the write tokens it holds are exposed to a minimal,
+  # auditable surface.
+  # ---------------------------------------------------------------------------
+  publish:
+    runs-on: ubuntu-latest
+    needs: refresh
+    if: needs.refresh.outputs.changed == 'true'
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    steps:
+      - uses: actions/checkout@main
+
+      - name: Download refreshed typings
+        uses: actions/download-artifact@main
+        with:
+          name: ${{ env.STUBS_ARTIFACT }}
+          path: typings/
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "${PR_BRANCH}"
+          git add typings/
+          git commit -m "${PR_TITLE}"
+          git push --force-with-lease origin "${PR_BRANCH}"
+
+      - name: Ensure pull request exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh pr view "${PR_BRANCH}" --json number --jq '.number' >/dev/null 2>&1; then
+            echo "PR already open for ${PR_BRANCH}; branch force-pushed so it now reflects the latest drift."
+          else
+            gh pr create \
+              --base main \
+              --head "${PR_BRANCH}" \
+              --title "${PR_TITLE}" \
+              --body "${PR_BODY}" \
+              --label automated \
+              --label stubs
+          fi
+
+      - name: Trigger CI on the stub-refresh branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run ci.yaml --ref "${PR_BRANCH}"

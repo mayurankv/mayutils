@@ -79,7 +79,7 @@ repos:
         exclude: src/uk_loans_pricing_update_packs/data/queries/testing/
         # additional_dependencies: ['<dbt-adapter>', 'sqlfluff-templater-dbt']
 -   repo: https://github.com/renovatebot/pre-commit-hooks
-    rev: 43.134.1
+    rev: 43.136.0
     hooks:
     -   id: renovate-config-validator
         args: [--strict]

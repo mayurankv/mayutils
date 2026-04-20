@@ -19,7 +19,9 @@ pytest.importorskip("jupyter_core")
 from mayutils.export import nbconvert
 
 
-def _make_notebook(path: Path) -> None:
+def _make_notebook(
+    path: Path,
+) -> None:
     """Write a minimal valid ``.ipynb`` at ``path``."""
     path.write_text(
         json.dumps(

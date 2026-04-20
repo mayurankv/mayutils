@@ -94,7 +94,7 @@ def null(
 def set_inline[T: SupportsSetItem](
     *,
     parent_object: T,
-    property_name: str,
+    property_name: str | int,
     value: Any,  # noqa: ANN401
 ) -> T:
     """Perform an in-place item assignment and return the container.
@@ -112,7 +112,7 @@ def set_inline[T: SupportsSetItem](
         implement ``__setitem__`` (see :class:`SupportsSetItem`); this
         includes ``dict``, ``list``, and most mapping or sequence
         implementations. The object is mutated in place.
-    property_name : str
+    property_name : str | int
         The key, index, or identifier used as the left-hand side of the
         assignment ``parent_object[property_name] = value``.
     value : Any
