@@ -11,7 +11,7 @@ init:
 
 .PHONY: env
 env:
-	uv sync --all-extras
+	uv sync --all-extras --all-groups
 
 .PHONY: update
 update:

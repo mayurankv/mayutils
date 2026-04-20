@@ -2,6 +2,7 @@
 
 docs/index.md
 logs/
+temp/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
