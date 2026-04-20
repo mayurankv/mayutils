@@ -64,7 +64,13 @@ DEFAULT_SETTINGS: dict[str, dict[str, Any]] = {
     "qtpng": {},
     "rst": {},
     "script": {},
-    "slides": {},
+    "slides": {
+        "no-input": None,
+        "no-prompt": None,
+        "SlidesExporter.reveal_scroll": "True",
+        "SlidesExporter.reveal_number": "c/t",
+        "SlidesExporter.reveal_theme": "night",
+    },
     "webpdf": {},
 }
 """Per-format default ``nbconvert`` CLI arguments.
@@ -281,6 +287,7 @@ def export(
 
     if output_dir is None:
         output_dir = OUTPUT_FOLDER / to.title().replace("Pdf", "PDF")
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     output_stem = output_dir / f"{title or file.stem}_{datetime.now(tz=UTC).isoformat()}"
     extension = FORMAT_EXTENSIONS.get(to, f".{to}")

@@ -13,7 +13,9 @@ timestamp appended to the stem so that repeated exports never
 overwrite previous runs.
 """
 
+import shutil
 import subprocess
+import tempfile
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -22,7 +24,7 @@ from mayutils.core.extras import may_require_extras
 from mayutils.export import OUTPUT_FOLDER
 
 with may_require_extras():
-    import quarto_cli as quarto
+    import quarto_cli as quarto  # pyright: ignore[reportMissingTypeStubs]
     from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
 
@@ -63,38 +65,6 @@ will expand into ``-M key=value`` pairs before invoking
 ``metadata`` at call time so individual exports can override or extend a
 format's baseline; mutate this dictionary in application-level bootstrap
 code to change the defaults globally.
-"""
-
-FORMAT_EXTENSIONS: dict[str, str] = {
-    "asciidoc": ".adoc",
-    "beamer": ".pdf",
-    "context": ".pdf",
-    "docx": ".docx",
-    "epub": ".epub",
-    "gfm": ".md",
-    "html": ".html",
-    "ipynb": ".ipynb",
-    "jats": ".xml",
-    "latex": ".tex",
-    "markdown": ".md",
-    "odt": ".odt",
-    "pdf": ".pdf",
-    "plain": ".txt",
-    "pptx": ".pptx",
-    "revealjs": ".html",
-    "rst": ".rst",
-    "rtf": ".rtf",
-    "typst": ".pdf",
-}
-"""Canonical file extension produced by ``quarto render`` for each format.
-
-Quarto writes to the filename passed via ``--output`` verbatim, so the
-output path must already end with the correct suffix to avoid artefacts
-like ``report.markdown`` where ``report.md`` was intended. Formats whose
-identifier is not also their natural extension (``markdown`` → ``.md``,
-``revealjs`` → ``.html``, ``typst`` → ``.pdf``, ...) are therefore listed
-explicitly; entries missing from this table fall back to a ``.<to>``
-suffix so new formats still round-trip sensibly.
 """
 
 DEFAULT_SETTINGS: dict[str, dict[str, Any]] = {
@@ -339,45 +309,66 @@ def export(
     if output_dir is None:
         output_dir = OUTPUT_FOLDER / to.title().replace("Pdf", "PDF")
 
-    extension = FORMAT_EXTENSIONS.get(to, f".{to}")
-    output_path = output_dir / f"{title or file.stem}_{datetime.now(tz=UTC).isoformat()}{extension}"
-
     merged_metadata = DEFAULT_METADATA.get(to, {}) | (metadata or {})
     settings: dict[str, Any] = DEFAULT_SETTINGS.get(to, {}) | kwargs
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    args: list[str | Path] = [
-        binary,
-        "render",
-        file,
-        "--output",
-        output_path.name,
-        "--output-dir",
-        output_dir,
-        "--to",
-        to,
-    ]
-    for key, value in merged_metadata.items():
-        args.extend(("-M", f"{key}={value}"))
-    for key, value in settings.items():
-        args.append(f"--{key}")
-        if value is not None:
-            args.append(str(value))
+    with tempfile.TemporaryDirectory(prefix="mayutils-quarto-") as tmp:
+        render_dir = Path(tmp)
+        for sibling in file.parent.iterdir():
+            if sibling != file and sibling.stem == file.stem:
+                continue
+            (render_dir / sibling.name).symlink_to(sibling.resolve())
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn(text_format="[progress.description]{task.description}"),
-        TimeElapsedColumn(),
-        transient=True,
-    ) as progress:
-        progress.add_task(
-            description="[white]Exporting...[/]",
-            total=None,
+        args: list[str | Path] = [
+            binary,
+            "render",
+            file.name,
+            "--to",
+            to,
+        ]
+        for key, value in merged_metadata.items():
+            args.extend(("-M", f"{key}={value}"))
+        for key, value in settings.items():
+            args.append(f"--{key}")
+            if value is not None:
+                args.append(str(value))
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn(text_format="[progress.description]{task.description}"),
+            TimeElapsedColumn(),
+            transient=True,
+        ) as progress:
+            progress.add_task(
+                description="[white]Exporting...[/]",
+                total=None,
+            )
+            subprocess.run(
+                args=args,
+                check=True,
+                cwd=render_dir,
+            )
+
+        rendered_candidates = sorted(
+            (child for child in render_dir.iterdir() if child.is_file() and not child.is_symlink() and child.stem == file.stem),
+            key=lambda child: child.stat().st_mtime,
+            reverse=True,
         )
-        subprocess.run(
-            args=args,
-            check=True,
-        )
+        if not rendered_candidates:
+            msg = (
+                f"Could not locate a rendered artefact for {file.name!r} with stem {file.stem!r} "
+                f"in the temporary render directory. Check the quarto output for errors."
+            )
+            raise RuntimeError(msg)
+        rendered = rendered_candidates[0]
+
+        output_path = output_dir / f"{title or file.stem}_{datetime.now(tz=UTC).isoformat()}{rendered.suffix}"
+
+        if output_path.exists():
+            output_path.unlink()
+
+        shutil.move(src=rendered, dst=output_path)
 
     return output_path

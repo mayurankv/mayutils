@@ -32,6 +32,14 @@ repos:
         entry: toml-sort -i --sort-table-keys --sort-inline-tables
         language: python
         files: ^pyproject\.toml$
+-   repo: local
+    hooks:
+    -   id: refresh-stubs
+        name: Refresh pyright type stubs
+        entry: uv run --extra all refresh_stubs
+        language: system
+        pass_filenames: false
+        files: ^(pyproject\.toml|uv\.lock)$
 -   repo: https://github.com/executablebooks/mdformat
     rev: 1.0.0
     hooks:
@@ -71,7 +79,7 @@ repos:
         exclude: src/uk_loans_pricing_update_packs/data/queries/testing/
         # additional_dependencies: ['<dbt-adapter>', 'sqlfluff-templater-dbt']
 -   repo: https://github.com/renovatebot/pre-commit-hooks
-    rev: 43.133.0
+    rev: 43.134.1
     hooks:
     -   id: renovate-config-validator
         args: [--strict]

@@ -1,7 +1,7 @@
 """Export utilities for rendering mayutils artefacts to external formats.
 
 This subpackage groups the exporters that convert in-memory mayutils
-objects (plots, tables, notebooks, markdown, slide definitions) into
+objects (plots, tables, notebooks, markdown definitions) into
 distributable artefacts such as HTML documents, static images, PDF
 reports and PowerPoint decks. It also exposes a canonical
 ``OUTPUT_FOLDER`` location, anchored to the project root discovered by
@@ -17,14 +17,14 @@ images
     Image export helpers for converting figures and documents to raster
     or vector images (requires the ``plotting`` or ``pdf`` extras).
 nbconvert
-    PDF export driven by ``jupyter nbconvert`` for notebook-based
-    reports.
+    Multi-format notebook export driven by ``jupyter nbconvert``
+    (requires the ``notebook`` extra). Reveal.js slide-deck defaults
+    live in :data:`~mayutils.export.nbconvert.DEFAULT_SETTINGS` under
+    the ``"slides"`` key.
 quarto
     Multi-format export (``pdf``, ``html``, ``docx``, ``pptx``,
-    ``revealjs``) delegated to the bundled ``quarto-cli`` binary.
-slides
-    PowerPoint deck export powered by ``python-pptx`` (requires the
-    ``microsoft`` extra).
+    ``revealjs``, …) delegated to the bundled ``quarto-cli`` binary
+    (requires the ``notebook`` extra).
 
 Attributes
 ----------
