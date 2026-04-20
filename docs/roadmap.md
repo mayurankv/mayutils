@@ -19,10 +19,6 @@ Priority: #critical
     - Reference: [quick start](https://mwouts.github.io/itables/quick_start.html)
     - Reference: [formatting](https://mwouts.github.io/itables/formatting.html)
 
-### Numbers
-
-- [ ] Prettify: SI units and configurable decimal places.
-
 ### Plots
 
 Priority: #critical

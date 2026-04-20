@@ -9,7 +9,7 @@ Utilities for Python — plotting helpers, dataframe adapters, Snowflake/SQL glu
 ```zsh
 uv add mayutils                   # core only
 uv add "mayutils[plotting]"       # + plotly/kaleido/matplotlib/scipy
-uv add "mayutils[recommended]"    # curated data-analysis set (plotting+notebook+dataframes+datetime+stats)
+uv add "mayutils[recommended]"    # curated data-analysis set (console+pandas+datetime+notebook+plotting+secrets)
 uv add "mayutils[all]"            # everything
 ```
 
@@ -23,23 +23,28 @@ print(prettify(num=1_234_567))  # "1.23M"
 
 ## Dependency Groups
 
-| Group         | Use it for                                                          |
-| ------------- | ------------------------------------------------------------------- |
-| `plotting`    | `plotly`, `kaleido`, `matplotlib`, `scipy`, `great-tables`          |
-| `notebook`    | `jupyter`, `ipykernel`, `nbconvert`, `itables`, `jupysql`           |
-| `dataframes`  | `polars`, `modin`                                                   |
-| `stats`       | `scikit-learn`, `scipy`, `numba`, `numpy-financial`                 |
-| `google`      | Google Drive / Sheets / Cloud Storage + auth                        |
-| `microsoft`   | `python-pptx`, `openpyxl`                                           |
-| `snowflake`   | `snowflake-connector-python`, `snowflake-sqlalchemy`                |
-| `streamlit`   | `streamlit`                                                         |
-| `web`         | `selenium`, `playwright`, `chromedriver-autoinstaller`              |
-| `pdf`         | `pymupdf`, `pillow`                                                 |
-| `datetime`    | `pendulum`                                                          |
-| `cli`         | `typer`, `cookiecutter`                                             |
-| `filesystem`  | `gitpython`, `watchdog`                                             |
-| `recommended` | meta: `plotting` + `notebook` + `dataframes` + `datetime` + `stats` |
-| `all`         | Every runtime extra                                                 |
+| Group         | Use it for                                                                    |
+| ------------- | ----------------------------------------------------------------------------- |
+| `plotting`    | `plotly`, `kaleido`, `matplotlib`, `scipy`, `great-tables`                    |
+| `notebook`    | `jupyter`, `ipykernel`, `nbconvert`, `itables`, `jupysql`, `quarto-cli`       |
+| `pandas`      | `pandas`, `pyarrow`                                                           |
+| `dataframes`  | `polars`, `modin`, `dask` (+ `pandas`)                                        |
+| `mathematics` | `sympy`, `numba`                                                              |
+| `statistics`  | `scikit-learn`, `scipy`, `statsmodels`                                        |
+| `financials`  | `numpy-financial`                                                             |
+| `google`      | Google Drive / Sheets / Cloud Storage + auth                                  |
+| `microsoft`   | `python-pptx`, `openpyxl`                                                     |
+| `sql`         | `sqlalchemy`                                                                  |
+| `snowflake`   | `snowflake-connector-python`, `snowflake-sqlalchemy` (+ `sql`)                |
+| `streamlit`   | `streamlit`                                                                   |
+| `web`         | `selenium`, `playwright`, `chromedriver-autoinstaller`                        |
+| `pdf`         | `pymupdf`, `pillow`                                                           |
+| `datetime`    | `pendulum`                                                                    |
+| `cli`         | `typer`, `cookiecutter`                                                       |
+| `filesystem`  | `gitpython`, `watchdog`                                                       |
+| `secrets`     | `python-dotenv`, `keyring`                                                    |
+| `recommended` | meta: `console` + `pandas` + `datetime` + `notebook` + `plotting` + `secrets` |
+| `all`         | Every runtime extra                                                           |
 
 Full details: [docs/guides/dependency-groups.md](docs/guides/dependency-groups.md).
 

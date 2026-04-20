@@ -23,7 +23,7 @@ uv add "mayutils[plotting]"
 uv add "mayutils[snowflake]"
 
 # Curated default for notebook-based data analysis
-# (plotting + notebook + dataframes + datetime + stats)
+# (console + pandas + datetime + notebook + plotting + secrets)
 uv add "mayutils[recommended]"
 
 # Everything

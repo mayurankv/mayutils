@@ -24,11 +24,10 @@ from datetime import tzinfo as BaseTzinfo  # noqa: N812
 from sqlite3 import register_adapter
 from typing import TYPE_CHECKING, Self
 
-import numpy as np
-
 from mayutils.core.extras import may_require_extras
 
 with may_require_extras():
+    import numpy as np
     from pendulum import (
         Date as PendulumDate,
     )
