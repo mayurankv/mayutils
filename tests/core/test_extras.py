@@ -41,7 +41,7 @@ class TestParseRequiresDist:
     )
     def test_parse(self, line: str, expected_dist: str, expected_extra: str | None) -> None:
         """Handles bare deps, quoted markers, sub-extras, and multi-marker lines."""
-        dist, extra = parse_requires_dist_line(line=line)
+        dist, extra = parse_requires_dist_line(line)
         assert dist == expected_dist
         assert extra == expected_extra
 
@@ -51,11 +51,11 @@ class TestModulesForDistribution:
 
     def test_installed_dist_via_top_level(self) -> None:
         """Installed distributions are resolved from their ``top_level.txt`` metadata."""
-        assert "numpy" in modules_for_distribution(dist="numpy")
+        assert "numpy" in modules_for_distribution("numpy")
 
     def test_naive_heuristic_for_unknown_dist(self) -> None:
         """Uninstalled distributions fall back to ``name.replace("-", "_")``."""
-        assert modules_for_distribution(dist="totally-made-up-xyz") == ("totally_made_up_xyz",)
+        assert modules_for_distribution("totally-made-up-xyz") == ("totally_made_up_xyz",)
 
 
 class TestExtrasForModule:
@@ -63,19 +63,19 @@ class TestExtrasForModule:
 
     def test_single_extra(self) -> None:
         """A module belonging to exactly one extra resolves to a singleton set."""
-        assert extras_for_module(module_name="plotly") == frozenset({"plotting"})
+        assert extras_for_module("plotly") == frozenset({"plotting"})
 
     def test_multi_extra_module(self) -> None:
         """``scipy`` lives under both ``plotting`` and ``stats`` — both are returned."""
-        assert extras_for_module(module_name="scipy") == frozenset({"plotting", "stats"})
+        assert extras_for_module("scipy") == frozenset({"plotting", "stats"})
 
     def test_dotted_module_resolves_via_parent(self) -> None:
         """Dotted submodules fall back to their parent module's extras mapping."""
-        assert extras_for_module(module_name="plotly.graph_objects") == frozenset({"plotting"})
+        assert extras_for_module("plotly.graph_objects") == frozenset({"plotting"})
 
     def test_unknown_module_returns_empty(self) -> None:
         """Modules not in any extra resolve to an empty set (no hint will be rendered)."""
-        assert extras_for_module(module_name="completely-unknown") == frozenset()
+        assert extras_for_module("completely-unknown") == frozenset()
 
 
 class TestFormatMissingExtraHint:
@@ -83,27 +83,27 @@ class TestFormatMissingExtraHint:
 
     def test_single_extra(self) -> None:
         """A single-extra hint names the module and the exact ``uv add`` command."""
-        message = format_missing_extra_hint(module_name="plotly")
+        message = format_missing_extra_hint("plotly")
         assert "plotly" in message
         assert '"mayutils[plotting]"' in message
         assert "uv add" in message
 
     def test_multiple_extras(self) -> None:
         """When multiple extras provide a module, the hint lists all of them."""
-        message = format_missing_extra_hint(module_name="scipy")
+        message = format_missing_extra_hint("scipy")
         assert '"mayutils[plotting]"' in message
         assert '"mayutils[stats]"' in message
 
     def test_unknown_module_falls_back(self) -> None:
         """Unknown modules produce a generic hint without a ``mayutils[...]`` reference."""
-        message = format_missing_extra_hint(module_name="unknown-xyz")
+        message = format_missing_extra_hint("unknown-xyz")
         assert "unknown-xyz" in message
         assert "mayutils[" not in message
 
     def test_explicit_extras_override_auto(self) -> None:
         """Caller-supplied ``extras`` take precedence over automatic resolution."""
         message = format_missing_extra_hint(
-            module_name="something",
+            "something",
             extras=("notebook",),
         )
         assert '"mayutils[notebook]"' in message

@@ -37,9 +37,9 @@ if TYPE_CHECKING:
 DISTRIBUTION_NAME = "mayutils"
 
 
-def _normalise_dist_name(
-    *,
+def normalise_dist_name(
     dist: str,
+    /,
 ) -> str:
     """Canonicalise a PyPI distribution name for comparison.
 
@@ -64,8 +64,8 @@ def _normalise_dist_name(
 
 
 def modules_for_distribution(
-    *,
     dist: str,
+    /,
 ) -> tuple[str, ...]:
     """Return the top-level importable modules shipped by ``dist``.
 
@@ -103,12 +103,12 @@ def modules_for_distribution(
             if modules:
                 return modules
 
-    return (_normalise_dist_name(dist=dist).replace("-", "_"),)
+    return (normalise_dist_name(dist).replace("-", "_"),)
 
 
 def parse_requires_dist_line(
-    *,
     line: str,
+    /,
 ) -> tuple[str, str | None]:
     """Split a ``Requires-Dist`` metadata line into its component parts.
 
@@ -185,18 +185,18 @@ def load_extras_map() -> dict[str, frozenset[str]]:
     result: dict[str, set[str]] = {}
 
     for line in requires:
-        dist_name, extra = parse_requires_dist_line(line=line)
+        dist_name, extra = parse_requires_dist_line(line)
         if extra is None or not dist_name:
             continue
-        for module in modules_for_distribution(dist=dist_name):
+        for module in modules_for_distribution(dist_name):
             result.setdefault(module, set()).add(extra)
 
     return {key: frozenset(value) for key, value in result.items()}
 
 
 def extras_for_module(
-    *,
     module_name: str,
+    /,
 ) -> frozenset[str]:
     """Resolve the optional-dependency extras that supply a given import.
 
@@ -232,8 +232,9 @@ def extras_for_module(
 
 
 def format_missing_extra_hint(
-    *,
     module_name: str,
+    /,
+    *,
     extras: tuple[str, ...] | None = None,
 ) -> str:
     """Build a human-readable install hint for a missing optional dependency.
@@ -267,7 +268,7 @@ def format_missing_extra_hint(
         "not installed" fallback when no extra is known to ship the
         module.
     """
-    hint_extras = tuple(sorted(extras)) if extras else tuple(sorted(extras_for_module(module_name=module_name)))
+    hint_extras = tuple(sorted(extras)) if extras else tuple(sorted(extras_for_module(module_name)))
     if not hint_extras:
         return f"Optional dependency '{module_name}' is not installed."
 
@@ -333,7 +334,7 @@ def requires_extras(
     except ImportError as err:
         module_name = getattr(err, "name", None) or "dependency"
         hint = format_missing_extra_hint(
-            module_name=module_name,
+            module_name,
             extras=extras or None,
         )
         original = err.msg if hasattr(err, "msg") else str(err)
