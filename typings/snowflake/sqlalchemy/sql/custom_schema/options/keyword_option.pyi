@@ -1,0 +1,13 @@
+from .keywords import SnowflakeKeyword
+from .table_option import TableOption, TableOptionKey
+
+class KeywordOption(TableOption):
+    def __init__(self, value: SnowflakeKeyword) -> None: ...
+    @property
+    def priority(self):  # -> Literal[Priority.HIGH]:
+        ...
+    def template(self) -> str: ...
+    @staticmethod
+    def create(name: TableOptionKey, value: SnowflakeKeyword | KeywordOption | None) -> TableOption | None: ...
+
+type KeywordOptionType = KeywordOption | SnowflakeKeyword

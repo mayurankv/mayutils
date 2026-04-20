@@ -1,0 +1,40 @@
+import operator
+
+from numba.core import types
+from numba.core.typing.templates import AbstractTemplate, AttributeTemplate
+
+"""
+Typing for enums.
+"""
+registry = ...
+infer = ...
+infer_global = ...
+infer_getattr = ...
+
+@infer_getattr
+class EnumAttribute(AttributeTemplate):
+    key = types.EnumMember
+    def resolve_value(self, ty): ...
+
+@infer_getattr
+class EnumClassAttribute(AttributeTemplate):
+    key = types.EnumClass
+    def generic_resolve(self, ty, attr):  # -> None:
+
+        ...
+
+@infer
+class EnumClassStaticGetItem(AbstractTemplate):
+    key = ...
+    def generic(self, args, kws):  # -> Signature | None:
+        ...
+
+class EnumCompare(AbstractTemplate):
+    def generic(self, args, kws):  # -> Signature | None:
+        ...
+
+@infer_global(operator.eq)
+class EnumEq(EnumCompare): ...
+
+@infer_global(operator.ne)
+class EnumNe(EnumCompare): ...

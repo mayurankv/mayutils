@@ -1,0 +1,19 @@
+_logger = ...
+_msg_deprecated_signature_arg = ...
+
+def jit(
+    signature_or_function=..., locals=..., cache=..., pipeline_class=..., boundscheck=..., **options
+):  # -> Callable[..., FakeCUDAKernel] | Callable[..., CUDADispatcher] | FakeCUDAKernel | CUDADispatcher | FunctionType | Callable[..., Callable[..., FakeCUDAKernel] | Callable[..., CUDADispatcher] | FakeCUDAKernel | CUDADispatcher | FunctionType | Any]:
+
+    ...
+def njit(
+    *args, **kws
+):  # -> Callable[..., FakeCUDAKernel] | Callable[..., CUDADispatcher] | FakeCUDAKernel | CUDADispatcher | FunctionType | Callable[..., Callable[..., FakeCUDAKernel] | Callable[..., CUDADispatcher] | FakeCUDAKernel | CUDADispatcher | FunctionType | Any]:
+
+    ...
+def cfunc(sig, locals=..., cache=..., pipeline_class=..., **options):  # -> Callable[..., CFunc]:
+
+    ...
+def jit_module(**kwargs):  # -> None:
+
+    ...

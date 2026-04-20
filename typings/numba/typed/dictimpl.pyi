@@ -1,0 +1,12 @@
+from numba.core import types
+from numba.core.imputils import lower_builtin
+
+"""
+This file implements the lowering for `dict()`
+"""
+_message_dict_support = ...
+
+@lower_builtin(dict, types.IterableType)
+def dict_constructor(context, builder, sig, args): ...
+@lower_builtin(dict)
+def impl_dict(context, builder, sig, args): ...

@@ -1,0 +1,3 @@
+def parse_signature(sig):  # -> tuple[list[tuple[Any, ...]], list[tuple[Any, ...]]]:
+
+    ...

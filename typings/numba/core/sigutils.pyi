@@ -1,0 +1,6 @@
+def is_signature(sig):  # -> bool:
+
+    ...
+def normalize_signature(sig):  # -> tuple[tuple[Any, ...] | Any, Any | None]:
+
+    ...

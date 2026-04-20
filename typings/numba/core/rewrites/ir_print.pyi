@@ -1,0 +1,13 @@
+from numba.core.rewrites import Rewrite, register_rewrite
+
+@register_rewrite("before-inference")
+class RewritePrintCalls(Rewrite):
+    def match(self, func_ir, block, typemap, calltypes):  # -> bool:
+        ...
+    def apply(self): ...
+
+@register_rewrite("before-inference")
+class DetectConstPrintArguments(Rewrite):
+    def match(self, func_ir, block, typemap, calltypes):  # -> bool:
+        ...
+    def apply(self): ...

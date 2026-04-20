@@ -1,0 +1,3 @@
+def create_pass_builder(tm, opt=..., loop_vectorize=..., slp_vectorize=...):  # -> PassBuilder:
+
+    ...

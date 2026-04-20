@@ -1,0 +1,13 @@
+from sqlalchemy.sql.expression import TextClause
+
+from .table_option import Priority, TableOption
+
+class ClusterByOption(TableOption):
+    def __init__(self, *expressions: str | TextClause) -> None: ...
+    @staticmethod
+    def create(value: ClusterByOptionType) -> TableOption: ...
+    def template(self) -> str: ...
+    @property
+    def priority(self) -> Priority: ...
+
+type ClusterByOptionType = ClusterByOption | list[str | TextClause]

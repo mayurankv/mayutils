@@ -1,0 +1,13 @@
+from sqlalchemy.sql import Selectable
+
+from .table_option import Priority, TableOption
+
+class AsQueryOption(TableOption):
+    def __init__(self, query: str | Selectable) -> None: ...
+    @staticmethod
+    def create(value: AsQueryOption | str | Selectable | None) -> TableOption: ...
+    def template(self) -> str: ...
+    @property
+    def priority(self) -> Priority: ...
+
+type AsQueryOptionType = AsQueryOption | str | Selectable

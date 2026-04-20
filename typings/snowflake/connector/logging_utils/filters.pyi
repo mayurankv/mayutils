@@ -1,0 +1,6 @@
+import logging
+
+def add_filter_to_logger_and_children(base_logger_name: str, filter_instance: logging.Filter) -> None: ...
+
+class SecretMaskingFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool: ...

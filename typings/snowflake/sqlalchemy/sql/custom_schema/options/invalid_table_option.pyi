@@ -1,0 +1,6 @@
+from .table_option import TableOption, TableOptionKey
+
+class InvalidTableOption(TableOption):
+    def __init__(self, name: TableOptionKey, value: Exception) -> None: ...
+    @staticmethod
+    def create(name: TableOptionKey, value: Exception) -> TableOption | None: ...

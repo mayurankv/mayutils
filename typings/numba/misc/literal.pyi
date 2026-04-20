@@ -1,0 +1,6 @@
+from numba.core.extending import overload
+from numba.misc.special import literal_unroll
+
+@overload(literal_unroll)
+def literal_unroll_impl(container):  # -> Callable[..., Any]:
+    ...

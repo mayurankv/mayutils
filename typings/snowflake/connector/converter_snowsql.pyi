@@ -1,0 +1,16 @@
+from collections.abc import Callable
+from datetime import datetime
+from time import struct_time
+from typing import Any
+
+from .converter import SnowflakeConverter
+
+logger = ...
+
+def format_sftimestamp(ctx: dict[str, Any], value: datetime | struct_time, franction_of_nanoseconds: int) -> str: ...
+
+class SnowflakeConverterSnowSQL(SnowflakeConverter):
+    def __init__(self, **kwargs) -> None: ...
+    def to_python_method(self, type_name: str, column: dict[str, Any]) -> Callable | None: ...
+
+    _TIME_to_python = ...

@@ -1,0 +1,3 @@
+def jitclass(cls_or_spec=..., spec=...):  # -> Callable[..., Any | type[__class_JitClassType]] | type | type[__class_JitClassType]:
+
+    ...

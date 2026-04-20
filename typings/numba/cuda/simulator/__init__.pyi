@@ -1,0 +1,6 @@
+from numba.core import config
+
+from .api import *
+
+reduce = ...
+if config.ENABLE_CUDASIM: ...
