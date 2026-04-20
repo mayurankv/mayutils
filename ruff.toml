@@ -26,6 +26,7 @@ exclude = [
     "site-packages",
     "venv",
     "Templates",
+    "typings",
 ]
 line-length = 140
 indent-width = 4

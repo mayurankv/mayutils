@@ -63,7 +63,7 @@ def _normalise_dist_name(
     return dist.strip().lower().replace("_", "-")
 
 
-def _modules_for_distribution(
+def modules_for_distribution(
     *,
     dist: str,
 ) -> tuple[str, ...]:
@@ -106,7 +106,7 @@ def _modules_for_distribution(
     return (_normalise_dist_name(dist=dist).replace("-", "_"),)
 
 
-def _parse_requires_dist_line(
+def parse_requires_dist_line(
     *,
     line: str,
 ) -> tuple[str, str | None]:
@@ -156,7 +156,7 @@ def _parse_requires_dist_line(
 
 
 @lru_cache(maxsize=1)
-def _load_extras_map() -> dict[str, frozenset[str]]:
+def load_extras_map() -> dict[str, frozenset[str]]:
     """Build the module-to-extras lookup table from installed metadata.
 
     Iterates the ``Requires-Dist`` headers of the ``mayutils``
@@ -185,10 +185,10 @@ def _load_extras_map() -> dict[str, frozenset[str]]:
     result: dict[str, set[str]] = {}
 
     for line in requires:
-        dist_name, extra = _parse_requires_dist_line(line=line)
+        dist_name, extra = parse_requires_dist_line(line=line)
         if extra is None or not dist_name:
             continue
-        for module in _modules_for_distribution(dist=dist_name):
+        for module in modules_for_distribution(dist=dist_name):
             result.setdefault(module, set()).add(extra)
 
     return {key: frozenset(value) for key, value in result.items()}
@@ -222,7 +222,7 @@ def extras_for_module(
         prefix). Empty when no declared extra ships the module, in
         which case callers should fall back to a generic message.
     """
-    mapping = _load_extras_map()
+    mapping = load_extras_map()
     parts = module_name.split(".")
     for index in range(len(parts), 0, -1):
         candidate = ".".join(parts[:index])

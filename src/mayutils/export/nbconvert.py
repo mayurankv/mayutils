@@ -26,6 +26,33 @@ with may_require_extras():
     from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
 
+FORMAT_EXTENSIONS: dict[str, str] = {
+    "asciidoc": ".asciidoc",
+    "html": ".html",
+    "latex": ".tex",
+    "markdown": ".md",
+    "notebook": ".ipynb",
+    "pdf": ".pdf",
+    "python": ".py",
+    "qtpdf": ".pdf",
+    "qtpng": ".png",
+    "rst": ".rst",
+    "script": ".py",
+    "slides": ".slides.html",
+    "webpdf": ".pdf",
+}
+"""Canonical file extension produced by ``jupyter nbconvert`` per format.
+
+``jupyter nbconvert`` auto-appends the correct extension when
+``--output`` is a bare stem, but silently produces doubled suffixes like
+``report.markdown.md`` or ``report.slides.slides.html`` when the caller
+supplies a guess that doesn't match its exporter trait. :func:`export`
+therefore passes a stemless ``--output`` and consults this table to
+compose the returned ``Path``. The ``"script"`` exporter's extension is
+kernel-dependent; ``.py`` is the correct default for the common Python
+kernel and can be overridden globally by mutating this dictionary.
+"""
+
 DEFAULT_SETTINGS: dict[str, dict[str, Any]] = {
     "asciidoc": {},
     "html": {},
@@ -219,10 +246,10 @@ def export(
     Returns
     -------
     Path
-        Path that was passed to ``--output``, i.e. the destination
-        stem (without the format-specific extension) of the rendered
-        artefact. Callers that need the final filename should append
-        the extension associated with ``to``.
+        Absolute path of the rendered artefact with the extension
+        resolved via :data:`FORMAT_EXTENSIONS` — i.e. the filename
+        actually produced by ``jupyter nbconvert`` on disk, not the
+        stemless value passed to ``--output``.
 
     Raises
     ------
@@ -255,7 +282,9 @@ def export(
     if output_dir is None:
         output_dir = OUTPUT_FOLDER / to.title().replace("Pdf", "PDF")
 
-    output_path = output_dir / f"{title or file.stem}_{datetime.now(tz=UTC).isoformat()}"
+    output_stem = output_dir / f"{title or file.stem}_{datetime.now(tz=UTC).isoformat()}"
+    extension = FORMAT_EXTENSIONS.get(to, f".{to}")
+    output_path = Path(f"{output_stem}{extension}")
 
     settings: dict[str, Any] = DEFAULT_SETTINGS.get(to, {}) | kwargs
 
@@ -264,7 +293,7 @@ def export(
         "nbconvert",
         file,
         "--output",
-        output_path,
+        output_stem,
         "--to",
         to,
     ]

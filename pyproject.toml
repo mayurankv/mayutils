@@ -177,6 +177,7 @@ web = [
 [project.scripts]
 clear_cache = "mayutils.scripts.clear_cache:app"
 generate_encryption_key = "mayutils.environment.oauth:generate_fernet_key"
+refresh_stubs = "mayutils.scripts.refresh_stubs:app"
 
 [tool.commitizen]
 changelog_file = "CHANGELOG.md"
