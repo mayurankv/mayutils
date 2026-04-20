@@ -1,4 +1,8 @@
-"""Tests for ``mayutils.objects.datetime``."""
+"""Tests for ``mayutils.objects.datetime``.
+
+Requires the ``datetime`` (for ``pendulum``) and ``numerics`` (for
+``numpy``) extras; the module is skipped at collection time otherwise.
+"""
 
 from __future__ import annotations
 
@@ -6,11 +10,12 @@ from datetime import date as stdlib_date
 from datetime import datetime as stdlib_datetime
 from datetime import time as stdlib_time
 
-import numpy as np
-import pendulum
 import pytest
 
-from mayutils.objects.datetime import (
+np = pytest.importorskip("numpy")
+pendulum = pytest.importorskip("pendulum")
+
+from mayutils.objects.datetime import (  # noqa: E402
     UTC,
     Date,
     DateNumericMixin,
@@ -123,7 +128,7 @@ class TestTimeConstructors:
 
     def test_fractional_completion_noon(self) -> None:
         """Noon is exactly half the day."""
-        assert Time(12, 0, 0).fractional_completion == pytest.approx(0.5)
+        assert np.isclose(Time(12, 0, 0).fractional_completion, 0.5)
 
 
 class TestDateTimeConstructors:
@@ -309,12 +314,12 @@ class TestInterval:
 
     def test_promote_pendulum_date(self) -> None:
         """A raw pendulum ``Date`` is promoted to our ``Date``."""
-        result = Interval.promote_pendulum(pendulum.date(2025, 1, 15))
+        result = Interval[Date].promote_pendulum(pendulum.date(2025, 1, 15))
         assert type(result) is Date
 
     def test_promote_pendulum_datetime(self) -> None:
         """A raw pendulum ``DateTime`` is promoted to our ``DateTime``."""
-        result = Interval.promote_pendulum(pendulum.datetime(2025, 1, 15))
+        result = Interval[DateTime].promote_pendulum(pendulum.datetime(2025, 1, 15))
         assert type(result) is DateTime
 
     def test_as_pendulum_returns_plain_pendulum(self) -> None:

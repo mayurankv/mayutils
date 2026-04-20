@@ -32,7 +32,8 @@ class TestSetInline:
 
     def test_assigns_on_dict(self) -> None:
         """The key is added to a ``dict`` with the supplied value."""
-        result = set_inline(parent_object={}, property_name="k", value=1)
+        dictionary: dict[str, int] = {}
+        result = set_inline(parent_object=dictionary, property_name="k", value=1)
         assert result == {"k": 1}
 
     def test_returns_same_object(self) -> None:

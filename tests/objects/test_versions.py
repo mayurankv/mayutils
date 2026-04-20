@@ -1,11 +1,18 @@
-"""Tests for ``mayutils.objects.versions``."""
+"""Tests for ``mayutils.objects.versions``.
+
+``packaging`` is treated as an optional dependency by
+:mod:`mayutils.objects.versions`, so the tests skip at collection time
+when it is not importable.
+"""
 
 from __future__ import annotations
 
 import pytest
-from packaging.version import Version
 
-from mayutils.objects.versions import bump_version_string
+packaging_version = pytest.importorskip("packaging.version")
+Version = packaging_version.Version
+
+from mayutils.objects.versions import bump_version_string  # noqa: E402
 
 
 class TestBumpVersionString:

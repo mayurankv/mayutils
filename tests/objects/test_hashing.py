@@ -1,14 +1,19 @@
-"""Tests for ``mayutils.objects.hashing``."""
+"""Tests for ``mayutils.objects.hashing``.
+
+Requires the ``datetime`` extra (for ``pendulum``); the module is
+skipped at collection time otherwise.
+"""
 
 from __future__ import annotations
 
 from datetime import datetime
 
-import pendulum
 import pytest
 
-from mayutils.objects.datetime import DateTime
-from mayutils.objects.hashing import hash_inputs, serialise
+pendulum = pytest.importorskip("pendulum")
+
+from mayutils.objects.datetime import DateTime  # noqa: E402
+from mayutils.objects.hashing import hash_inputs, serialise  # noqa: E402
 
 
 class TestSerialise:
