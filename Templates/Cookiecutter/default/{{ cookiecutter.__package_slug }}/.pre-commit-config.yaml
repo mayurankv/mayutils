@@ -22,7 +22,7 @@ repos:
     # Run the formatter.
     - id: ruff-format
 - repo: https://github.com/RobertCraigie/pyright-python
-  rev: v1.1.407
+  rev: v1.1.408
   hooks:
     - id: pyright
       additional_dependencies:
@@ -65,7 +65,7 @@ repos:
       stages: [pre-push]
 
 - repo: https://github.com/executablebooks/mdformat
-  rev: 0.7.13 # Use the ref you want to point at
+  rev: 0.7.22 # Use the ref you want to point at
   hooks:
     - id: mdformat
       additional_dependencies:
