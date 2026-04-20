@@ -12,7 +12,7 @@ class TestPrettify:
 
     def test_zero(self) -> None:
         """Zero formats as the literal string ``"0"`` (no suffix)."""
-        assert prettify(num=0) == "0"
+        assert prettify(0) == "0"
 
     @pytest.mark.parametrize(
         ("value", "expected_suffix"),
@@ -24,7 +24,7 @@ class TestPrettify:
     )
     def test_suffix_scales(self, value: float, expected_suffix: str) -> None:
         """Each magnitude threshold picks up the correct SI suffix (K/M/B)."""
-        assert prettify(num=value).endswith(expected_suffix)
+        assert prettify(value).endswith(expected_suffix)
 
 
 class TestOrdinal:
@@ -48,4 +48,4 @@ class TestOrdinal:
     )
     def test_ordinals(self, value: int, expected: str) -> None:
         """Teens all take ``-th``; other two-digit endings follow the 1/2/3/4+ rule."""
-        assert ordinal(n=value) == expected
+        assert ordinal(value) == expected

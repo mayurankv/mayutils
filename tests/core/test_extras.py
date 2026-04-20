@@ -9,11 +9,12 @@ from __future__ import annotations
 import pytest
 
 from mayutils.core.extras import (
-    _load_extras_map,
-    _modules_for_distribution,
-    _parse_requires_dist_line,
     extras_for_module,
     format_missing_extra_hint,
+    load_extras_map,
+    may_require_extras,
+    modules_for_distribution,
+    parse_requires_dist_line,
     requires_extras,
 )
 
@@ -40,7 +41,7 @@ class TestParseRequiresDist:
     )
     def test_parse(self, line: str, expected_dist: str, expected_extra: str | None) -> None:
         """Handles bare deps, quoted markers, sub-extras, and multi-marker lines."""
-        dist, extra = _parse_requires_dist_line(line=line)
+        dist, extra = parse_requires_dist_line(line=line)
         assert dist == expected_dist
         assert extra == expected_extra
 
@@ -50,11 +51,11 @@ class TestModulesForDistribution:
 
     def test_installed_dist_via_top_level(self) -> None:
         """Installed distributions are resolved from their ``top_level.txt`` metadata."""
-        assert "numpy" in _modules_for_distribution(dist="numpy")
+        assert "numpy" in modules_for_distribution(dist="numpy")
 
     def test_naive_heuristic_for_unknown_dist(self) -> None:
         """Uninstalled distributions fall back to ``name.replace("-", "_")``."""
-        assert _modules_for_distribution(dist="totally-made-up-xyz") == ("totally_made_up_xyz",)
+        assert modules_for_distribution(dist="totally-made-up-xyz") == ("totally_made_up_xyz",)
 
 
 class TestExtrasForModule:
@@ -114,7 +115,7 @@ class TestRequiresExtras:
     def test_reraises_with_hint(self) -> None:
         """A failing real import inside the context manager is re-raised with the hint."""
         with pytest.raises(ImportError, match="mayutils\\[plotting\\]") as exc_info, requires_extras("plotting"):
-            import nonexistent_module_abc  # noqa: F401, PLC0415
+            import nonexistent_module_abc  # pyright: ignore[reportUnusedImport, reportMissingImports] # ty:ignore[unresolved-import]  # noqa: F401, PLC0415
         assert exc_info.value.__cause__ is not None
         assert isinstance(exc_info.value.__cause__, ImportError)
 
@@ -140,17 +141,60 @@ class TestRequiresExtras:
         assert value == expected
 
 
+class TestMayRequireExtras:
+    """Tests for :func:`may_require_extras` — auto-resolving no-arg context manager."""
+
+    def test_auto_resolves_single_extra(self) -> None:
+        """A failing import inside the block is decorated with the extra inferred from pyproject."""
+        msg = "No module named 'plotly'"
+        with pytest.raises(ImportError) as exc_info, may_require_extras():
+            raise ImportError(msg, name="plotly")
+        assert "mayutils[plotting]" in str(exc_info.value)
+
+    def test_auto_resolves_multi_extra(self) -> None:
+        """Modules declared by multiple extras get a hint listing all of them."""
+        msg = "No module named 'scipy'"
+        with pytest.raises(ImportError) as exc_info, may_require_extras():
+            raise ImportError(msg, name="scipy")
+        rendered = str(exc_info.value)
+        assert "mayutils[plotting]" in rendered
+        assert "mayutils[stats]" in rendered
+
+    def test_unknown_module_falls_back_to_generic(self) -> None:
+        """A module not declared in any extra gets the generic 'not installed' hint."""
+        msg = "No module named 'unknown_module_xyz'"
+        with pytest.raises(ImportError) as exc_info, may_require_extras():
+            raise ImportError(msg, name="unknown_module_xyz")
+        rendered = str(exc_info.value)
+        assert "unknown_module_xyz" in rendered
+        assert "mayutils[" not in rendered
+
+    def test_preserves_module_name(self) -> None:
+        """The re-raised ``ImportError.name`` still matches the originally-missing module."""
+        msg = "No module named 'polars'"
+        with pytest.raises(ImportError) as exc_info, may_require_extras():
+            raise ImportError(msg, name="polars")
+        assert exc_info.value.name == "polars"
+
+    def test_passthrough_when_no_error(self) -> None:
+        """The context manager is a no-op when the wrapped block raises nothing."""
+        expected = 42
+        with may_require_extras():
+            value = expected
+        assert value == expected
+
+
 class TestExtrasMap:
     """Tests for :func:`_load_extras_map` — the cached ``module → extras`` mapping."""
 
     def test_map_is_populated(self) -> None:
         """When the package is installed, the extras map is non-empty."""
-        mapping = _load_extras_map()
+        mapping = load_extras_map()
         assert mapping, "extras map should be populated when running from installed metadata"
 
     def test_covers_every_declared_extra(self) -> None:
         """Every extra declared in ``pyproject.toml`` appears in the computed mapping."""
-        mapping = _load_extras_map()
+        mapping = load_extras_map()
         all_extras = {extra for extras in mapping.values() for extra in extras}
         expected = {
             "plotting",
