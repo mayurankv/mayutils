@@ -8,11 +8,11 @@ view, and a one-call image export pipeline built on ``dataframe-image`` that
 produces a palette-consistent PNG with optional dark-mode rendering.
 """
 
+from __future__ import annotations
+
 from collections.abc import Callable, Hashable, Mapping, Sequence
 from pathlib import Path
-from typing import Any, Self
-
-from pandas.io.formats.style_render import Subset
+from typing import TYPE_CHECKING, Any, Self
 
 from mayutils.core.extras import may_require_extras
 from mayutils.objects.colours import Colour
@@ -26,9 +26,12 @@ with may_require_extras():
         save_image,  # pyright: ignore[reportUnknownVariableType]
     )
     from itables import show
+    from pandas.io.formats.style import Styler as Style
+    from pandas.io.formats.style_render import Subset
+
+if TYPE_CHECKING:
     from pandas import DataFrame, Index
     from pandas._typing import Axis, Level
-    from pandas.io.formats.style import Styler as Style
     from pandas.io.formats.style_render import Subset
 
 

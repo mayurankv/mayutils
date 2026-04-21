@@ -3,6 +3,7 @@
 docs/index.md
 logs/
 temp/
+Notebooks/tests/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

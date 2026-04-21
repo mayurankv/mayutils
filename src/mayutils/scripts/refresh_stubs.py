@@ -5,17 +5,15 @@ This module exposes a Typer application that inspects the project-local
 hand-curated or previously generated stubs already exist, confirms that
 the packages still need external stubs (i.e. they do not ship a
 ``py.typed`` marker themselves and no community ``types-<pkg>`` stub is
-installed), regenerates their stubs via ``pyright --createstub`` and
-then tidies the result with ``ruff check --fix`` followed by
-``ruff format`` so the emitted ``.pyi`` files conform to the project's
-lint and formatting rules. It is intended to be run after a dependency
-bump so that local stub files stay in sync with the installed package
-signatures.
+installed), and regenerates their stubs via ``pyright --createstub``.
+It is intended to be run after a dependency bump so that local stub
+files stay in sync with the installed package signatures.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import re
 import subprocess
 from importlib.metadata import distributions
 from pathlib import Path
@@ -205,6 +203,79 @@ def stub_packages(
     return sorted(names)
 
 
+_CHAINED_ASSIGN_RE = re.compile(
+    pattern=r"^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$",
+    flags=re.MULTILINE,
+)
+"""Match ``name = name = expression`` statements at the start of a line.
+
+Used exclusively by :func:`canonicalise_chained_assignments` to work
+around a pyright ``--createstub`` bug that shuffles the order of the
+left-hand-side names between runs (for example ``Reduce = reduce`` on
+one run and ``reduce = Reduce`` on the next), which otherwise makes
+every regeneration rewrite the stub file even though the semantics are
+unchanged.
+"""
+
+
+def canonicalise_chained_assignments(
+    text: str,
+    /,
+) -> str:
+    """Return ``text`` with chained assignment LHS names sorted alphabetically.
+
+    Pyright's ``--createstub`` emits lines of the form ``a = b = rhs``
+    with non-deterministic ordering of ``a`` and ``b`` across runs. This
+    helper canonicalises each such line to the sorted form so
+    consecutive regenerations produce identical output.
+
+    Parameters
+    ----------
+    text : str
+        Full contents of a generated ``.pyi`` file.
+
+    Returns
+    -------
+    str
+        The same text with every matching chained assignment rewritten
+        so its two LHS names appear in sorted order. Lines that don't
+        match the pattern are left untouched.
+    """
+
+    def _sort(match: re.Match[str]) -> str:
+        first, second = sorted((match.group(1), match.group(2)))
+
+        return f"{first} = {second} = {match.group(3)}"
+
+    return _CHAINED_ASSIGN_RE.sub(_sort, text)
+
+
+def stabilise_chained_assignments(
+    root: Path,
+    /,
+) -> None:
+    """Rewrite every ``.pyi`` under ``root`` with chained assignments sorted.
+
+    Walks ``root`` recursively and applies
+    :func:`canonicalise_chained_assignments` to every ``.pyi`` file,
+    only writing back when the canonical form differs. This is a
+    targeted workaround for pyright's non-deterministic output — not a
+    general formatter — so content that doesn't contain the specific
+    pattern is left byte-identical.
+
+    Parameters
+    ----------
+    root : pathlib.Path
+        Stub package folder to stabilise. Usually
+        ``typings/<package>/``.
+    """
+    for path in root.rglob(pattern="*.pyi"):
+        original = path.read_text(encoding="utf-8")
+        canonical = canonicalise_chained_assignments(original)
+        if canonical != original:
+            path.write_text(canonical, encoding="utf-8")
+
+
 def run_pyright(
     package: str,
     /,
@@ -232,47 +303,6 @@ def run_pyright(
     return subprocess.run(
         args=["pyright", "--createstub", package],
         cwd=typings.parent,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-
-def run_ruff(
-    command: str,
-    /,
-    *args: str,
-    target: Path,
-) -> subprocess.CompletedProcess[str]:
-    """Invoke a ``ruff`` subcommand against ``target``.
-
-    Parameters
-    ----------
-    command : str
-        Ruff subcommand to run (``"check"`` or ``"format"``).
-    *args : str
-        Additional command-line flags forwarded to ``ruff`` before the
-        target path (for example ``"--fix"`` for ``ruff check``).
-    target : pathlib.Path
-        Path passed as the final positional argument. Passed together
-        with ``--no-respect-gitignore`` and ``--force-exclude=false`` so
-        that stubs living in a typings folder excluded by
-        ``.gitignore`` or a ruff config are still visited.
-
-    Returns
-    -------
-    subprocess.CompletedProcess[str]
-        Result of the subprocess call, with ``stdout`` / ``stderr``
-        captured for inspection by the caller.
-    """
-    return subprocess.run(
-        args=[
-            "ruff",
-            command,
-            "--no-respect-gitignore",
-            *args,
-            str(target),
-        ],
         capture_output=True,
         text=True,
         check=False,
@@ -309,11 +339,6 @@ def refresh(  # noqa: C901, PLR0912, PLR0915
         "-v",
         help="Stream pyright stdout/stderr for each package",
     ),
-    format_: bool = Option(
-        True,  # noqa: FBT003
-        "--format/--no-format",
-        help="Run ``ruff check --fix`` and ``ruff format`` on the refreshed stubs",
-    ),
 ) -> None:
     """Regenerate ``pyright`` stubs for each package already present in ``typings/``.
 
@@ -340,12 +365,6 @@ def refresh(  # noqa: C901, PLR0912, PLR0915
     verbose : bool, default False
         When ``True`` pyright's output is streamed for every package that
         succeeds; errors are always surfaced regardless of this flag.
-    format_ : bool, default True
-        When ``True`` (the default) each successfully regenerated stub
-        folder is tidied up with ``ruff check --fix`` followed by
-        ``ruff format`` so the generated ``.pyi`` files conform to the
-        project's lint and formatting rules. Disable with
-        ``--no-format`` when debugging generator output directly.
 
     Raises
     ------
@@ -431,30 +450,15 @@ def refresh(  # noqa: C901, PLR0912, PLR0915
                 console.print(f"[bold red]:x: {package}:[/bold red] pyright exited with {result.returncode}")
             else:
                 refreshed.append(package)
+                target = typings.joinpath(*package.split("."))
+                if target.is_dir():
+                    stabilise_chained_assignments(target)
                 if verbose:
                     console.print(f"[green]:white_check_mark: {package}[/green]")
                     if result.stdout.strip():
                         console.print(result.stdout.rstrip())
 
             progress.advance(task_id=task)
-
-    if format_ and refreshed:
-        console.print(f"[cyan]Formatting {len(refreshed)} refreshed stub folder(s) with ruff...[/cyan]")
-        for package in refreshed:
-            target = typings.joinpath(*package.split("."))
-            if not target.exists():
-                continue
-
-            check_result = run_ruff("check", "--fix", "--unsafe-fixes", target=target)
-            if check_result.returncode != 0 and verbose:
-                console.print(f"[yellow]ruff check {package}:[/yellow]\n{check_result.stdout.rstrip()}")
-
-            format_result = run_ruff("format", target=target)
-            if format_result.returncode != 0:
-                failures.append((package, format_result.stderr.strip() or format_result.stdout.strip()))
-                console.print(f"[bold red]:x: ruff format {package}:[/bold red] exited with {format_result.returncode}")
-            elif verbose:
-                console.print(f"[green]:sparkles: formatted {package}[/green]")
 
     if failures:
         console.print(f"[bold red]:warning: {len(failures)} failure(s):[/bold red]")

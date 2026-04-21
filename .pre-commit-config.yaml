@@ -3,10 +3,10 @@ repos:
     rev: v0.15.11
     hooks:
     -   id: ruff-check
-        exclude: 'Templates/Cookiecutter/'
+        exclude: '(Templates/Cookiecutter/|^typings/)'
         args: [--fix]
     -   id: ruff-format
-        exclude: 'Templates/Cookiecutter/'
+        exclude: '(Templates/Cookiecutter/|^typings/)'
 
 -   repo: https://github.com/commitizen-tools/commitizen
     rev: v4.13.10
@@ -32,6 +32,15 @@ repos:
         entry: toml-sort -i --sort-table-keys --sort-inline-tables
         language: python
         files: ^pyproject\.toml$
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+    -   id: check-yaml
+        exclude: '(^|/)mkdocs\.yml$|Templates/Cookiecutter/'
+    -   id: end-of-file-fixer
+        exclude: 'typings'
+    -   id: trailing-whitespace
+        exclude: 'typings'
 -   repo: local
     hooks:
     -   id: refresh-stubs
@@ -50,13 +59,6 @@ repos:
         -   mdformat-pyproject
         # -   mdformat-ruff
         # -   mdformat-gfm
--   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
-    hooks:
-    -   id: check-yaml
-        exclude: '(^|/)mkdocs\.yml$|Templates/Cookiecutter/'
-    -   id: end-of-file-fixer
-    -   id: trailing-whitespace
 -   repo: https://gitlab.com/vojko.pribudic.foss/pre-commit-update
     rev: v0.9.0
     hooks:
@@ -79,7 +81,7 @@ repos:
         exclude: src/uk_loans_pricing_update_packs/data/queries/testing/
         # additional_dependencies: ['<dbt-adapter>', 'sqlfluff-templater-dbt']
 -   repo: https://github.com/renovatebot/pre-commit-hooks
-    rev: 43.136.1
+    rev: 43.139.0
     hooks:
     -   id: renovate-config-validator
         args: [--strict]

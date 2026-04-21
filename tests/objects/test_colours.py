@@ -209,28 +209,28 @@ class TestColourBlend:
         """A fully opaque foreground replaces the background entirely."""
         fg = Colour(r=255, g=0, b=0, a=1.0)
         bg = Colour(r=0, g=0, b=0)
-        result = Colour.blend(fg, bg)
+        result = Colour.blend(foreground=fg, background=bg)
         assert result.values() == (255.0, 0.0, 0.0, 1.0)
 
     def test_fully_transparent_foreground(self) -> None:
         """A fully transparent foreground yields the background."""
         fg = Colour(r=255, g=0, b=0, a=0.0)
         bg = Colour(r=0, g=255, b=0)
-        result = Colour.blend(fg, bg)
+        result = Colour.blend(foreground=fg, background=bg)
         assert result.values() == (0.0, 255.0, 0.0, 1.0)
 
     def test_half_opacity_averages_channels(self) -> None:
         """Fifty-percent alpha produces the arithmetic mean of the channels."""
         fg = Colour(r=200, g=0, b=0, a=0.5)
         bg = Colour(r=0, g=100, b=0)
-        result = Colour.blend(fg, bg)
+        result = Colour.blend(foreground=fg, background=bg)
         assert result.r == 100.0  # noqa: PLR2004
         assert result.g == 50.0  # noqa: PLR2004
 
     def test_rejects_translucent_background(self) -> None:
         """A non-opaque background raises :class:`ValueError`."""
         with pytest.raises(ValueError, match="Background"):
-            Colour.blend(Colour(r=0, g=0, b=0), Colour(r=0, g=0, b=0, a=0.5))
+            Colour.blend(foreground=Colour(r=0, g=0, b=0), background=Colour(r=0, g=0, b=0, a=0.5))
 
 
 class TestPptxInterop:
