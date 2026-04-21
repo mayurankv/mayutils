@@ -1,7 +1,7 @@
 from .api import *
 from .kernels import reduction
 
-Reduce = reduce = reduction.Reduce
+reduce = Reduce = reduction.Reduce
 
 def is_available(): ...
 def is_supported_version(): ...

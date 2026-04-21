@@ -222,9 +222,9 @@ class Styler(Style):
             enabling fluent chained calls.
         """
         if max_colour is None:
-            max_colour = Colour.parse(colour="rgba(0, 255, 154, 1)")
+            max_colour = Colour.parse("rgba(0, 255, 154, 1)")
         if min_colour is None:
-            min_colour = Colour.parse(colour="rgba(226, 0, 0, 1)")
+            min_colour = Colour.parse("rgba(226, 0, 0, 1)")
 
         def style_map(
             val: float,
@@ -462,7 +462,7 @@ class Styler(Style):
             max_cols=max_cols,
         )
 
-        base = Colour.parse(colour="rgb(31, 36, 48)" if dark else "#FFFFFF")
+        base = Colour.parse("rgb(31, 36, 48)" if dark else "#FFFFFF")
         font_colour = "#cccac2" if dark else "#000000"
         style = """
             <style>
@@ -497,7 +497,7 @@ class Styler(Style):
             base=base.to_str(),
             even=(
                 Colour.blend(
-                    foreground=Colour.parse(colour="rgba(130, 130, 130, 0.08)"),
+                    foreground=Colour.parse("rgba(130, 130, 130, 0.08)"),
                     background=base,
                 )
                 .round()
@@ -505,7 +505,7 @@ class Styler(Style):
             ),
             header=(
                 Colour.blend(
-                    foreground=Colour.parse(colour="rgba(130, 130, 130, 0.16)"),
+                    foreground=Colour.parse("rgba(130, 130, 130, 0.16)"),
                     background=base,
                 )
                 .round()

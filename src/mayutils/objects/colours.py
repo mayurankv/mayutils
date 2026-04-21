@@ -243,6 +243,7 @@ class Colour:
     def parse(
         cls,
         colour: str,
+        /,
     ) -> Self:
         """Construct a :class:`Colour` from any common string encoding.
 
@@ -289,6 +290,7 @@ class Colour:
     def set_opacity(
         self,
         opacity: float,
+        /,
     ) -> Self:
         """Replace the alpha channel in place.
 
@@ -324,6 +326,7 @@ class Colour:
     def _html_show(
         self,
         size: int = 50,
+        /,
     ) -> str:
         """Build a minimal HTML swatch showing the colour.
 
@@ -390,6 +393,7 @@ class Colour:
 
     def to_str(  # noqa: C901, PLR0911, PLR0912
         self,
+        *,
         opacity: float | None = None,
         method: Literal[
             "hex",
@@ -637,6 +641,7 @@ class Colour:
     @classmethod
     def blend(
         cls,
+        *,
         foreground: Self,
         background: Self,
     ) -> Self:
@@ -708,6 +713,8 @@ class Colour:
 
 def hex_to_rgba(
     hex_colour: str,
+    /,
+    *,
     alpha: float = 1.0,
 ) -> str:
     """Convert a hex colour string into a CSS ``rgba(...)`` string.
@@ -749,7 +756,7 @@ def hex_to_rgba(
         values = [int(hex_colour[i : i + 2], 16) for i in range(0, length, 2)]
 
         if len(hex_colour) == alphahex_length:
-            alpha = round(values.pop() / 255, 2)
+            alpha = round(number=values.pop() / 255, ndigits=2)
 
         return f"rgba({values[0]}, {values[1]}, {values[2]}, {alpha})"
 
@@ -757,5 +764,5 @@ def hex_to_rgba(
     raise ValueError(msg)
 
 
-TRANSPARENT = Colour.parse(colour="rgba(0,0,0,0)")
-SPECTRUM = {name: Colour.parse(colour=colour) for name, colour in MAIN_COLOURSCALE.items()}
+TRANSPARENT = Colour.parse("rgba(0,0,0,0)")
+SPECTRUM = {name: Colour.parse(colour) for name, colour in MAIN_COLOURSCALE.items()}
