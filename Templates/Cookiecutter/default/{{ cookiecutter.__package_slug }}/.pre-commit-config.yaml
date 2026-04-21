@@ -44,7 +44,7 @@ repos:
           'types-six'
         ]
 - repo: https://github.com/sqlfluff/sqlfluff
-  rev: 3.4.2
+  rev: 4.1.0
   hooks:
     - id: sqlfluff-lint
       args: [--dialect, snowflake] #[--exclude-rules, L014,L016]
