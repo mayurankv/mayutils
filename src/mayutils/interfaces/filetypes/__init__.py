@@ -20,7 +20,9 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Self, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, overload
+
+from mayutils.objects.dataframes import infer_backend
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
@@ -575,14 +577,41 @@ class DataFile(ABC):
             sheet=sheet,
         )
 
-    @abstractmethod
+    @overload
+    def read(
+        self,
+        *,
+        dataframe_backend: Literal["pandas"],
+        **kwargs: Any,  # noqa: ANN401
+    ) -> DataFrame: ...
+
+    @overload
+    def read(
+        self,
+        *,
+        dataframe_backend: Literal["polars"],
+        **kwargs: Any,  # noqa: ANN401
+    ) -> pl.DataFrame: ...
+
+    @overload
     def read(
         self,
         *,
         dataframe_backend: DataframeBackends | None = None,
         **kwargs: Any,  # noqa: ANN401
+    ) -> DataFrames: ...
+
+    def read(
+        self,
+        *,
+        dataframe_backend: DataframeBackends | None = None,
+        **kwargs: Any,
     ) -> DataFrames:
         """Materialise the file into a DataFrame.
+
+        Resolves ``dataframe_backend`` against :attr:`backend` when
+        unset and dispatches to the format-specific :meth:`_read`
+        hook; concrete subclasses only implement ``_read``.
 
         Parameters
         ----------
@@ -598,6 +627,41 @@ class DataFile(ABC):
         pandas.DataFrame or polars.DataFrame
             Fully loaded DataFrame whose concrete type matches the
             resolved ``dataframe_backend``.
+        """
+        resolved_backend = dataframe_backend if dataframe_backend is not None else self.backend
+
+        return self._read(
+            dataframe_backend=resolved_backend,
+            **kwargs,
+        )
+
+    @abstractmethod
+    def _read(
+        self,
+        *,
+        dataframe_backend: DataframeBackends,
+        **kwargs: Any,  # noqa: ANN401
+    ) -> DataFrames:
+        """Format-specific read hook invoked by :meth:`read`.
+
+        The backend has already been resolved against :attr:`backend`,
+        so implementations receive a concrete
+        :data:`~mayutils.objects.dataframes.DataframeBackends` literal
+        and must return the matching DataFrame type.
+
+        Parameters
+        ----------
+        dataframe_backend : {"pandas", "polars"}
+            Resolved DataFrame library to return.
+        **kwargs
+            Format-specific options forwarded verbatim from
+            :meth:`read`.
+
+        Returns
+        -------
+        pandas.DataFrame or polars.DataFrame
+            Fully loaded DataFrame whose concrete type matches
+            ``dataframe_backend``.
         """
 
     def to_pandas(
@@ -616,12 +680,9 @@ class DataFile(ABC):
         pandas.DataFrame
             Fully loaded DataFrame.
         """
-        return cast(
-            "DataFrame",
-            self.read(
-                dataframe_backend="pandas",
-                **read_kwargs,
-            ),
+        return self.read(
+            dataframe_backend="pandas",
+            **read_kwargs,
         )
 
     def to_polars(
@@ -640,15 +701,73 @@ class DataFile(ABC):
         polars.DataFrame
             Fully loaded DataFrame.
         """
-        return cast(
-            "pl.DataFrame",
-            self.read(
-                dataframe_backend="polars",
-                **read_kwargs,
-            ),
+        return self.read(
+            dataframe_backend="polars",
+            **read_kwargs,
         )
 
-    @abstractmethod
+    @staticmethod
+    def resolve_write_backend(
+        df: DataFrames,
+        dataframe_backend: DataframeBackends | None,
+    ) -> DataframeBackends:
+        """Resolve the write backend and validate it matches ``type(df)``.
+
+        Subclasses implementing :meth:`write` must call this at the
+        top of the method so the contract that ``df`` and the resolved
+        backend agree is enforced uniformly across every format rather
+        than reimplemented per subclass.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame or polars.DataFrame
+            DataFrame the caller intends to persist.
+        dataframe_backend : {"pandas", "polars"} or None
+            Explicit backend override supplied to :meth:`write`. When
+            ``None``, the backend is inferred from ``type(df)``.
+
+        Returns
+        -------
+        {"pandas", "polars"}
+            The resolved backend, guaranteed to match ``type(df)``.
+
+        Raises
+        ------
+        TypeError
+            If an explicit ``dataframe_backend`` is supplied and does
+            not match ``type(df)``.
+        """
+        inferred = infer_backend(df)
+        if dataframe_backend is None:
+            return inferred
+
+        if inferred != dataframe_backend:
+            msg = f"Expected a {dataframe_backend} DataFrame for backend '{dataframe_backend}', got {type(df).__name__}"
+            raise TypeError(msg)
+
+        return dataframe_backend
+
+    @overload
+    def write(
+        self,
+        df: DataFrame,
+        /,
+        *,
+        dataframe_backend: Literal["pandas"] | None = None,
+        **kwargs: Any,  # noqa: ANN401
+    ) -> Self: ...
+
+    @overload
+    def write(
+        self,
+        df: pl.DataFrame,
+        /,
+        *,
+        dataframe_backend: Literal["polars"] | None = None,
+        **kwargs: Any,  # noqa: ANN401
+    ) -> Self: ...
+
+    @overload
     def write(
         self,
         df: DataFrames,
@@ -656,8 +775,22 @@ class DataFile(ABC):
         *,
         dataframe_backend: DataframeBackends | None = None,
         **kwargs: Any,  # noqa: ANN401
+    ) -> Self: ...
+
+    def write(
+        self,
+        df: DataFrames,
+        /,
+        *,
+        dataframe_backend: DataframeBackends | None = None,
+        **kwargs: Any,
     ) -> Self:
         """Serialise a DataFrame into the file at :attr:`path`.
+
+        Routes through :meth:`_resolve_write_backend` before dispatching
+        to the format-specific :meth:`_write` hook, so every subclass
+        inherits the ``df``/backend type-match check without having to
+        reimplement it.
 
         Parameters
         ----------
@@ -675,6 +808,48 @@ class DataFile(ABC):
         -------
         Self
             The current handle, enabling fluent chaining.
+
+        Raises
+        ------
+        TypeError
+            If ``dataframe_backend`` is supplied and does not match
+            ``type(df)``.
+        """
+        resolved_backend = self.resolve_write_backend(df, dataframe_backend)
+
+        self._write(
+            df,
+            dataframe_backend=resolved_backend,
+            **kwargs,
+        )
+
+        return self
+
+    @abstractmethod
+    def _write(
+        self,
+        df: DataFrames,
+        /,
+        *,
+        dataframe_backend: DataframeBackends,
+        **kwargs: Any,  # noqa: ANN401
+    ) -> None:
+        """Format-specific write hook invoked by :meth:`write`.
+
+        By the time ``_write`` is called, the base class has already
+        verified that ``type(df)`` agrees with ``dataframe_backend``,
+        so implementations can dispatch on ``dataframe_backend``
+        without re-checking the DataFrame's runtime type.
+
+        Parameters
+        ----------
+        df : pandas.DataFrame or polars.DataFrame
+            DataFrame to persist.
+        dataframe_backend : {"pandas", "polars"}
+            Resolved backend that matches ``type(df)``.
+        **kwargs
+            Format-specific options forwarded verbatim from
+            :meth:`write`.
         """
 
     @abstractmethod

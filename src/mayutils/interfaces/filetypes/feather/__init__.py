@@ -10,11 +10,10 @@ requested DataFrame library.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Self, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from mayutils.core.extras import may_require_extras
 from mayutils.interfaces.filetypes import DataFile
-from mayutils.objects.dataframes import infer_backend
 
 with may_require_extras():
     import pandas as pd
@@ -40,78 +39,76 @@ class Feather(DataFile):
 
     suffix: ClassVar[str] = ".feather"
 
-    def read(
+    def _read(
         self,
         *,
-        dataframe_backend: DataframeBackends | None = None,
+        dataframe_backend: DataframeBackends,
         **kwargs: Any,  # noqa: ANN401
     ) -> DataFrames:
         """Materialise the Feather file into a DataFrame.
 
         Parameters
         ----------
-        dataframe_backend : {"pandas", "polars"} or None, optional
-            Target DataFrame library; defaults to :attr:`backend`.
+        dataframe_backend : {"pandas", "polars"}
+            Resolved DataFrame library to return.
         **kwargs
             Forwarded to the backend reader.
 
         Returns
         -------
         pandas.DataFrame or polars.DataFrame
-            Fully loaded DataFrame whose concrete type matches the
-            resolved backend.
+            Fully loaded DataFrame whose concrete type matches
+            ``dataframe_backend``.
         """
-        backend = dataframe_backend if dataframe_backend is not None else self.backend
-
-        if backend == "polars":
+        if dataframe_backend == "polars":
             return pl.read_ipc(source=self.path, **kwargs)
 
         return pd.read_feather(path=self.path, **kwargs)
 
-    def write(
+    def _write(
         self,
         df: DataFrames,
         /,
         *,
-        dataframe_backend: DataframeBackends | None = None,
+        dataframe_backend: DataframeBackends,
         **kwargs: Any,  # noqa: ANN401
-    ) -> Self:
+    ) -> None:
         """Serialise a DataFrame to the Feather file.
 
         Parameters
         ----------
         df : pandas.DataFrame or polars.DataFrame
-            DataFrame to persist.
-        dataframe_backend : {"pandas", "polars"} or None, optional
-            Explicit backend override; when ``None`` the backend is
-            inferred from ``type(df)``.
+            DataFrame to persist; its runtime type has already been
+            validated against ``dataframe_backend`` by
+            :meth:`DataFile.write`.
+        dataframe_backend : {"pandas", "polars"}
+            Resolved backend that matches ``type(df)``.
         **kwargs
             Forwarded verbatim to the backend writer.
-
-        Returns
-        -------
-        Self
-            The current handle, for fluent chaining.
-
-        Raises
-        ------
-        TypeError
-            If the resolved backend does not match ``type(df)``.
         """
-        backend = dataframe_backend if dataframe_backend is not None else infer_backend(df)
-
-        if backend == "pandas":
+        if dataframe_backend == "pandas":
             if not isinstance(df, pd.DataFrame):
-                msg = f"Expected a pandas DataFrame for backend 'pandas', got {type(df)}"
-                raise TypeError(msg)
-            df.to_feather(path=self.path, **kwargs)
-        else:
-            if not isinstance(df, pl.DataFrame):
-                msg = f"Expected a polars DataFrame for backend 'polars', got {type(df)}"
-                raise TypeError(msg)
-            df.write_ipc(file=self.path, **kwargs)
+                msg = f"Expected a pandas DataFrame for writing with backend 'pandas', but got {type(df).__name__!r} instead."
+                raise TypeError(
+                    msg,
+                )
 
-        return self
+            df.to_feather(
+                path=self.path,
+                **kwargs,
+            )
+
+        elif dataframe_backend == "polars":
+            if not isinstance(df, pl.DataFrame):
+                msg = f"Expected a polars DataFrame for writing with backend 'polars', but got {type(df).__name__!r} instead."
+                raise TypeError(
+                    msg,
+                )
+
+            df.write_ipc(
+                file=self.path,
+                **kwargs,
+            )
 
     def schema(
         self,

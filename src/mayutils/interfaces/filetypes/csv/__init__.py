@@ -10,11 +10,10 @@ line-by-line.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Self
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from mayutils.core.extras import may_require_extras
 from mayutils.interfaces.filetypes import DataFile
-from mayutils.objects.dataframes import DataframeBackends, DataFrames, infer_backend
 
 with may_require_extras():
     import pandas as pd
@@ -22,6 +21,8 @@ with may_require_extras():
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+    from mayutils.objects.dataframes import DataframeBackends, DataFrames
 
 
 DEFAULT_SCHEMA_SAMPLE_ROWS = 1000
@@ -41,90 +42,78 @@ class Csv(DataFile):
 
     suffix: ClassVar[str] = ".csv"
 
-    def read(
+    def _read(
         self,
         *,
-        dataframe_backend: DataframeBackends | None = None,
+        dataframe_backend: DataframeBackends,
         **kwargs: Any,  # noqa: ANN401
     ) -> DataFrames:
         """Materialise the CSV file into a DataFrame.
 
         Parameters
         ----------
-        dataframe_backend : {"pandas", "polars"} or None, optional
-            Target DataFrame library; defaults to :attr:`backend`.
+        dataframe_backend : {"pandas", "polars"}
+            Resolved DataFrame library to return.
         **kwargs
             Forwarded verbatim to the backend reader.
 
         Returns
         -------
         pandas.DataFrame or polars.DataFrame
-            Fully loaded DataFrame whose concrete type matches the
-            resolved backend.
+            Fully loaded DataFrame whose concrete type matches
+            ``dataframe_backend``.
         """
-        backend = dataframe_backend if dataframe_backend is not None else self.backend
-
-        if backend == "polars":
+        if dataframe_backend == "polars":
             return pl.read_csv(source=self.path, **kwargs)
 
         return pd.read_csv(filepath_or_buffer=self.path, **kwargs)  # pyright: ignore[reportUnknownVariableType]
 
-    def write(
+    def _write(
         self,
         df: DataFrames,
         /,
         *,
-        dataframe_backend: DataframeBackends | None = None,
+        dataframe_backend: DataframeBackends,
         **kwargs: Any,  # noqa: ANN401
-    ) -> Self:
+    ) -> None:
         """Serialise a DataFrame to the CSV file.
 
         Parameters
         ----------
         df : pandas.DataFrame or polars.DataFrame
-            DataFrame to persist.
-        dataframe_backend : {"pandas", "polars"} or None, optional
-            Explicit backend override. When ``None``, dispatch is
-            inferred from ``type(df)``.
+            DataFrame to persist; its runtime type has already been
+            validated against ``dataframe_backend`` by
+            :meth:`DataFile.write`.
+        dataframe_backend : {"pandas", "polars"}
+            Resolved backend that matches ``type(df)``.
         **kwargs
             Forwarded verbatim to the backend writer. For pandas,
             ``index`` defaults to ``False`` so round-tripping does not
             accidentally add an unnamed index column.
-
-        Returns
-        -------
-        Self
-            The current handle, for fluent chaining.
-
-        Raises
-        ------
-        TypeError
-            If the resolved backend does not match ``type(df)``.
         """
-        backend = dataframe_backend if dataframe_backend is not None else infer_backend(df)
-
-        if backend == "pandas":
+        if dataframe_backend == "pandas":
             if not isinstance(df, pd.DataFrame):
-                msg = f"Expected a pandas DataFrame for backend 'pandas', got {type(df)}"
-                raise TypeError(msg)
+                msg = f"Expected a pandas DataFrame for writing with backend 'pandas', but got {type(df).__name__!r} instead."
+                raise TypeError(
+                    msg,
+                )
 
             df.to_csv(
                 path_or_buf=self.path,
                 index=kwargs.pop("index", False),
                 **kwargs,
             )
-
-        else:
+        elif dataframe_backend == "polars":
             if not isinstance(df, pl.DataFrame):
-                msg = f"Expected a polars DataFrame for backend 'polars', got {type(df)}"
-                raise TypeError(msg)
+                msg = f"Expected a polars DataFrame for writing with backend 'polars', but got {type(df).__name__!r} instead."
+                raise TypeError(
+                    msg,
+                )
 
             df.write_csv(
                 file=self.path,
                 **kwargs,
             )
-
-        return self
 
     def schema(
         self,

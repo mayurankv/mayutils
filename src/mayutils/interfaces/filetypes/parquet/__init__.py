@@ -10,14 +10,13 @@ metadata-cheap introspection and streaming reads on top through
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Self, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from mayutils.core.extras import may_require_extras
 from mayutils.interfaces.filetypes import DataFile
 from mayutils.objects.dataframes import (
     DataframeBackends,
     DataFrames,
-    infer_backend,
     read_parquet,
     to_parquet,
 )
@@ -45,19 +44,18 @@ class Parquet(DataFile):
 
     suffix: ClassVar[str] = ".parquet"
 
-    def read(
+    def _read(
         self,
         *,
-        dataframe_backend: DataframeBackends | None = None,
+        dataframe_backend: DataframeBackends,
         **kwargs: Any,  # noqa: ANN401
     ) -> DataFrames:
         """Materialise the parquet file into a DataFrame.
 
         Parameters
         ----------
-        dataframe_backend : {"pandas", "polars"} or None, optional
-            Target DataFrame library. When ``None``, falls back to
-            :attr:`backend`.
+        dataframe_backend : {"pandas", "polars"}
+            Resolved DataFrame library to return.
         **kwargs
             Forwarded to :func:`mayutils.objects.dataframes.read_parquet`
             (for example ``columns=[...]``).
@@ -70,47 +68,38 @@ class Parquet(DataFile):
         """
         return read_parquet(
             self.path,
-            dataframe_backend=dataframe_backend if dataframe_backend is not None else self.backend,
+            dataframe_backend=dataframe_backend,
             **kwargs,
         )
 
-    def write(
+    def _write(
         self,
         df: DataFrames,
         /,
         *,
-        dataframe_backend: DataframeBackends | None = None,
+        dataframe_backend: DataframeBackends,
         **kwargs: Any,  # noqa: ANN401
-    ) -> Self:
+    ) -> None:
         """Write a DataFrame to the parquet file.
 
         Parameters
         ----------
         df : pandas.DataFrame or polars.DataFrame
-            DataFrame to persist.
-        dataframe_backend : {"pandas", "polars"} or None, optional
-            Explicit dispatch override; when ``None``, the backend is
-            inferred from ``type(df)``.
+            DataFrame to persist; its runtime type has already been
+            validated against ``dataframe_backend`` by
+            :meth:`DataFile.write`.
+        dataframe_backend : {"pandas", "polars"}
+            Resolved backend that matches ``type(df)``.
         **kwargs
             Forwarded to the underlying writer (for example
             ``partition_cols=[...]`` on pandas).
-
-        Returns
-        -------
-        Self
-            The current handle, for fluent chaining.
         """
-        if dataframe_backend is None:
-            dataframe_backend = infer_backend(df)
-
         to_parquet(
             df=df,
             path=self.path,
             dataframe_backend=dataframe_backend,
             **kwargs,
         )
-
-        return self
 
     def schema(
         self,
