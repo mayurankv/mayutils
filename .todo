@@ -4,16 +4,15 @@
 	- Better caching for query pulls
 - Add all tests
 
-- Notebooks
+- Notebooks/examples/charts.ipynb
 - Templates
 - temp/temp.ipy
 - src/mayutils/data/live
-- src/mayutils/data/local
 - src/mayutils/data/read
-- src/mayutils/environment/benchmarking
 - src/mayutils/environment/logging
 - src/mayutils/environment/memoisation
 - src/mayutils/interfaces/filetypes/pptx/
+- src/mayutils/interfaces/filetypes/xlsx/
 - src/mayutils/visualisation/graphs/plotly/
 - src/mayutils/visualisation/graphs/combine
 - src/mayutils/visualisation/console
