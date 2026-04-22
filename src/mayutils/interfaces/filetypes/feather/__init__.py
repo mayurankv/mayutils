@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Self, cast
 
 from mayutils.core.extras import may_require_extras
 from mayutils.interfaces.filetypes import DataFile
+from mayutils.objects.dataframes import infer_backend
 
 with may_require_extras():
     import pandas as pd
@@ -97,10 +98,7 @@ class Feather(DataFile):
         TypeError
             If the resolved backend does not match ``type(df)``.
         """
-        if dataframe_backend is None:
-            backend: DataframeBackends = "pandas" if isinstance(df, pd.DataFrame) else "polars"
-        else:
-            backend = dataframe_backend
+        backend = dataframe_backend if dataframe_backend is not None else infer_backend(df)
 
         if backend == "pandas":
             if not isinstance(df, pd.DataFrame):

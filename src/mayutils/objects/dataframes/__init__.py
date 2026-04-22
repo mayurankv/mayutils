@@ -45,6 +45,33 @@ DATA_FOLDER: Path = OUTPUT_FOLDER / "Data"
 """Default on-disk root for DataFrame artifacts."""
 
 
+def infer_backend(
+    df: DataFrames,
+    /,
+) -> DataframeBackends:
+    """Return the :class:`DataframeBackends` literal matching ``df``'s runtime type.
+
+    Used by the backend-dispatching writers (parquet, csv, feather,
+    xlsx, ...) to choose between the pandas and polars code paths when
+    the caller does not supply an explicit backend override.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame or polars.DataFrame
+        DataFrame whose concrete class identifies the backend.
+
+    Returns
+    -------
+    {"pandas", "polars"}
+        ``"pandas"`` when ``df`` is a :class:`pandas.DataFrame`,
+        ``"polars"`` otherwise.
+    """
+    if isinstance(df, pd.DataFrame):
+        return "pandas"
+
+    return "polars"
+
+
 def to_parquet(
     df: DataFrames,
     path: Path | str,
@@ -292,6 +319,7 @@ __all__ = [
     "DataFrames",
     "DataframeBackends",
     "column_to_excel",
+    "infer_backend",
     "read_parquet",
     "setup_pandas",
     "to_parquet",

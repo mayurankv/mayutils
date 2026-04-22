@@ -17,12 +17,12 @@ from mayutils.interfaces.filetypes import DataFile
 from mayutils.objects.dataframes import (
     DataframeBackends,
     DataFrames,
+    infer_backend,
     read_parquet,
     to_parquet,
 )
 
 with may_require_extras():
-    import pandas as pd
     import polars as pl
     import pyarrow as pa
     import pyarrow.parquet as pq
@@ -101,7 +101,7 @@ class Parquet(DataFile):
             The current handle, for fluent chaining.
         """
         if dataframe_backend is None:
-            dataframe_backend = "pandas" if isinstance(df, pd.DataFrame) else "polars"
+            dataframe_backend = infer_backend(df)
 
         to_parquet(
             df=df,
