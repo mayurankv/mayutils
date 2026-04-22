@@ -51,5 +51,5 @@ class TestBumpVersionString:
 
     def test_unknown_bump_raises(self) -> None:
         """An unrecognised bump component surfaces :class:`ValueError`."""
-        with pytest.raises(ValueError, match="Unknown part to bump"):
+        with pytest.raises(expected_exception=ValueError, match="Unknown part to bump"):
             bump_version_string("1.0.0", bump="build")

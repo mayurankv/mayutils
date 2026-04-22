@@ -36,7 +36,7 @@ class TestSerialise:
 
     def test_unsupported_type_raises(self) -> None:
         """Non-datetime inputs raise :class:`TypeError`."""
-        with pytest.raises(TypeError, match="not serialisable"):
+        with pytest.raises(expected_exception=TypeError, match="not serialisable"):
             serialise(object())
 
 

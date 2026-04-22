@@ -81,7 +81,7 @@ def combine_figures(
     images: list[Image.Image] = []
     for file in files:
         document = Document(filename=Path(file).expanduser().resolve())
-        pix: Pixmap = document[0].get_pixmap()  # pyright: ignore[reportUnknownVariableType, reportAttributeAccessIssue, reportUnknownMemberType]
+        pix: Pixmap = document[0].get_pixmap()  # pyright: ignore[reportUnknownMemberType]
         img = Image.frombytes(
             mode="RGB",
             size=(  # pyright: ignore[reportUnknownArgumentType]

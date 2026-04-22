@@ -114,7 +114,7 @@ class TestRequiresExtras:
 
     def test_reraises_with_hint(self) -> None:
         """A failing real import inside the context manager is re-raised with the hint."""
-        with pytest.raises(ImportError, match="mayutils\\[plotting\\]") as exc_info, requires_extras("plotting"):
+        with pytest.raises(expected_exception=ImportError, match="mayutils\\[plotting\\]") as exc_info, requires_extras("plotting"):
             import nonexistent_module_abc  # pyright: ignore[reportUnusedImport, reportMissingImports] # ty:ignore[unresolved-import]  # noqa: F401, PLC0415
         assert exc_info.value.__cause__ is not None
         assert isinstance(exc_info.value.__cause__, ImportError)
@@ -122,14 +122,14 @@ class TestRequiresExtras:
     def test_no_extras_uses_auto_resolution(self) -> None:
         """With no extras passed, the hint is derived from the ``ImportError.name`` module."""
         msg = "No module named 'plotly'"
-        with pytest.raises(ImportError) as exc_info, requires_extras():
+        with pytest.raises(expected_exception=ImportError) as exc_info, requires_extras():
             raise ImportError(msg, name="plotly")
         assert "mayutils[plotting]" in str(exc_info.value)
 
     def test_preserves_module_name(self) -> None:
         """The re-raised ``ImportError.name`` still matches the originally-missing module."""
         msg = "No module named 'scipy'"
-        with pytest.raises(ImportError) as exc_info, requires_extras("plotting"):
+        with pytest.raises(expected_exception=ImportError) as exc_info, requires_extras("plotting"):
             raise ImportError(msg, name="scipy")
         assert exc_info.value.name == "scipy"
 
@@ -147,14 +147,14 @@ class TestMayRequireExtras:
     def test_auto_resolves_single_extra(self) -> None:
         """A failing import inside the block is decorated with the extra inferred from pyproject."""
         msg = "No module named 'plotly'"
-        with pytest.raises(ImportError) as exc_info, may_require_extras():
+        with pytest.raises(expected_exception=ImportError) as exc_info, may_require_extras():
             raise ImportError(msg, name="plotly")
         assert "mayutils[plotting]" in str(exc_info.value)
 
     def test_auto_resolves_multi_extra(self) -> None:
         """Modules declared by multiple extras get a hint listing all of them."""
         msg = "No module named 'scipy'"
-        with pytest.raises(ImportError) as exc_info, may_require_extras():
+        with pytest.raises(expected_exception=ImportError) as exc_info, may_require_extras():
             raise ImportError(msg, name="scipy")
         rendered = str(exc_info.value)
         assert "mayutils[plotting]" in rendered
@@ -163,7 +163,7 @@ class TestMayRequireExtras:
     def test_unknown_module_falls_back_to_generic(self) -> None:
         """A module not declared in any extra gets the generic 'not installed' hint."""
         msg = "No module named 'unknown_module_xyz'"
-        with pytest.raises(ImportError) as exc_info, may_require_extras():
+        with pytest.raises(expected_exception=ImportError) as exc_info, may_require_extras():
             raise ImportError(msg, name="unknown_module_xyz")
         rendered = str(exc_info.value)
         assert "unknown_module_xyz" in rendered
@@ -172,7 +172,7 @@ class TestMayRequireExtras:
     def test_preserves_module_name(self) -> None:
         """The re-raised ``ImportError.name`` still matches the originally-missing module."""
         msg = "No module named 'polars'"
-        with pytest.raises(ImportError) as exc_info, may_require_extras():
+        with pytest.raises(expected_exception=ImportError) as exc_info, may_require_extras():
             raise ImportError(msg, name="polars")
         assert exc_info.value.name == "polars"
 

@@ -138,52 +138,52 @@ class DataframeUtilsAccessor:
         path = Path(path)
 
         if path.suffix in [".png", ".jpeg", ".jpg", ".pdf", ".svg", ".eps"]:
-            default_kwargs = {}
-            joint_kwargs = default_kwargs | kwargs  # pyright: ignore[reportUnknownVariableType]
+            default_kwargs: dict[str, Any] = {}
+            joint_kwargs = default_kwargs | kwargs
             return self.styler.save(
                 path,
-                **joint_kwargs,  # pyright: ignore[reportUnknownArgumentType]
+                **joint_kwargs,
             )
 
         if path.suffix == ".parquet":
-            default_kwargs = {
+            default_kwargs: dict[str, Any] = {
                 "index": True,
             }
-            joint_kwargs = default_kwargs | kwargs  # pyright: ignore[reportUnknownVariableType]
-            self.df.to_parquet(  # pyright: ignore[reportCallIssue]
+            joint_kwargs = default_kwargs | kwargs
+            self.df.to_parquet(
                 path=path,
-                **joint_kwargs,  # pyright: ignore[reportArgumentType]
+                **joint_kwargs,
             )
 
         elif path.suffix == ".feather":
-            default_kwargs = {}
-            joint_kwargs = default_kwargs | kwargs  # pyright: ignore[reportUnknownVariableType]
+            default_kwargs: dict[str, Any] = {}
+            joint_kwargs = default_kwargs | kwargs
             msg = "Feather not implemented"
             raise NotImplementedError(msg)
             self.df.to_feather(
                 path,
-                **(default_kwargs | kwargs),
+                **joint_kwargs,
             )
 
         elif path.suffix == ".csv":
-            default_kwargs = {
+            default_kwargs: dict[str, Any] = {
                 "index": True,
             }
-            joint_kwargs = default_kwargs | kwargs  # pyright: ignore[reportUnknownVariableType]
-            self.df.to_csv(  # pyright: ignore[reportCallIssue]
+            joint_kwargs = default_kwargs | kwargs
+            self.df.to_csv(
                 path_or_buf=path,
-                **joint_kwargs,  # pyright: ignore[reportArgumentType]
+                **joint_kwargs,
             )
 
         elif path.suffix == ".xlsx":
-            default_kwargs = {
+            default_kwargs: dict[str, Any] = {
                 "index": True,
             }
-            joint_kwargs = default_kwargs | kwargs  # pyright: ignore[reportUnknownVariableType]
+            joint_kwargs = default_kwargs | kwargs
             with ExcelWriter(path=path) as excel_writer:  # pyright: ignore[reportUnknownVariableType]
                 self.df.to_excel(  # pyright: ignore[reportUnknownMemberType]
                     excel_writer=excel_writer,
-                    **joint_kwargs,  # pyright: ignore[reportArgumentType]
+                    **joint_kwargs,
                 )
         else:
             msg = f"Format {path.suffix} is an unsupported format"

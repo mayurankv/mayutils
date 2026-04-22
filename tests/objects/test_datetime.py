@@ -39,20 +39,20 @@ class TestDateConstructors:
 
     def test_from_base(self) -> None:
         """``from_base`` wraps a stdlib ``date``."""
-        result = Date.from_base(stdlib_date(2025, 1, 15))
+        result = Date.from_base(stdlib_date(year=2025, month=1, day=15))
         assert isinstance(result, Date)
         assert (result.year, result.month, result.day) == (2025, 1, 15)
 
     def test_as_pendulum_returns_plain_pendulum(self) -> None:
         """``as_pendulum`` is a plain :class:`pendulum.Date`, not our subclass."""
-        result = Date(2025, 1, 15).as_pendulum
+        result = Date(year=2025, month=1, day=15).as_pendulum
         assert type(result) is pendulum.Date
 
     def test_as_base_returns_stdlib(self) -> None:
         """``as_base`` is a plain :class:`datetime.date`."""
-        result = Date(2025, 1, 15).as_base
+        result = Date(year=2025, month=1, day=15).as_base
         assert type(result) is stdlib_date
-        assert result == stdlib_date(2025, 1, 15)
+        assert result == stdlib_date(year=2025, month=1, day=15)
 
     def test_parse_from_string(self) -> None:
         """String parsing produces a :class:`Date` (not a :class:`DateTime`)."""
@@ -62,18 +62,18 @@ class TestDateConstructors:
 
     def test_parse_invalid_raises(self) -> None:
         """Unparseable input raises :class:`TypeError` / :class:`ValueError`."""
-        with pytest.raises((TypeError, ValueError)):
+        with pytest.raises(expected_exception=(TypeError, ValueError)):
             Date.parse("not-a-date")
 
     def test_coerce_from_string(self) -> None:
         """Strings are parsed via :meth:`Date.parse`."""
-        assert Date.coerce("2025-01-15") == Date(2025, 1, 15)
+        assert Date.coerce("2025-01-15") == Date(year=2025, month=1, day=15)
 
     def test_coerce_from_datetime_narrows(self) -> None:
         """A :class:`DateTime` is narrowed to its :class:`Date` part."""
         result = Date.coerce(DateTime(2025, 1, 15, 10, 30))
         assert type(result) is Date
-        assert result == Date(2025, 1, 15)
+        assert result == Date(year=2025, month=1, day=15)
 
     def test_coerce_from_pendulum_date(self) -> None:
         """A pendulum ``Date`` round-trips through :meth:`Date.from_pendulum`."""

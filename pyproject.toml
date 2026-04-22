@@ -192,12 +192,20 @@ version_files = ["pyproject.toml:^version"]
 wrap = 1000
 
 [tool.pyright]
-exclude = ["**/__pycache__", "**/.venv", "Templates"]
-include = ["src", "tests"]
+exclude = [
+  "**/__pycache__",
+  "**/.venv",
+  "**/.ruff_cache",
+  "**/.pytest_cache",
+  "**/.mypy_cache",
+  "**/node_modules",
+  "Templates",
+  "typings",
+  "**/.*"
+]
 pythonVersion = "3.13"
 stubPath = "typings"
-typeCheckingMode = "standard"
-useLibraryCodeForTypes = true
+typeCheckingMode = "strict"
 venv = ".venv"
 venvPath = "."
 

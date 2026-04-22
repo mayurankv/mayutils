@@ -139,7 +139,7 @@ class Feather(DataFile):
         int
             Total number of rows declared by the Feather file.
         """
-        with pa_ipc.open_file(source=self.path) as reader:  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+        with pa_ipc.open_file(source=str(self.path)) as reader:  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
             return sum(reader.get_batch(index).num_rows for index in range(reader.num_record_batches))  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
 
     def iter_chunks(
@@ -176,8 +176,11 @@ class Feather(DataFile):
         backend = dataframe_backend if dataframe_backend is not None else self.backend
         table = feather.read_table(source=self.path, **kwargs)  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
 
-        for start in range(0, table.num_rows, chunk_size):  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
-            yield pyarrow_table_to_backend(table.slice(start, chunk_size), backend=backend)  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+        for start in range(0, table.num_rows, chunk_size):  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+            yield pyarrow_table_to_backend(
+                table.slice(offset=start, length=chunk_size),  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
+                backend=backend,
+            )
 
 
 def pyarrow_table_to_backend(
@@ -203,7 +206,7 @@ def pyarrow_table_to_backend(
     if backend == "polars":
         return cast("pl.DataFrame", pl.from_arrow(data=table))  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
 
-    return cast("pd.DataFrame", table.to_pandas())  # pyright: ignore[reportUnknownMemberType]
+    return table.to_pandas()  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
 
 
 __all__ = [

@@ -202,7 +202,7 @@ def pyarrow_table_to_backend(
     if backend == "polars":
         return cast("pl.DataFrame", pl.from_arrow(data=table))  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
 
-    return cast("pd.DataFrame", table.to_pandas())  # pyright: ignore[reportUnknownMemberType]
+    return table.to_pandas()  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
 
 
 __all__ = [

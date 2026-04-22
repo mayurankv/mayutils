@@ -131,7 +131,7 @@ class TestExport:
         qmd = tmp_path / "input.qmd"
         _make_qmd(path=qmd)
 
-        with pytest.raises(ValueError, match=r"Unknown Quarto format 'bogus'"):
+        with pytest.raises(expected_exception=ValueError, match=r"Unknown Quarto format 'bogus'"):
             quarto.export(
                 qmd,
                 to="bogus",

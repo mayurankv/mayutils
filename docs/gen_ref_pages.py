@@ -9,9 +9,9 @@ nav = Nav()
 
 src = Path("src")
 
-for path in sorted(src.rglob("*.py")):
-    module_path = path.relative_to(src).with_suffix("")
-    doc_path = path.relative_to(src).with_suffix(".md")
+for path in sorted(src.rglob(pattern="*.py")):
+    module_path = path.relative_to(src).with_suffix(suffix="")
+    doc_path = path.relative_to(src).with_suffix(suffix=".md")
     full_doc_path = Path("reference", doc_path)
 
     parts = tuple(module_path.parts)
@@ -26,8 +26,8 @@ for path in sorted(src.rglob("*.py")):
         parts = parts[:-1]
         if not parts:
             continue
-        doc_path = doc_path.with_name("index.md")
-        full_doc_path = full_doc_path.with_name("index.md")
+        doc_path = doc_path.with_name(name="index.md")
+        full_doc_path = full_doc_path.with_name(name="index.md")
 
     nav[parts] = doc_path.as_posix()
 

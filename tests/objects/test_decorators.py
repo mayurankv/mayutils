@@ -64,8 +64,8 @@ class TestFlexwrap:
         """The parameterised form refuses non-callable positional arguments."""
         shout = self._make_shout()
 
-        with pytest.raises(TypeError, match="only supports keyword arguments"):
-            shout("not-a-callable", "also-not")  # pyright: ignore[reportCallIssue]
+        with pytest.raises(expected_exception=TypeError, match="only supports keyword arguments"):
+            shout("not-a-callable", "also-not")
 
     def test_parameterised_preserves_metadata(self) -> None:
         """Metadata survives the parameterised branch too."""

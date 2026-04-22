@@ -46,10 +46,10 @@ class TestSetInline:
     def test_assigns_on_list(self) -> None:
         """An existing list index can be overwritten."""
         container = [0, 0, 0]
-        set_inline(parent_object=container, property_name=1, value=9)  # pyright: ignore[reportArgumentType]
+        set_inline(parent_object=container, property_name=1, value=9)
         assert container == [0, 9, 0]
 
     def test_invalid_list_index_raises(self) -> None:
         """Out-of-range list indices propagate :class:`IndexError`."""
-        with pytest.raises(IndexError):
-            set_inline(parent_object=[], property_name=0, value=1)  # pyright: ignore[reportArgumentType]
+        with pytest.raises(expected_exception=IndexError):
+            set_inline(parent_object=[], property_name=0, value=1)

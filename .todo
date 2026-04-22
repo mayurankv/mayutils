@@ -1,3 +1,25 @@
-- Split google interface into folders like microsoft
+- Add documentation to all filesystem interface files
 - Make sure all docstrings are proper numpy docstrings
--
+- Add refresh daily to caching
+	- Better caching for query pulls
+- Add all tests
+
+- Notebooks
+- Templates
+- temp/temp.ipy
+- src/mayutils/data/live
+- src/mayutils/data/local
+- src/mayutils/data/read
+- src/mayutils/environment/benchmarking
+- src/mayutils/environment/logging
+- src/mayutils/environment/memoisation
+- src/mayutils/interfaces/filetypes/pptx/
+- src/mayutils/visualisation/graphs/plotly/
+- src/mayutils/visualisation/graphs/combine
+- src/mayutils/visualisation/console
+- src/mayutils/visualisation/notebook
+- src/mayutils/__init__
+- misc:
+	- CHANGELOG
+	- gitignore
+	- .todo

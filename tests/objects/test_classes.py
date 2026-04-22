@@ -36,7 +36,7 @@ class TestClassOnlyProperty:
             def name(cls: type) -> str:  # noqa: N805 # pyright: ignore[reportGeneralTypeIssues]
                 return cls.__name__
 
-        with pytest.raises(AttributeError, match="class, not instances"):
+        with pytest.raises(expected_exception=AttributeError, match="class, not instances"):
             _ = Foo().name
 
 
@@ -61,8 +61,8 @@ class TestReadOnlyClassOnlyProperty:
             def version(cls: type) -> int:  # noqa: N805 # pyright: ignore[reportGeneralTypeIssues]
                 return 1
 
-        with pytest.raises(AttributeError, match="read-only"):
-            Foo().version = 2  # pyright: ignore[reportAttributeAccessIssue]
+        with pytest.raises(expected_exception=AttributeError, match="read-only"):
+            Foo().version = 2
 
 
 class TestBaseClass:
@@ -88,7 +88,7 @@ class TestAddMethod:
             captured["prior"] = prior_value
             return 7
 
-        add_method(Foo, hook, "run")
+        add_method(cls=Foo, method=hook, method_name="run")
 
         result = Foo().run()  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType, reportAttributeAccessIssue]  # ty:ignore[unresolved-attribute]
 
@@ -106,7 +106,7 @@ class TestAddMethod:
             assert prior_value == 3  # noqa: PLR2004
             return prior_value + 1
 
-        add_method(Foo, hook, "run")
+        add_method(cls=Foo, method=hook, method_name="run")
 
         assert Foo().run() == 4  # noqa: PLR2004
 
@@ -120,7 +120,7 @@ class TestAddMethod:
         def hook(self_obj: Foo, *_: Any, prior_value: int | None, **__: Any) -> int | None:  # noqa: ANN401, ARG001
             return None
 
-        add_method(Foo, hook, "run")
+        add_method(cls=Foo, method=hook, method_name="run")
 
         assert Foo().run() == 5  # noqa: PLR2004
 
@@ -133,7 +133,7 @@ class TestAddMethod:
         def hook(self_obj: Foo, *_: Any, prior_value: int | None, **__: Any) -> int | None:  # noqa: ANN401, ARG001
             return None
 
-        assert add_method(Foo, hook, "run") is Foo
+        assert add_method(cls=Foo, method=hook, method_name="run") is Foo
 
     def test_forwards_args_and_kwargs(self) -> None:
         """Positional and keyword args flow through to the hook."""
@@ -149,7 +149,7 @@ class TestAddMethod:
         ) -> tuple[tuple[Any, ...], dict[str, Any]] | None:
             return args, kwargs
 
-        add_method(Foo, hook, "run")
+        add_method(cls=Foo, method=hook, method_name="run")
 
         assert Foo().run(1, 2, k=3) == ((1, 2), {"k": 3})  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]  # ty:ignore[unresolved-attribute]
 

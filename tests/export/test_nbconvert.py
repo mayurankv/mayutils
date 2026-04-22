@@ -157,7 +157,7 @@ class TestExport:
         nb = tmp_path / "input.ipynb"
         _make_notebook(path=nb)
 
-        with pytest.raises(ValueError, match=r"Unknown nbconvert format 'bogus'"):
+        with pytest.raises(expected_exception=ValueError, match=r"Unknown nbconvert format 'bogus'"):
             nbconvert.export(
                 nb,
                 to="bogus",
@@ -172,7 +172,7 @@ class TestExport:
         nb = tmp_path / "input.ipynb"
         _make_notebook(path=nb)
 
-        with pytest.raises(ValueError, match=r"Unknown nbconvert template 'does-not-exist'"):
+        with pytest.raises(expected_exception=ValueError, match=r"Unknown nbconvert template 'does-not-exist'"):
             nbconvert.export(
                 nb,
                 to="html",

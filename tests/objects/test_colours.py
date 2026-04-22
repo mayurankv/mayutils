@@ -43,7 +43,7 @@ class TestColourConstruction:
     )
     def test_out_of_range_rejected(self, r: float, g: float, b: float, a: float) -> None:
         """Out-of-range channel values raise :class:`ValueError` at construction."""
-        with pytest.raises(ValueError, match="out of range"):
+        with pytest.raises(expected_exception=ValueError, match="out of range"):
             Colour(r=r, g=g, b=b, a=a)
 
 
@@ -99,7 +99,7 @@ class TestColourSetOpacity:
 
     def test_rejects_out_of_range(self) -> None:
         """Alpha outside ``[0, 1]`` raises :class:`ValueError`."""
-        with pytest.raises(ValueError, match="out of range"):
+        with pytest.raises(expected_exception=ValueError, match="out of range"):
             Colour(r=0, g=0, b=0).set_opacity(1.5)
 
 
@@ -133,7 +133,7 @@ class TestColourToStr:
 
     def test_hex3_rejects_bad_channels(self) -> None:
         """``method="hex3"`` raises when any channel cannot be shortened."""
-        with pytest.raises(ValueError, match="hex code"):
+        with pytest.raises(expected_exception=ValueError, match="hex code"):
             Colour(r=1, g=0, b=0).to_str(method="hex3")
 
     def test_rgba_question_switches_on_opacity(self) -> None:
@@ -158,7 +158,7 @@ class TestColourToStr:
 
     def test_css_raises_for_unnamed(self) -> None:
         """Colours without a named CSS equivalent raise :class:`ValueError`."""
-        with pytest.raises(ValueError, match="known css"):
+        with pytest.raises(expected_exception=ValueError, match="known css"):
             Colour(r=1, g=2, b=3).to_str(method="css")
 
     def test_grayscale(self) -> None:
@@ -167,7 +167,7 @@ class TestColourToStr:
 
     def test_unknown_method_raises(self) -> None:
         """An unknown ``method`` selector raises :class:`ValueError`."""
-        with pytest.raises(ValueError, match="Unknown method"):
+        with pytest.raises(expected_exception=ValueError, match="Unknown method"):
             Colour(r=0, g=0, b=0).to_str(method="bogus")  # pyright: ignore[reportArgumentType]  # ty:ignore[invalid-argument-type]
 
 
@@ -229,7 +229,7 @@ class TestColourBlend:
 
     def test_rejects_translucent_background(self) -> None:
         """A non-opaque background raises :class:`ValueError`."""
-        with pytest.raises(ValueError, match="Background"):
+        with pytest.raises(expected_exception=ValueError, match="Background"):
             Colour.blend(foreground=Colour(r=0, g=0, b=0), background=Colour(r=0, g=0, b=0, a=0.5))
 
 
@@ -263,7 +263,7 @@ class TestHexToRgba:
 
     def test_rejects_invalid_length(self) -> None:
         """Strings that are neither six nor eight digits raise :class:`ValueError`."""
-        with pytest.raises(ValueError, match="Invalid hex"):
+        with pytest.raises(expected_exception=ValueError, match="Invalid hex"):
             hex_to_rgba("#fff")
 
 

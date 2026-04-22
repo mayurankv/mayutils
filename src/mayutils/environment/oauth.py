@@ -618,10 +618,10 @@ def google_oauth(
     )
     creds = cast("Credentials", flow.run_local_server(port=0))  # pyright: ignore[reportUnknownMemberType]
     logger.info(
-        msg=f"New token created at {creds.expiry}",  # pyright: ignore[reportUnknownMemberType, reportOptionalMemberAccess]
+        msg=f"New token created at {creds.expiry}",  # pyright: ignore[reportUnknownMemberType]
     )
 
-    if not creds.valid:  # pyright: ignore[reportUnknownMemberType, reportOptionalMemberAccess]
+    if not creds.valid:
         msg = "Authentication failed, please check your credentials."
         raise ValueError(msg)
 

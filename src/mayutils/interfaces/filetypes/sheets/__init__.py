@@ -163,7 +163,7 @@ class Sheet:
             self.service.spreadsheets()
             .values()
             .get(
-                spreadsheetId=self.parent.id,  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
+                spreadsheetId=self.parent.id,
                 range=f"{self.title}!A1:{column_to_excel(self.columns)}{self.rows}"
                 if sheet_range is None
                 else f"{self.title}!{sheet_range}",
