@@ -34,6 +34,14 @@ target-version = "py313"
 
 [lint]
 select = ["ALL"]
+extend-select = [
+    "DOC201",
+    "DOC202",
+    "DOC402",
+    "DOC403",
+    "DOC501",
+    "DOC502",
+]
 ignore = [
     "CPY001",
     "FIX002",
@@ -44,6 +52,8 @@ ignore = [
 ]
 fixable = ["ALL"]
 unfixable = []
+preview = true
+explicit-preview-rules = true
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [lint.per-file-ignores]

@@ -1,4 +1,5 @@
-"""Pandas DataFrame accessor utilities exposed through the ``df.utils`` namespace.
+"""
+Expose pandas DataFrame accessor utilities via the ``df.utils`` namespace.
 
 This module defines :class:`DataframeUtilsAccessor`, a lightweight wrapper that
 augments a :class:`pandas.DataFrame` with convenience helpers for persisting to
@@ -8,11 +9,32 @@ applying diverging heatmaps, coercing columns to declared dtypes with
 datetime-aware parsing, and anchoring values to a chosen interval mean. The
 module also declares the :data:`DatetimeKind` and :data:`DtypeSpec` type
 aliases that describe the accepted values for the dtype mapping machinery.
+
+See Also
+--------
+pandas.DataFrame : Underlying tabular structure exposed through the accessor.
+mayutils.objects.dataframes.pandas.stylers : Companion module that supplies
+    the :class:`Styler` wrapper used by this accessor.
+mayutils.objects.dataframes.pandas.series : Sibling helpers that attach a
+    matching accessor to :class:`pandas.Series`.
+mayutils.objects.dataframes.pandas.index : Sibling helpers that operate on
+    :class:`pandas.Index` objects.
+
+Examples
+--------
+>>> import pandas as pd
+>>> from mayutils.objects.dataframes.pandas.dataframes import (
+...     DataframeUtilsAccessor,
+... )
+>>> df = pd.DataFrame({"a": [1, 2, 3]}, index=[0, 1, 2])
+>>> accessor = DataframeUtilsAccessor(df=df)
+>>> accessor.rename_index("row").index.name
+'row'
 """
 
 from collections.abc import Callable, Hashable, Mapping, Sequence
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Literal, cast
 
 from mayutils.core.extras import may_require_extras
 from mayutils.objects.dataframes.pandas.stylers import Styler
@@ -60,7 +82,8 @@ The following values are supported:
 
 
 class DataframeUtilsAccessor:
-    """Accessor that attaches helper methods to a pandas DataFrame.
+    """
+    Attach helper methods to a pandas DataFrame via the ``utils`` namespace.
 
     Registered as ``DataFrame.utils`` elsewhere in :mod:`mayutils`, this class
     aggregates operations that would otherwise clutter a notebook session:
@@ -68,32 +91,80 @@ class DataframeUtilsAccessor:
     styling, numeric/datetime dtype coercion, tail aggregation and interval
     grounding. The wrapped frame is held on :attr:`df` and all helpers either
     mutate it in place and return it for chaining or derive new artefacts
-    without touching the original.
+    without touching the original. Because the frame is held by reference,
+    copy-on-write semantics of the caller's pandas session are preserved and
+    no implicit deep copy is taken.
 
     Parameters
     ----------
-    df : pandas.DataFrame
+    df
         Frame bound to the accessor. Subsequent helper calls read from and
         (where noted) mutate this instance directly.
 
     Attributes
     ----------
-    df : pandas.DataFrame
+    df
         The underlying DataFrame the accessor operates on.
+
+    See Also
+    --------
+    pandas.DataFrame : Underlying tabular container wrapped by the accessor.
+    mayutils.objects.dataframes.pandas.stylers.Styler : Styling wrapper used
+        by :meth:`styler` and :meth:`change_map`.
+    mayutils.objects.dataframes.pandas.series : Sibling accessor for
+        :class:`pandas.Series`.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> from mayutils.objects.dataframes.pandas.dataframes import (
+    ...     DataframeUtilsAccessor,
+    ... )
+    >>> df = pd.DataFrame({"x": [0.1, -0.2, 0.3]}, index=[0, 1, 2])
+    >>> accessor = DataframeUtilsAccessor(df=df)
+    >>> round(accessor.max_abs(0.0), 2)
+    0.3
     """
 
     def __init__(
         self,
         df: DataFrame,
     ) -> None:
-        """Bind the accessor instance to ``df``.
+        """
+        Bind the accessor instance to ``df``.
+
+        The frame is stored as the :attr:`df` attribute without deep-copying,
+        so any mutation performed by subsequent helpers propagates straight
+        back to the caller's object. This keeps memory usage flat when the
+        accessor is constructed in hot loops and preserves the copy-on-write
+        semantics of the ambient pandas session. The accessor therefore
+        behaves as a thin view on top of the supplied frame.
 
         Parameters
         ----------
-        df : pandas.DataFrame
+        df
             Frame that every subsequent method call will operate on. Stored
             by reference; mutating methods therefore modify the caller's
             object directly.
+
+        See Also
+        --------
+        pandas.DataFrame : Tabular container stored on :attr:`df`.
+        DataframeUtilsAccessor.rename_index : Sibling helper that relabels
+            the bound frame's index in place.
+        DataframeUtilsAccessor.styler : Sibling helper that exposes the
+            styling pipeline for the bound frame.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from mayutils.objects.dataframes.pandas.dataframes import (
+        ...     DataframeUtilsAccessor,
+        ... )
+        >>> frame = pd.DataFrame({"value": [10, 20, 30]})
+        >>> accessor = DataframeUtilsAccessor(df=frame)
+        >>> accessor.df is frame
+        True
         """
         self.df = df
 
@@ -101,30 +172,34 @@ class DataframeUtilsAccessor:
         self,
         path: Path | str,
         /,
-        **kwargs: Any,  # noqa: ANN401
+        **kwargs: object,
     ) -> Path:
-        """Serialise the underlying DataFrame to ``path``, dispatching on suffix.
+        """
+        Serialise the underlying DataFrame to ``path``, dispatching on suffix.
 
         The file suffix selects the persistence backend: image/document
         suffixes (``.png``, ``.jpeg``, ``.jpg``, ``.pdf``, ``.svg``, ``.eps``)
         render through :class:`Styler`; ``.parquet``, ``.csv`` and ``.xlsx``
         round-trip via the matching pandas writers (all of which retain the
-        index); any other suffix is rejected.
+        index); any other suffix is rejected. Tabular backends pass
+        ``index=True`` by default so the frame can be round-tripped without
+        silently dropping the index, and ``**kwargs`` override that default
+        when a caller wants to write a bare tabular representation.
 
         Parameters
         ----------
-        path : pathlib.Path or str
+        path
             Destination on disk. Coerced to :class:`pathlib.Path` so the
             suffix-driven dispatch works regardless of the input type. The
             parent directory must already exist.
         **kwargs
             Additional keyword arguments forwarded unchanged to
             :meth:`Styler.save` when the suffix selects an image/document
-            backend. Ignored for tabular writers.
+            backend, or to the matching ``pandas.DataFrame.to_*`` writer for
+            tabular backends.
 
         Returns
         -------
-        pathlib.Path
             The resolved path that was written to, suitable for chaining into
             downstream logging or assertions.
 
@@ -134,11 +209,34 @@ class DataframeUtilsAccessor:
             Raised when the suffix is ``.feather`` (currently disabled) or
             any other value not listed above, signalling an unsupported
             output format.
+
+        See Also
+        --------
+        pandas.DataFrame.to_parquet : Writer used for ``.parquet`` outputs.
+        pandas.DataFrame.to_csv : Writer used for ``.csv`` outputs.
+        pandas.DataFrame.to_excel : Writer used for ``.xlsx`` outputs.
+        mayutils.objects.dataframes.pandas.stylers.Styler.save : Renderer
+            used for image/document suffixes.
+
+        Examples
+        --------
+        >>> import tempfile
+        >>> from pathlib import Path
+        >>> import pandas as pd
+        >>> from mayutils.objects.dataframes.pandas.dataframes import (
+        ...     DataframeUtilsAccessor,
+        ... )
+        >>> df = pd.DataFrame({"a": [1, 2]})
+        >>> accessor = DataframeUtilsAccessor(df=df)
+        >>> with tempfile.TemporaryDirectory() as tmpdir:
+        ...     out = accessor.save(Path(tmpdir) / "out.csv")
+        ...     out.exists()
+        True
         """
         path = Path(path)
 
         if path.suffix in [".png", ".jpeg", ".jpg", ".pdf", ".svg", ".eps"]:
-            default_kwargs: dict[str, Any] = {}
+            default_kwargs: dict[str, object] = {}
             joint_kwargs = default_kwargs | kwargs
             return self.styler.save(
                 path,
@@ -146,7 +244,7 @@ class DataframeUtilsAccessor:
             )
 
         if path.suffix == ".parquet":
-            default_kwargs: dict[str, Any] = {
+            default_kwargs: dict[str, object] = {
                 "index": True,
             }
             joint_kwargs = default_kwargs | kwargs
@@ -156,7 +254,7 @@ class DataframeUtilsAccessor:
             )
 
         elif path.suffix == ".feather":
-            default_kwargs: dict[str, Any] = {}
+            default_kwargs: dict[str, object] = {}
             joint_kwargs = default_kwargs | kwargs
             msg = "Feather not implemented"
             raise NotImplementedError(msg)
@@ -166,7 +264,7 @@ class DataframeUtilsAccessor:
             )
 
         elif path.suffix == ".csv":
-            default_kwargs: dict[str, Any] = {
+            default_kwargs: dict[str, object] = {
                 "index": True,
             }
             joint_kwargs = default_kwargs | kwargs
@@ -176,7 +274,7 @@ class DataframeUtilsAccessor:
             )
 
         elif path.suffix == ".xlsx":
-            default_kwargs: dict[str, Any] = {
+            default_kwargs: dict[str, object] = {
                 "index": True,
             }
             joint_kwargs = default_kwargs | kwargs
@@ -195,20 +293,23 @@ class DataframeUtilsAccessor:
         self,
         *,
         caption: str | None = None,
-        **kwargs: Any,  # noqa: ANN401
+        **kwargs: object,
     ) -> None:
-        """Render the DataFrame interactively through :func:`itables.show`.
+        """
+        Render the DataFrame interactively through :func:`itables.show`.
 
         Wraps the bound frame in an ``itables`` DataTables widget so callers
         can sort, search and paginate the data inside a notebook cell without
-        first converting it to HTML manually.
+        first converting it to HTML manually. The frame is passed by
+        reference, so the widget reflects the current state of :attr:`df`
+        without allocating a copy; dtypes and the row/column index are
+        preserved end-to-end.
 
         Parameters
         ----------
-        *args
-            Positional arguments forwarded verbatim to :func:`itables.show`;
-            see the ``itables`` documentation for the supported options
-            (row limits, column definitions, etc.).
+        caption
+            Optional caption rendered above the DataTables widget. ``None``
+            suppresses the caption row entirely.
         **kwargs
             Keyword arguments forwarded verbatim to :func:`itables.show`,
             controlling DataTables configuration such as pagination, column
@@ -216,9 +317,30 @@ class DataframeUtilsAccessor:
 
         Returns
         -------
-        None
             The function is called purely for its side effect of rendering
             the interactive table in the active display context.
+
+        See Also
+        --------
+        itables.show : Underlying DataTables renderer invoked by this helper.
+        pandas.DataFrame.to_html : Static HTML alternative from pandas.
+        mayutils.objects.dataframes.pandas.dataframes.DataframeUtilsAccessor.gt :
+            Sibling helper returning a ``great_tables`` view instead.
+
+        Examples
+        --------
+        >>> import contextlib
+        >>> import io
+        >>> import pandas as pd
+        >>> from mayutils.objects.dataframes.pandas.dataframes import (
+        ...     DataframeUtilsAccessor,
+        ... )
+        >>> df = pd.DataFrame({"x": [1, 2, 3]})
+        >>> accessor = DataframeUtilsAccessor(df=df)
+        >>> with contextlib.redirect_stdout(io.StringIO()):
+        ...     result = accessor.interact(caption="Preview")
+        >>> result is None
+        True
         """
         return show(
             df=self.df,
@@ -233,28 +355,31 @@ class DataframeUtilsAccessor:
         *,
         columns: Sequence[Hashable] | Index | None = None,
     ) -> float:
-        """Compute the largest absolute gap between the data and a reference point.
+        """
+        Compute the largest absolute gap between the data and a reference point.
 
         Converts the selected subset of the frame to ``float`` and returns
         ``max(|x - reference_value|)``, clipping the positive and negative
         extremes at zero first so purely one-sided distributions still yield
         a meaningful non-negative magnitude. The result is typically used to
-        symmetrise diverging colour scales around ``reference_value``.
+        symmetrise diverging colour scales around ``reference_value``. The
+        intermediate array is materialised via :func:`numpy.asarray` which
+        avoids an extra copy when the underlying frame is already backed by
+        a contiguous float buffer.
 
         Parameters
         ----------
-        reference_value : float, default ``0``
+        reference_value
             Anchor point from which deviations are measured. Changing this
             shifts which direction a value is considered "positive" or
             "negative" for the purpose of the comparison.
-        columns : Sequence[Hashable] or pandas.Index or None, default ``None``
+        columns
             Subset of column labels to consider. When ``None`` every column
             in the bound frame participates; otherwise only the selected
             columns contribute to the maximum.
 
         Returns
         -------
-        float
             Non-negative magnitude of the furthest selected value from
             ``reference_value``, suitable for use as a symmetric colour-scale
             bound.
@@ -265,6 +390,24 @@ class DataframeUtilsAccessor:
             Raised when the maximum absolute deviation is exactly zero,
             i.e. every selected value equals ``reference_value`` and so no
             meaningful scale can be derived.
+
+        See Also
+        --------
+        pandas.DataFrame : Tabular container whose values are summarised.
+        numpy.abs : NumPy primitive underlying the magnitude calculation.
+        mayutils.objects.dataframes.pandas.dataframes.DataframeUtilsAccessor.change_map :
+            Consumer of this helper for symmetric diverging heatmaps.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from mayutils.objects.dataframes.pandas.dataframes import (
+        ...     DataframeUtilsAccessor,
+        ... )
+        >>> df = pd.DataFrame({"a": [1.0, -2.0, 3.0]})
+        >>> accessor = DataframeUtilsAccessor(df=df)
+        >>> accessor.max_abs(0.0)
+        3.0
         """
         values = self.df if columns is None else self.df[columns]
         deviations = np.asarray(values - reference_value, dtype=float)
@@ -282,23 +425,43 @@ class DataframeUtilsAccessor:
         index_name: str,
         /,
     ) -> DataFrame:
-        """Set the bound frame's index name and return the frame for chaining.
+        """
+        Set the bound frame's index name and return the frame for chaining.
 
         Mutates :attr:`df` in place by assigning ``index_name`` to
         ``df.index.name`` so downstream operations that rely on a labelled
         index (e.g. ``reset_index``, groupby output) receive the intended
-        label.
+        label. Because pandas indices are immutable containers but carry a
+        mutable ``name`` attribute, this update has zero memory cost and
+        does not invalidate any existing references to the index object.
 
         Parameters
         ----------
-        index_name : str
+        index_name
             Label to assign to the index. Replaces any existing name.
 
         Returns
         -------
-        pandas.DataFrame
             The bound DataFrame, returned to permit fluent chaining with
             other pandas operations.
+
+        See Also
+        --------
+        pandas.Index.name : Attribute updated by this helper.
+        pandas.DataFrame.rename_axis : Non-mutating pandas equivalent.
+        mayutils.objects.dataframes.pandas.index : Sibling helpers for
+            direct :class:`pandas.Index` manipulation.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from mayutils.objects.dataframes.pandas.dataframes import (
+        ...     DataframeUtilsAccessor,
+        ... )
+        >>> df = pd.DataFrame({"x": [1, 2]})
+        >>> accessor = DataframeUtilsAccessor(df=df)
+        >>> accessor.rename_index("row_id").index.name
+        'row_id'
         """
         self.df.index.name = index_name
 
@@ -311,32 +474,54 @@ class DataframeUtilsAccessor:
         *,
         aggregation: Callable[[DataFrame], Series] | None = lambda x: x.sum(),
     ) -> DataFrame:
-        """Collapse rows with index greater than or equal to ``cutoff`` into a single bucket.
+        """
+        Collapse rows whose index meets ``cutoff`` into a single bucket row.
 
         Splits the frame on ``cutoff``, keeps the head as-is, reduces the
         tail with ``aggregation`` and re-appends it under the label
         ``f"{cutoff}+"``. The resulting index is cast to ``str`` and sorted
         numerically on the pre-``+`` prefix so the aggregated row always
         sits at the end. Passing ``aggregation=None`` omits the tail
-        entirely, producing a hard truncation.
+        entirely, producing a hard truncation. The head slice is copied to
+        avoid mutating the caller's frame when the aggregated row is
+        written back via ``loc``.
 
         Parameters
         ----------
-        cutoff : int
+        cutoff
             Inclusive boundary applied to the frame's index. Rows with
             ``index < cutoff`` are retained; rows with ``index >= cutoff``
             form the tail that is aggregated.
-        aggregation : Callable[[pandas.DataFrame], pandas.Series] or None, default ``lambda x: x.sum()``
+        aggregation
             Reduction that turns the tail DataFrame into a single Series
             stored under the ``"<cutoff>+"`` label. ``None`` skips the
             aggregation step entirely, returning only the head portion.
 
         Returns
         -------
-        pandas.DataFrame
             Copy of the bound frame with its tail collapsed (or dropped).
             When aggregation is applied, the index is stringified and
             lexically ordered by the numeric prefix.
+
+        See Also
+        --------
+        pandas.DataFrame.loc : Label-based indexer used for the head/tail
+            split and the aggregated-row write-back.
+        pandas.DataFrame.sum : Default tail reduction supplied by the
+            fallback ``aggregation``.
+        mayutils.objects.dataframes.pandas.dataframes.DataframeUtilsAccessor.slice_interval :
+            Related helper that restricts the frame to a datetime window.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from mayutils.objects.dataframes.pandas.dataframes import (
+        ...     DataframeUtilsAccessor,
+        ... )
+        >>> df = pd.DataFrame({"n": [1, 2, 3, 4]}, index=[0, 1, 2, 3])
+        >>> accessor = DataframeUtilsAccessor(df=df)
+        >>> accessor.cutoff(2)["n"].tolist()
+        [1.0, 2.0, 7.0]
         """
         df_cut = self.df.loc[self.df.index < cutoff].copy()
         if aggregation is not None:
@@ -354,32 +539,57 @@ class DataframeUtilsAccessor:
         scaling: float = 0.6,
         columns: Sequence[Hashable] | Index | None = None,
     ) -> Styler:
-        """Build a diverging heatmap centred on ``reference_value``.
+        """
+        Build a diverging heatmap centred on ``reference_value``.
 
         Delegates to :meth:`Styler.change_map` after computing a symmetric
         bound via :meth:`max_abs`, so positive and negative deviations
         receive matching colour intensities. The returned styler keeps the
-        bound frame unchanged; colours are a presentation-only overlay.
+        bound frame unchanged; colours are a presentation-only overlay that
+        sits outside the numeric buffer so the source dtypes and index are
+        preserved. Each call instantiates a fresh styler, avoiding any
+        leakage of format state between rendering attempts.
 
         Parameters
         ----------
-        reference_value : float, default ``0``
+        reference_value
             Neutral midpoint that receives no colour. Cells equal to this
             value are rendered white; cells above/below diverge toward the
             positive/negative palette extremes.
-        scaling : float, default ``0.6``
+        scaling
             Peak opacity applied to the extreme cells. Values in ``(0, 1]``
-            dial the contrast down or up — ``0.6`` leaves headroom so text
+            dial the contrast down or up. ``0.6`` leaves headroom so text
             on coloured cells remains readable.
-        columns : Sequence[Hashable] or pandas.Index or None, default ``None``
+        columns
             Restrict styling (and the symmetric-bound calculation) to these
             columns. ``None`` styles the whole frame.
 
         Returns
         -------
-        Styler
             Styler wrapping the bound frame with the diverging colour map
             applied to the selected columns.
+
+        See Also
+        --------
+        mayutils.objects.dataframes.pandas.stylers.Styler.change_map :
+            Underlying renderer invoked with the symmetric bound.
+        mayutils.objects.dataframes.pandas.dataframes.DataframeUtilsAccessor.max_abs :
+            Helper that provides the symmetric bound consumed here.
+        pandas.io.formats.style.Styler.background_gradient : Closest pandas
+            equivalent for applying colour gradients to a frame.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from mayutils.objects.dataframes.pandas.dataframes import (
+        ...     DataframeUtilsAccessor,
+        ... )
+        >>> from mayutils.objects.dataframes.pandas.stylers import Styler
+        >>> df = pd.DataFrame({"delta": [-0.4, 0.2, 0.5]})
+        >>> accessor = DataframeUtilsAccessor(df=df)
+        >>> styler = accessor.change_map(0.0)
+        >>> isinstance(styler, Styler)
+        True
         """
         return self.styler.change_map(
             self.max_abs(
@@ -395,16 +605,41 @@ class DataframeUtilsAccessor:
     def styler(
         self,
     ) -> Styler:
-        """Fresh :class:`Styler` bound to the underlying frame.
+        """
+        Build a fresh :class:`Styler` bound to the underlying frame.
 
         Each access constructs a new styler so callers can stage independent
-        styling pipelines without leaking formatting state between them.
+        styling pipelines without leaking formatting state between them. The
+        styler references the frame rather than copying it, so column order
+        and dtypes continue to reflect the live :attr:`df`. Constructing a
+        throwaway styler per access is cheap because the wrapper only stores
+        a reference alongside its own rule tables.
 
         Returns
         -------
-        Styler
             Newly instantiated styler wrapping :attr:`df`; any existing
             styling on other stylers is unaffected.
+
+        See Also
+        --------
+        mayutils.objects.dataframes.pandas.stylers.Styler : Styler class
+            returned by this property.
+        pandas.io.formats.style.Styler : Native pandas styling API that the
+            custom :class:`Styler` builds upon.
+        mayutils.objects.dataframes.pandas.dataframes.DataframeUtilsAccessor.gt :
+            Alternative renderer based on ``great_tables``.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from mayutils.objects.dataframes.pandas.dataframes import (
+        ...     DataframeUtilsAccessor,
+        ... )
+        >>> from mayutils.objects.dataframes.pandas.stylers import Styler
+        >>> df = pd.DataFrame({"a": [1, 2]})
+        >>> accessor = DataframeUtilsAccessor(df=df)
+        >>> isinstance(accessor.styler, Styler)
+        True
         """
         return Styler(data=self.df)
 
@@ -412,17 +647,40 @@ class DataframeUtilsAccessor:
     def gt(
         self,
     ) -> GT:
-        """Fresh :class:`great_tables.GT` view of the bound frame.
+        """
+        Build a fresh :class:`great_tables.GT` view of the bound frame.
 
         Provides direct access to the ``great_tables`` rendering pipeline for
         publication-grade tables. Each access builds a new ``GT`` so
-        configuration applied to earlier accessors is not carried over.
+        configuration applied to earlier accessors is not carried over. The
+        underlying frame is referenced (not copied) which keeps the memory
+        footprint small even when ``GT`` is constructed inside hot loops
+        and preserves any column dtypes the caller has already coerced.
 
         Returns
         -------
-        great_tables.GT
             Newly instantiated ``GT`` wrapping :attr:`df`, ready for
             additional ``tab_*`` / ``fmt_*`` calls.
+
+        See Also
+        --------
+        great_tables.GT : Rendering class returned by this property.
+        mayutils.objects.dataframes.pandas.dataframes.DataframeUtilsAccessor.styler :
+            Alternative renderer returning a custom :class:`Styler`.
+        mayutils.objects.dataframes.pandas.dataframes.DataframeUtilsAccessor.interact :
+            Interactive renderer based on ``itables``.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from great_tables import GT
+        >>> from mayutils.objects.dataframes.pandas.dataframes import (
+        ...     DataframeUtilsAccessor,
+        ... )
+        >>> df = pd.DataFrame({"a": [1, 2]})
+        >>> accessor = DataframeUtilsAccessor(df=df)
+        >>> isinstance(accessor.gt, GT)
+        True
         """
         return GT(data=self.df)
 
@@ -435,7 +693,8 @@ class DataframeUtilsAccessor:
         date_format: str = "%Y-%m-%d %H:%M:%S",
         time_format: str = "%H:%M:%S",
     ) -> DataFrame:
-        """Cast columns in place to the dtypes declared in ``mapper``.
+        """
+        Cast columns in place to the dtypes declared in ``mapper``.
 
         Iterates over ``mapper`` and rewrites each target column with the
         appropriate conversion: datetime parsing dispatches through a local
@@ -443,66 +702,94 @@ class DataframeUtilsAccessor:
         coerces with :func:`pandas.to_numeric`; everything else is forwarded
         to :meth:`pandas.Series.astype`. All conversions mutate :attr:`df`
         directly so the accessor can be chained with other in-place helpers.
+        Because each write replaces a single column at a time, the memory
+        overhead is bounded by the size of the widest individual column.
 
         Parameters
         ----------
-        mapper : Mapping[Hashable, DtypeSpec]
+        mapper
             Column-label to target-dtype mapping. The value controls how the
             column is rewritten (see :data:`DtypeSpec` for the full set of
             accepted specifications).
-        datetime_format : str, default ``"%Y-%m-%d %H:%M:%S"``
+        datetime_format
             ``strptime``-style pattern used when a column is mapped to
             ``"datetime"``. Applied verbatim by :func:`pandas.to_datetime`.
-        date_format : str, default ``"%Y-%m-%d %H:%M:%S"``
+        date_format
             ``strptime``-style pattern used when a column is mapped to
             ``"date"``; after parsing, the ``.dt.date`` accessor strips the
             time component.
-        time_format : str, default ``"%H:%M:%S"``
+        time_format
             ``strptime``-style pattern used when a column is mapped to
             ``"time"``; after parsing, the ``.dt.time`` accessor strips the
             date component.
 
         Returns
         -------
-        pandas.DataFrame
             The bound frame after every requested conversion has been
             applied, returned for chaining.
 
         Raises
         ------
         TypeError
-            Raised when a column lookup, parse or cast fails for any reason
-            — :class:`KeyError`, :class:`ValueError` and :class:`TypeError`
+            Raised when a column lookup, parse or cast fails for any reason.
+            :class:`KeyError`, :class:`ValueError` and :class:`TypeError`
             from the underlying pandas call are all rewrapped into a single
             informative message identifying the offending column/dtype pair.
+
+        See Also
+        --------
+        pandas.to_datetime : Parser used for the datetime kinds.
+        pandas.to_numeric : Parser used when ``dtype == "numeric"``.
+        pandas.Series.astype : Fallback cast used for generic dtype specs.
+        mayutils.objects.dataframes.pandas.series : Sibling accessor with
+            equivalent column-level helpers for :class:`pandas.Series`.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from mayutils.objects.dataframes.pandas.dataframes import (
+        ...     DataframeUtilsAccessor,
+        ... )
+        >>> df = pd.DataFrame(
+        ...     {"n": ["1", "2"], "d": ["2024-01-01", "2024-01-02"]},
+        ... )
+        >>> accessor = DataframeUtilsAccessor(df=df)
+        >>> _ = accessor.map_dtypes(
+        ...     {"n": "numeric", "d": "date"},
+        ...     date_format="%Y-%m-%d",
+        ... )
+        >>> accessor.df["n"].tolist()
+        [1, 2]
         """
 
         def convert_datetime(
             series: Series,
             datetime_type: DatetimeKind,
         ) -> Series:
-            """Parse ``series`` into the temporal kind selected by ``datetime_type``.
+            """
+            Parse ``series`` into the temporal kind selected by ``datetime_type``.
 
             Routes to :func:`pandas.to_datetime` with the format string from
             the enclosing :meth:`map_dtypes` call that matches
             ``datetime_type``. For ``"date"`` and ``"time"`` the parsed
             result is further narrowed with ``dt.date`` / ``dt.time`` so the
             returned series contains pure date or time values rather than
-            full timestamps.
+            full timestamps. This closure captures the three format strings
+            from :meth:`map_dtypes` so dispatch cost stays ``O(1)`` per
+            column regardless of how large ``series`` is.
 
             Parameters
             ----------
-            series : pandas.Series
+            series
                 Column of string-like values to parse. Values not matching
                 the relevant format will propagate a :class:`ValueError`
                 from pandas.
-            datetime_type : Literal['datetime', 'date', 'time']
+            datetime_type
                 Selects which format string from the enclosing scope is used
                 and whether the post-parse accessor narrows the result.
 
             Returns
             -------
-            pandas.Series
                 Parsed series containing ``Timestamp``, ``date`` or ``time``
                 values according to ``datetime_type``.
 
@@ -510,8 +797,31 @@ class DataframeUtilsAccessor:
             ------
             ValueError
                 Raised when ``datetime_type`` is outside the supported
-                literal set — acts as a defensive guard for callers that
+                literal set. Acts as a defensive guard for callers that
                 bypass the type hints.
+
+            See Also
+            --------
+            pandas.to_datetime : Underlying parser invoked by this helper.
+            pandas.Series.dt : Datetime accessor used to narrow results to
+                ``date`` or ``time``.
+            mayutils.objects.dataframes.pandas.series : Sibling accessor
+                offering equivalent datetime helpers at series level.
+
+            Examples
+            --------
+            >>> import pandas as pd
+            >>> from mayutils.objects.dataframes.pandas.dataframes import (
+            ...     DataframeUtilsAccessor,
+            ... )
+            >>> df = pd.DataFrame({"d": ["2024-01-01", "2024-01-02"]})
+            >>> accessor = DataframeUtilsAccessor(df=df)
+            >>> _ = accessor.map_dtypes(
+            ...     {"d": "date"},
+            ...     date_format="%Y-%m-%d",
+            ... )
+            >>> [str(v) for v in accessor.df["d"].tolist()]
+            ['2024-01-01', '2024-01-02']
             """
             if datetime_type == "datetime":
                 return to_datetime(series, format=datetime_format)
@@ -534,7 +844,7 @@ class DataframeUtilsAccessor:
                 elif dtype == "numeric":
                     self.df[col] = to_numeric(column)
                 else:
-                    self.df[col] = column.astype(cast("Any", dtype))
+                    self.df[col] = column.astype(cast("object", dtype))
 
             except (
                 KeyError,
@@ -551,7 +861,8 @@ class DataframeUtilsAccessor:
         interval: Interval[Date] | Interval[DateTime],
         /,
     ) -> DataFrame:
-        """Restrict the frame to rows whose index falls within ``interval``.
+        """
+        Restrict the frame to rows whose index falls within ``interval``.
 
         Dispatches on the index's inferred type so that callers can pass a
         single :class:`Interval` regardless of whether the underlying index
@@ -559,11 +870,12 @@ class DataframeUtilsAccessor:
         datetime indices receive the interval promoted to full datetimes;
         date indices receive it further narrowed back to dates. The
         returned frame is a ``.loc`` view into the bound DataFrame, not a
-        copy.
+        copy, so mutating it may propagate back to :attr:`df` under
+        pandas's copy-on-write settings.
 
         Parameters
         ----------
-        interval : Interval
+        interval
             Inclusive window whose endpoints bracket the rows to retain.
             Endpoint polarity is handled by
             :attr:`Interval.as_slice`, so inverted intervals are sliced
@@ -571,7 +883,6 @@ class DataframeUtilsAccessor:
 
         Returns
         -------
-        pandas.DataFrame
             Subset of the bound frame whose index values lie inside
             ``interval``.
 
@@ -581,6 +892,33 @@ class DataframeUtilsAccessor:
             Raised when the frame's index is neither datetime- nor
             date-typed, which is required to translate the interval into
             a label-based slice.
+
+        See Also
+        --------
+        pandas.DataFrame.loc : Indexer used to translate interval endpoints
+            into a slice operation.
+        mayutils.objects.datetime.Interval : Window type accepted by this
+            helper.
+        mayutils.objects.dataframes.pandas.dataframes.DataframeUtilsAccessor.cutoff :
+            Related helper that collapses tail rows rather than slicing
+            by interval.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from mayutils.objects.datetime import Date, Interval
+        >>> from mayutils.objects.dataframes.pandas.dataframes import (
+        ...     DataframeUtilsAccessor,
+        ... )
+        >>> df = pd.DataFrame(
+        ...     {"v": [1, 2, 3]},
+        ...     index=pd.Index([Date(2024, 1, i) for i in (1, 2, 3)]),
+        ... )
+        >>> accessor = DataframeUtilsAccessor(df=df)
+        >>> window = Interval(start=Date(2024, 1, 1), end=Date(2024, 1, 2))
+        >>> sliced = accessor.slice_interval(window)
+        >>> sliced["v"].tolist()
+        [1, 2]
         """
         if self.df.index.inferred_type == "datetime":
             return self.df.loc[interval.to_datetime_interval().as_slice]
@@ -595,25 +933,27 @@ class DataframeUtilsAccessor:
         interval: Interval[Date] | Interval[DateTime] | None,
         /,
     ) -> DataFrame:
-        """Rebase the frame against the mean of values within ``interval``.
+        """
+        Rebase the frame against the mean of values within ``interval``.
 
         Intended to shift a timeseries-like frame so that the mean over the
         supplied :class:`Interval` becomes the new zero (or reference)
         baseline, mirroring the behaviour of the Series-level ``ground``
         helper. The DataFrame implementation is currently a stub: a
         ``None`` interval returns the frame untouched while any concrete
-        interval is explicitly rejected.
+        interval is explicitly rejected. When eventually implemented the
+        method will not allocate a copy; instead it will write in place
+        once the anchoring mean has been computed across the slice.
 
         Parameters
         ----------
-        interval : Interval or None, default ``None``
+        interval
             Inclusive window over which the anchoring mean would be
             computed. ``None`` is a no-op passthrough; a concrete interval
             is rejected until the feature lands.
 
         Returns
         -------
-        pandas.DataFrame
             The bound frame returned unchanged when ``interval`` is
             ``None``.
 
@@ -622,6 +962,27 @@ class DataframeUtilsAccessor:
         NotImplementedError
             Raised whenever ``interval`` is not ``None``, signalling that
             DataFrame-level grounding has not yet been implemented.
+
+        See Also
+        --------
+        mayutils.objects.dataframes.pandas.series : Sibling accessor
+            providing the implemented series-level grounding helper.
+        mayutils.objects.datetime.Interval : Window type that will be
+            consumed once DataFrame grounding is implemented.
+        mayutils.objects.dataframes.pandas.dataframes.DataframeUtilsAccessor.slice_interval :
+            Related helper that already restricts the frame to an
+            interval.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from mayutils.objects.dataframes.pandas.dataframes import (
+        ...     DataframeUtilsAccessor,
+        ... )
+        >>> df = pd.DataFrame({"v": [1.0, 2.0, 3.0]})
+        >>> accessor = DataframeUtilsAccessor(df=df)
+        >>> accessor.ground(None) is df
+        True
         """
         if interval is None:
             return self.df

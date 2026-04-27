@@ -1,10 +1,46 @@
 # Roadmap
 
-## Tooling
+Organised by package layout (`src/mayutils/*`). Priority tags: `#critical`, `#high`, `#medium`, `#low`; difficulty tags: `#hard`.
+
+## `environment`
+
+### Logging
 
 Priority: #critical
 
-### Presentations
+- [ ] Classmethod / staticmethod to change the default logging level.
+- [ ] Re-add a file handler to the logger.
+- [ ] Surface `logger.name` in the rich handler output ([rich#850](https://github.com/Textualize/rich/issues/850)).
+
+## `interfaces.filetypes`
+
+### Cross-format conversion
+
+Priority: #high
+
+- [ ] `docs` ↔ `docx` — round-trip between Google Docs and Word documents (via Drive export/import or a shared intermediate representation).
+- [ ] `slides` ↔ `pptx` — round-trip between Google Slides and PowerPoint decks.
+- [ ] `sheets` ↔ `xlsx` — round-trip between Google Sheets and Excel workbooks (sheet-by-sheet, preserving formulas/formatting where feasible).
+
+### `markdown`
+
+Priority: #high
+
+- [ ] Pandoc wrapper — shell out to `pandoc` for format conversion (md ↔ docx / pptx / pdf / html / latex) with a typed Python API.
+    - Reference: [Pandoc user guide](https://pandoc.org/MANUAL.html)
+    - Reference: [pypandoc](https://github.com/JessicaTegner/pypandoc)
+
+### `latex`
+
+Priority: #medium
+
+- [ ] LaTeX wrapper — programmatic authoring of `.tex` documents with a fluent API (document class, preamble, sections, tables, figures) and a compile helper (`pdflatex` / `tectonic`) that mirrors the `pptx → pdf` LibreOffice pattern.
+    - Reference: [PyLaTeX](https://jeltef.github.io/PyLaTeX/current/)
+    - Reference: [Tectonic](https://tectonic-typesetting.github.io/)
+
+### `pptx`
+
+Priority: #critical
 
 - [ ] Improve the Presentation text interface
     - [ ] Ingest text directly from Markdown
@@ -13,13 +49,19 @@ Priority: #critical
     - Reference: [python-pptx bullet search](https://python-pptx.readthedocs.io/en/latest/search.html?q=bullet&check_keywords=yes&area=default)
     - Reference: [python-pptx movie analysis](https://python-pptx.readthedocs.io/en/latest/dev/analysis/shp-movie.html?highlight=animation)
 
-### Tables
+### `docx`
 
-- [ ] Add `itables` support
-    - Reference: [quick start](https://mwouts.github.io/itables/quick_start.html)
-    - Reference: [formatting](https://mwouts.github.io/itables/formatting.html)
+Priority: #medium
 
-### Plots
+- [ ] Flesh out the `python-docx` façade (placeholder today) — document authoring, tables, images, styles.
+
+### `docs`
+
+Priority: #medium
+
+- [ ] Flesh out the Google Docs v1 wrapper (placeholder today), mirroring the `sheets` / `slides` ergonomics.
+
+## `visualisation.graphs.plotly`
 
 Priority: #critical
 
@@ -95,15 +137,22 @@ Priority: #low
 - [ ] [Density heatmaps](https://plotly.com/python/density-heatmaps/)
 - [ ] [Choropleth maps](https://plotly.com/python/choropleth-maps/)
 
-### Logging
+## `visualisation.notebook` / tables
 
-Priority: #critical
+Priority: #low
 
-- [ ] Classmethod / staticmethod to change the default logging level.
-- [ ] Re-add a file handler to the logger.
-- [ ] Surface `logger.name` in the rich handler output ([rich#850](https://github.com/Textualize/rich/issues/850)).
+- [ ] Add `itables` support
+    - Reference: [quick start](https://mwouts.github.io/itables/quick_start.html)
+    - Reference: [formatting](https://mwouts.github.io/itables/formatting.html)
+- [ ] Great Tables theming ([theme options](https://posit-dev.github.io/great-tables/get-started/table-theme-options.html))
 
-### Pydantic
+## `objects.dataframes`
+
+Priority: #low
+
+- [ ] Polars functionality (wait until the surrounding code is more familiar with it).
+
+## `objects` (Pydantic, decorators, classes)
 
 Priority: #low
 
@@ -112,61 +161,35 @@ Priority: #low
 - [ ] Set up a couple of things using pydantic.
 - [ ] Translate dataclasses to pydantic dataclasses where helpful.
 - [ ] Explore `BaseModel`.
-
-### Decorators
-
-Priority: #low
-
 - [ ] Implement other broadly-useful decorators as they come up.
-
-### Classes
-
-Priority: #low
-
 - [ ] Add default class methods.
 
-### Tables
-
-Priority: #low
-
-- [ ] Great Tables theming ([theme options](https://posit-dev.github.io/great-tables/get-started/table-theme-options.html))
-
-### DataFrames
-
-Priority: #low
-
-- [ ] Polars functionality (wait until the surrounding code is more familiar with it).
-
-### Mathematics
+## `mathematics`
 
 Priority: #low
 
 - [ ] JIT compilation with [numba](https://numba.pydata.org/numba-doc/dev/user/jit.html).
 
-### Filesystem / Webdrivers
+## `interfaces.cloud` / webdrivers
 
 Priority: #low
 
 - [ ] Fix Chrome webdriver #hard — fix all Chromium variants.
 - [ ] Fix Firefox webdriver #hard.
 
-### Apps
+## Apps
 
 Priority: #low
 
 - [ ] [Typer](https://typer.tiangolo.com)
 - [ ] Streamlit exploration
 
-## Understand
+## Research / understand
 
 Priority: #low
 
 - [pyutils reference](https://github.com/scottgasch/pyutils)
 - [What is a data lake? (AWS)](https://aws.amazon.com/what-is/data-lake/)
-
-## Tools
-
-Priority: #low
 
 ### Drawing
 

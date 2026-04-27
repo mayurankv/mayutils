@@ -1,15 +1,37 @@
-"""Markdown parsing utilities built on top of Mistune.
+"""
+Provide Markdown parsing utilities built on top of Mistune.
 
-This module exposes a pre-configured :class:`mistune.Markdown` factory together
-with two custom inline plugins. ``plugin_underline`` promotes ``__text__``
-spans to an ``underline`` AST node so that double-underscore syntax is not
-consumed by Mistune's default bold/emphasis rule, and ``plugin_emoji``
-substitutes ``:name:`` shortcodes with Unicode emoji drawn from
-:data:`EMOJI_MAP`. Together with the bundled Mistune plugins listed in
+This module exposes a pre-configured :class:`mistune.Markdown` factory
+together with two custom inline plugins. ``plugin_underline`` promotes
+``__text__`` spans to an ``underline`` AST node so that double-underscore
+syntax is not consumed by Mistune's default bold/emphasis rule, and
+``plugin_emoji`` substitutes ``:name:`` shortcodes with Unicode emoji drawn
+from :data:`EMOJI_MAP`. Together with the bundled Mistune plugins listed in
 :data:`DEFAULT_PLUGINS` (strikethrough, footnotes, task lists, mark,
 superscript, subscript), these components give downstream renderers a richer
 markdown dialect tailored to the documentation and reporting use cases used
 elsewhere in :mod:`mayutils`.
+
+See Also
+--------
+mistune.create_markdown : Upstream factory wrapped by
+    :func:`create_markdown_parser` to build configured parsers.
+mistune.plugins.formatting : Source of the bundled ``mark``,
+    ``strikethrough``, ``superscript`` and ``subscript`` plugins.
+mistune.plugins.footnotes : Source of the bundled ``footnotes`` plugin.
+mistune.plugins.task_lists : Source of the bundled GFM ``task_lists``
+    plugin.
+mayutils.interfaces.filetypes.tex : Sibling LaTeX interface that consumes
+    markdown sources rendered through this module.
+
+Examples
+--------
+>>> from mayutils.interfaces.filetypes.markdown import create_markdown_parser
+>>> md = create_markdown_parser()
+>>> ast = md("__underline__ and ==highlight==")
+>>> types = {child["type"] for child in ast[0]["children"]}
+>>> "underline" in types and "mark" in types
+True
 """
 
 import re
@@ -153,33 +175,44 @@ EMOJI_MAP = {
 def plugin_underline(
     md: Markdown,
 ) -> None:
-    """Register an inline ``underline`` rule on a Mistune parser.
+    """
+    Register an inline ``underline`` rule on a Mistune parser.
 
-    The plugin installs a custom inline handler that matches
-    ``__text__`` spans and emits an ``underline`` AST token whose children
-    are the fully parsed inline contents of ``text``. The rule is inserted
-    ahead of Mistune's built-in ``emphasis`` rule so that double-underscore
-    sequences are not consumed as bold before the underline rule can see
-    them.
+    Installs a custom inline handler that matches ``__text__`` spans and
+    emits an ``underline`` AST token whose children are the fully parsed
+    inline contents of ``text``. The rule is inserted ahead of Mistune's
+    built-in ``emphasis`` rule so that double-underscore sequences are not
+    consumed as bold before the underline rule can see them. The closing
+    ``__`` must be preceded by a non-whitespace, non-underscore character
+    and must not be immediately followed by another ``_``; this mirrors
+    CommonMark's flanking rules and prevents greedy matches across
+    paragraph boundaries.
 
     Parameters
     ----------
-    md : mistune.Markdown
+    md
         Parser instance whose inline lexer should be extended. The plugin
         calls :meth:`md.inline.register` in-place and does not otherwise
         mutate ``md``.
 
-    Returns
-    -------
-    None
-        The function operates by side effect on ``md``.
+    See Also
+    --------
+    plugin_emoji : Sibling inline plugin registered by the same factory.
+    create_markdown_parser : Factory that wires ``plugin_underline`` into
+        the default plugin stack.
+    mistune.InlineParser.register : Underlying registration hook invoked
+        by this plugin.
+    mistune.plugins.formatting.mark : Formatting plugin registered
+        alongside this rule in :data:`DEFAULT_PLUGINS`.
 
-    Notes
-    -----
-    The closing ``__`` must be preceded by a non-whitespace, non-underscore
-    character and must not be immediately followed by another ``_``; this
-    mirrors CommonMark's flanking rules and prevents greedy matches across
-    paragraph boundaries.
+    Examples
+    --------
+    >>> import mistune
+    >>> from mayutils.interfaces.filetypes.markdown import plugin_underline
+    >>> md = mistune.create_markdown(renderer=None, plugins=[plugin_underline])
+    >>> ast = md("This is __emphasised__ text.")
+    >>> any(child["type"] == "underline" for child in ast[0]["children"])
+    True
     """
     underline_end = re.compile(r"(?:[^\s_])__(?!_)")
 
@@ -188,11 +221,18 @@ def plugin_underline(
         m: re.Match[str],
         state: InlineState,
     ) -> int | None:
-        r"""Consume an opening ``__`` and emit an ``underline`` AST node.
+        r"""
+        Consume an opening ``__`` and emit an ``underline`` AST node.
 
         Scans forward from the match end for the closing ``__`` delimiter,
         recursively renders the enclosed inline content, and appends a
-        token of type ``underline`` to ``state``.
+        token of type ``underline`` to ``state``. Nested inline markup
+        such as emphasis, inline code and links is preserved because the
+        span body is re-tokenised through ``inline.render`` on a copied
+        state whose ``src`` is restricted to the captured text. When no
+        closing delimiter is found, the function returns ``None`` so that
+        Mistune backtracks and offers the position to the next inline
+        rule.
 
         Parameters
         ----------
@@ -201,8 +241,9 @@ def plugin_underline(
             contents so that nested emphasis, code, links, etc. are
             preserved inside the underline node.
         m : re.Match[str]
-            Match object produced by the opening ``__(?=[^\\s_])`` pattern;
-            its ``end()`` marks the first character of the span body.
+            Match object produced by the opening ``__(?=[^\\s_])``
+            pattern; its ``end()`` marks the first character of the span
+            body.
         state : mistune.InlineState
             Current inline parsing state. Tokens are appended to this
             state's token list, and ``state.src`` is searched for the
@@ -216,6 +257,23 @@ def plugin_underline(
             lexer should advance. ``None`` is returned when no closing
             delimiter is located, causing Mistune to fall back to the next
             inline rule.
+
+        See Also
+        --------
+        plugin_underline : Outer plugin that registers this handler.
+        mistune.InlineState.copy : Helper used to isolate recursive
+            parsing of the underline span body.
+        mistune.InlineState.append_token : Method used to emit the
+            ``underline`` token to the parser state.
+
+        Examples
+        --------
+        >>> import mistune
+        >>> from mayutils.interfaces.filetypes.markdown import plugin_underline
+        >>> md = mistune.create_markdown(renderer=None, plugins=[plugin_underline])
+        >>> ast = md("plain __bold__ text")
+        >>> any(child["type"] == "underline" for child in ast[0]["children"])
+        True
         """
         pos = m.end()
         m1 = underline_end.search(state.src, pos)
@@ -249,15 +307,18 @@ def plugin_underline(
 def plugin_emoji(
     md: Markdown,
 ) -> None:
-    """Register an inline ``emoji`` rule that expands ``:name:`` shortcodes.
+    """
+    Register an inline ``emoji`` rule that expands ``:name:`` shortcodes.
 
-    The plugin matches lower-case shortcodes of the form ``:name:`` and
-    replaces them with the corresponding Unicode glyph from
-    :data:`EMOJI_MAP`. Shortcodes whose ``name`` is not present in the map
-    are emitted verbatim (including the surrounding colons) so unrelated
-    text such as ``:foo:bar:`` is not silently stripped. The rule is
-    registered before ``emphasis`` so that colon-delimited shortcodes are
-    resolved before emphasis processing could otherwise interfere.
+    Matches lower-case shortcodes of the form ``:name:`` and replaces them
+    with the corresponding Unicode glyph from :data:`EMOJI_MAP`. Shortcodes
+    whose ``name`` is not present in the map are emitted verbatim
+    (including the surrounding colons) so unrelated text such as
+    ``:foo:bar:`` is not silently stripped. The rule is registered before
+    ``emphasis`` so that colon-delimited shortcodes are resolved before
+    emphasis processing could otherwise interfere. Downstream renderers
+    see a plain ``text`` token whose ``raw`` value already contains the
+    substituted character, so no further rendering logic is required.
 
     Parameters
     ----------
@@ -266,10 +327,26 @@ def plugin_emoji(
         calls :meth:`md.inline.register` in-place and does not otherwise
         mutate ``md``.
 
-    Returns
-    -------
-    None
-        The function operates by side effect on ``md``.
+    See Also
+    --------
+    plugin_underline : Sibling inline plugin registered in the same
+        default stack.
+    EMOJI_MAP : Lookup table mapping shortcode names to Unicode glyphs.
+    create_markdown_parser : Factory that wires ``plugin_emoji`` into the
+        default plugin stack.
+    mistune.InlineParser.register : Underlying registration hook invoked
+        by this plugin.
+
+    Examples
+    --------
+    >>> import mistune
+    >>> from mayutils.interfaces.filetypes.markdown import plugin_emoji
+    >>> md = mistune.create_markdown(renderer=None, plugins=[plugin_emoji])
+    >>> ast = md("Rated :star: out of five.")
+    >>> isinstance(ast, list) and ast[0]["type"] == "paragraph"
+    True
+    >>> len(ast[0]["children"]) >= 2
+    True
     """
 
     def parse_emoji(
@@ -277,13 +354,17 @@ def plugin_emoji(
         m: re.Match[str],
         state: InlineState,
     ) -> int | None:
-        """Emit a text token containing the emoji for a ``:name:`` shortcode.
+        """
+        Emit a text token containing the emoji for a ``:name:`` shortcode.
 
         Looks up the captured ``name`` in :data:`EMOJI_MAP` and appends a
         ``text`` token whose ``raw`` value is either the resolved Unicode
         character or, when the name is unknown, the original
         ``:name:`` string so the source is preserved in the rendered
-        output.
+        output. The handler never calls back into the inline parser
+        because the replacement is a literal character or passthrough
+        string; recursive rendering would be wasted work for an atomic
+        token.
 
         Parameters
         ----------
@@ -300,9 +381,28 @@ def plugin_emoji(
 
         Returns
         -------
-        int
+        int or None
             Position in ``state.src`` immediately after the closing colon
             of the shortcode, telling the outer lexer where to resume.
+            Always returns a concrete integer because the match already
+            anchors a valid span, but the optional return type is kept to
+            match Mistune's inline rule protocol.
+
+        See Also
+        --------
+        plugin_emoji : Outer plugin that registers this handler.
+        EMOJI_MAP : Lookup table consulted for each shortcode match.
+        mistune.InlineState.append_token : Method used to emit the text
+            token carrying the substituted glyph.
+
+        Examples
+        --------
+        >>> import mistune
+        >>> from mayutils.interfaces.filetypes.markdown import plugin_emoji
+        >>> md = mistune.create_markdown(renderer=None, plugins=[plugin_emoji])
+        >>> ast = md(":rocket: launched!")
+        >>> isinstance(ast, list) and ast[0]["type"] == "paragraph"
+        True
         """
         pos = m.end()
 
@@ -346,13 +446,16 @@ def create_markdown_parser(
     renderer: None = None,
     plugins: Iterable[str | Plugin] | None = DEFAULT_PLUGINS,
 ) -> Markdown:
-    """Build a :class:`mistune.Markdown` parser with the project defaults.
+    """
+    Build a :class:`mistune.Markdown` parser with the project defaults.
 
     Wraps :func:`mistune.create_markdown` so callers receive a parser that
     already understands the extended markdown dialect used across
-    :mod:`mayutils` — strikethrough, footnotes, GFM task lists, highlight
+    :mod:`mayutils`: strikethrough, footnotes, GFM task lists, highlight
     (``==mark==``), superscript, subscript, underline (``__text__``) and
-    ``:emoji:`` shortcodes.
+    ``:emoji:`` shortcodes. The returned instance is callable: invoking it
+    on a markdown source string produces the renderer's output, which
+    defaults to Mistune's HTML renderer when ``renderer`` is ``None``.
 
     Parameters
     ----------
@@ -375,6 +478,27 @@ def create_markdown_parser(
     mistune.Markdown
         A fully configured parser whose ``__call__`` converts a markdown
         source string into the renderer's output type (HTML by default).
+
+    See Also
+    --------
+    mistune.create_markdown : Underlying factory wrapped by this helper.
+    plugin_underline : Inline plugin included in the default stack.
+    plugin_emoji : Inline plugin included in the default stack.
+    DEFAULT_PLUGINS : Ordered list of plugins installed when ``plugins``
+        is left at its default value.
+
+    Examples
+    --------
+    >>> from mayutils.interfaces.filetypes.markdown import create_markdown_parser
+    >>> md = create_markdown_parser()
+    >>> ast = md("# Title")
+    >>> ast[0]["type"]
+    'heading'
+    >>> ast[0]["attrs"]["level"]
+    1
+    >>> minimal = create_markdown_parser(plugins=[])
+    >>> minimal("plain paragraph")[0]["type"]
+    'paragraph'
     """
     return mistune.create_markdown(
         renderer=renderer,

@@ -13,6 +13,7 @@ dev = [
   "mdformat-mkdocs>=5.2.0b2",
   "mdformat-pyproject>=0.1.1",
   "mypy>=1.18.2",
+  "numpydoc>=1.8",
   "pre-commit>=4.3.0",
   "pytest>=8.4.2",
   "ruff>=0.14.2",
@@ -92,6 +93,7 @@ mathematics = [
 microsoft = [
   "fastexcel>=0.14",
   "openpyxl>=3.1.5",
+  "python-docx>=1.2.0",
   "python-pptx>=1.0.2"
 ]
 notebook = [
@@ -193,6 +195,13 @@ version_files = ["pyproject.toml:^version"]
 
 [tool.mdformat]
 wrap = 1000
+
+[tool.numpydoc_validation]
+checks = [
+  "all",
+  "PR04",
+  "RT03"
+]
 
 [tool.pyright]
 exclude = [

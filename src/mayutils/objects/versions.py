@@ -1,4 +1,5 @@
-"""Semantic version manipulation helpers.
+"""
+Provide semantic version manipulation helpers.
 
 Thin wrapper around :mod:`packaging.version` that centralises the
 release-bump semantics used by ``mayutils``' versioning scripts and any
@@ -6,7 +7,27 @@ caller that needs to advance a ``major.minor.patch`` triple without
 reaching for a regex. The module depends on the optional ``packaging``
 distribution and is guarded by
 :func:`mayutils.core.extras.may_require_extras` so a missing install
-surfaces an actionable hint instead of a bare ``ImportError``.
+surfaces an actionable hint instead of a bare ``ImportError``. PEP 440
+ordering rules govern how the resulting versions compare against
+pre-release or post-release siblings.
+
+See Also
+--------
+packaging.version.Version : PEP 440 compliant version parser and
+    comparator used as the canonical type within this module.
+importlib.metadata.version : Standard library helper that resolves a
+    distribution's installed version string, suitable input for
+    :func:`bump_version_string`.
+bump_version_string : Sibling helper that advances a version by a named
+    release component.
+
+Examples
+--------
+>>> from mayutils.objects.versions import bump_version_string
+>>> str(bump_version_string("1.2.3", bump="patch"))
+'1.2.4'
+>>> str(bump_version_string("1.2.3", bump="minor"))
+'1.3.0'
 """
 
 from mayutils.core.extras import may_require_extras
@@ -24,7 +45,8 @@ def bump_version_string(
     *,
     bump: str,
 ) -> Version:
-    """Advance a semantic version by one release component.
+    """
+    Advance a semantic version by one release component.
 
     Coerces ``version`` to a :class:`packaging.version.Version` (parsing
     a string when needed), then constructs a new ``Version`` whose
@@ -32,18 +54,21 @@ def bump_version_string(
     are reset to zero so ``minor`` and ``major`` bumps produce a clean
     release number rather than carrying stale patch or minor counts
     (e.g. bumping the minor of ``1.2.3`` yields ``1.3.0``, not
-    ``1.3.3``).
+    ``1.3.3``). Any PEP 440 pre-release, post-release or local segment
+    on the input is discarded because the result is always a plain
+    three-component release, which orders strictly after every
+    pre-release of the same release number.
 
     Parameters
     ----------
-    version : str or packaging.version.Version
+    version
         Current release identifier. Strings are parsed via
         :class:`packaging.version.Version`, so any PEP 440 compliant
         form is accepted; a pre-parsed ``Version`` is used directly.
         Only the ``major``, ``minor`` and ``micro`` components are
-        inspected — pre-release, post-release and local segments are
+        inspected and pre-release, post-release and local segments are
         dropped in the returned value.
-    bump : {"major", "minor", "patch"}
+    bump
         Which component to advance. ``"patch"`` increments the micro
         segment only; ``"minor"`` increments the minor segment and
         resets the patch to zero; ``"major"`` increments the major
@@ -51,19 +76,25 @@ def bump_version_string(
 
     Returns
     -------
-    packaging.version.Version
         A freshly constructed ``Version`` representing the bumped
         release, normalised to the three-component ``major.minor.patch``
-        form.
+        form and guaranteed to compare greater than ``version`` under
+        PEP 440 ordering.
 
     Raises
     ------
     ValueError
         If ``bump`` is not one of ``"major"``, ``"minor"`` or
         ``"patch"``, indicating an unsupported release increment.
-    packaging.version.InvalidVersion
-        Propagated from :class:`packaging.version.Version` when a
-        string ``version`` cannot be parsed as PEP 440.
+
+    See Also
+    --------
+    packaging.version.Version : Underlying PEP 440 compliant version
+        type whose ``major``, ``minor`` and ``micro`` attributes drive
+        the bump arithmetic.
+    importlib.metadata.version : Standard library helper that returns
+        the currently installed distribution version string, typical
+        input to this function for release automation.
 
     Examples
     --------
@@ -73,6 +104,8 @@ def bump_version_string(
     '1.3.0'
     >>> str(bump_version_string("1.2.3", bump="major"))
     '2.0.0'
+    >>> str(bump_version_string("2.0.0a1", bump="patch"))
+    '2.0.1'
     """
     if isinstance(version, str):
         version = Version(version)

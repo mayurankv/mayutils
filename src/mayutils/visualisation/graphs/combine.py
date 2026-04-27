@@ -1,10 +1,43 @@
-"""Figure mosaicking utilities for tiling rendered plots into a single image.
+"""
+Mosaic rendered figure exports into a single gridded contact-sheet image.
 
 This module composes multi-page figure artefacts produced elsewhere in the
 visualisation pipeline into a single raster image arranged on a regular
 grid. Individual pages are rasterised with PyMuPDF and assembled with
 Pillow, allowing a collection of standalone exports to be presented as a
 unified contact sheet suitable for reports and slide decks.
+
+See Also
+--------
+mayutils.visualisation.graphs.plotly.charts : Sibling helpers that build
+    plotly ``Plot`` and ``SubPlot`` figures whose exports are typically
+    mosaicked by this module.
+mayutils.visualisation.graphs.matplotlib.templates : Sibling matplotlib
+    template helpers producing figure artefacts compatible with mosaicking.
+plotly.subplots.make_subplots : Alternative route that composes multiple
+    plotly traces into one figure without needing pre-rendered PDFs.
+matplotlib.figure.Figure : Matplotlib figure whose saved PDFs can be fed
+    into :func:`combine_figures` as tile sources.
+
+Examples
+--------
+>>> import tempfile
+>>> from pathlib import Path
+>>> import pymupdf
+>>> from mayutils.visualisation.graphs.combine import combine_figures
+>>> with tempfile.TemporaryDirectory() as _tmp:
+...     _tmp_path = Path(_tmp)
+...     _a = _tmp_path / "a.pdf"
+...     _b = _tmp_path / "b.pdf"
+...     for _p in (_a, _b):
+...         _doc = pymupdf.open()
+...         _ = _doc.new_page(width=72, height=72)
+...         _doc.save(_p)
+...         _doc.close()
+...     _out = _tmp_path / "mosaic.png"
+...     combine_figures(_a, _b, title=_out, cols=2, rows=1)
+...     _out.exists()
+True
 """
 
 from pathlib import Path
@@ -23,44 +56,42 @@ def combine_figures(
     rows: int,
     filetype: str = "pdf",
 ) -> None:
-    """Assemble a collection of figure files into one gridded image export.
+    """
+    Assemble a collection of figure files into one gridded image export.
 
     The first page of each source document is rasterised and pasted onto a
     white canvas whose dimensions are derived from the pixel size of the
     first rasterised page multiplied by the requested grid shape. Files are
-    laid out in row-major order, so the iteration index maps to ``(row,
-    col) = divmod(index, cols)``. The composed canvas is written to disk
-    through :meth:`PIL.Image.save`, with the output format inferred by
-    Pillow from the ``title`` extension.
+    laid out in row-major order, so the iteration index maps to
+    ``(row, col) = divmod(index, cols)``. The composed canvas is written to
+    disk through :meth:`PIL.Image.save`, with the output format inferred by
+    Pillow from the ``title`` extension. All tiles share the pixel
+    dimensions of the first rasterised page, so pages with differing native
+    sizes will be placed without rescaling and may not fill their cell
+    exactly.
 
     Parameters
     ----------
-    files : pathlib.Path | str
+    *files
         Ordered filesystem paths of the figures to mosaic. The ordering
         drives the row-major placement on the canvas, and the first entry
         additionally dictates the per-cell pixel dimensions used to size
         the output canvas.
-    title : pathlib.Path | str
+    title
         Destination path (including extension) where the combined image is
         persisted. The extension governs the serialisation format chosen
         by Pillow.
-    cols : int
+    cols
         Number of columns in the target grid. Together with ``rows`` this
         controls both the canvas width and the placement coordinates of
         each tile.
-    rows : int
+    rows
         Number of rows in the target grid. Controls the canvas height and,
         together with ``cols``, the capacity of the mosaic.
-    filetype : str, default "pdf"
+    filetype
         Source document format. Selects the rasterisation path; only
         ``"pdf"`` is currently wired up, with other values reserved for
         future backends.
-
-    Returns
-    -------
-    None
-        The function operates through the side effect of writing the
-        combined image to ``title`` and does not return a value.
 
     Raises
     ------
@@ -68,11 +99,46 @@ def combine_figures(
         Raised when ``filetype`` is anything other than ``"pdf"``, since
         no alternative rasterisation backend has been implemented.
 
+    See Also
+    --------
+    plotly.subplots.make_subplots : Build a plotly figure with an arranged
+        grid of subplots sharing a common layout rather than combining
+        pre-rendered exports.
+    matplotlib.figure.Figure : Matplotlib figure container whose saved
+        output files can be fed into this mosaicking routine.
+    mayutils.visualisation.graphs.plotly.charts : Sibling helpers that
+        produce the individual plotly figures typically exported to PDF
+        before being combined here.
+    mayutils.visualisation.graphs.plotly.utilities : Sibling utilities for
+        styling and exporting plotly figures ahead of mosaicking.
+
     Notes
     -----
     All tiles share the pixel dimensions of the first rasterised page;
     pages with differing native sizes will be placed without rescaling
     and may therefore not fill their cell exactly.
+
+    Examples
+    --------
+    Combine four PDF chart exports into a 2x2 contact sheet saved as a
+    single PNG image:
+
+    >>> import tempfile
+    >>> from pathlib import Path
+    >>> import pymupdf
+    >>> from mayutils.visualisation.graphs.combine import combine_figures
+    >>> with tempfile.TemporaryDirectory() as _tmp:
+    ...     _tmp_path = Path(_tmp)
+    ...     _files = [_tmp_path / f"chart_{_i}.pdf" for _i in range(4)]
+    ...     for _p in _files:
+    ...         _doc = pymupdf.open()
+    ...         _ = _doc.new_page(width=72, height=72)
+    ...         _doc.save(_p)
+    ...         _doc.close()
+    ...     _out = _tmp_path / "dashboard.png"
+    ...     combine_figures(*_files, title=_out, cols=2, rows=2)
+    ...     _out.exists()
+    True
     """
     if filetype != "pdf":
         msg = "Other conversions are not supported yet"

@@ -1,4 +1,5 @@
-"""Human-readable numeric formatting helpers.
+"""
+Provide human-readable numeric formatting helpers.
 
 This module provides small, dependency-free routines for turning raw
 numeric values into display-friendly strings. :func:`prettify` collapses
@@ -7,6 +8,13 @@ suitable for chart annotations, table cells, and log messages where the
 full floating-point representation would be unwieldy. :func:`ordinal`
 attaches the correct English ordinal suffix (``st``, ``nd``, ``rd``,
 ``th``) to an integer, honouring the irregular behaviour of the teens.
+
+See Also
+--------
+prettify : Render a number as a compact magnitude-suffixed string.
+ordinal : Attach the English ordinal suffix to an integer.
+format : Built-in Python string formatting mini-language.
+decimal.Decimal : Fixed-point arithmetic type for exact numeric rendering.
 
 Examples
 --------
@@ -17,7 +25,7 @@ Examples
 '1.2M'
 >>> ordinal(21)
 '21st'
-"""
+"""  # noqa: RUF002
 
 
 def prettify(
@@ -27,7 +35,8 @@ def prettify(
     sf: int = 3,
     si_units: bool = False,
 ) -> str:
-    """Render a number as a compact magnitude-suffixed string.
+    """
+    Render a number as a compact magnitude-suffixed string.
 
     The input is first rounded to ``sf`` significant figures, then
     repeatedly divided (or multiplied) by one thousand until its
@@ -39,15 +48,15 @@ def prettify(
 
     Parameters
     ----------
-    n : float
+    n
         Positional-only numeric value to render. The sign is preserved
         in the output, and zero short-circuits to the literal ``"0"``
         with no suffix applied.
-    sf : int, optional
+    sf
         Number of significant figures retained before scaling. Larger
         values expose more precision in the mantissa at the cost of a
         longer string; defaults to ``3``.
-    si_units : bool, optional
+    si_units
         When ``True``, the large-magnitude suffixes follow strict SI
         conventions (``G``, ``P``, ``E``, ``Z``, ``Y``). When ``False``
         (the default), colloquial finance-style suffixes are emitted
@@ -55,7 +64,6 @@ def prettify(
 
     Returns
     -------
-    str
         The compact rendering of ``n``, consisting of the scaled
         mantissa immediately followed by the selected magnitude suffix
         (empty for values already in ``[1, 1000)``).
@@ -67,6 +75,14 @@ def prettify(
         roughly ``10**36``) or small enough (below roughly ``10**-27``)
         that no suffix entry exists in the lookup table.
 
+    See Also
+    --------
+    ordinal : Attach the English ordinal suffix to an integer.
+    format : Built-in Python string formatting mini-language used for
+        the ``:.{sf}g`` and ``:f`` conversions within the routine.
+    decimal.Decimal : Fixed-point arithmetic type preferred when the
+        rounding behaviour of binary floats is unacceptable.
+
     Examples
     --------
     >>> prettify(0)
@@ -76,8 +92,8 @@ def prettify(
     >>> prettify(2_500_000)
     '2.5M'
     >>> prettify(0.0001)
-    '100µ'
-    """
+    '0.1m'
+    """  # noqa: RUF002
     _pos_magnitude = 1e3
     _neg_magnitude = 1e-3
 
@@ -116,7 +132,7 @@ def prettify(
             suffix = [
                 "",
                 "m",
-                "µ",
+                "µ",  # noqa: RUF001
                 "n",
                 "p",
                 "f",
@@ -137,7 +153,8 @@ def ordinal(
     n: int,
     /,
 ) -> str:
-    """Attach the English ordinal suffix to an integer.
+    """
+    Attach the English ordinal suffix to an integer.
 
     Selects the suffix from the standard English scheme: ``st`` for
     numbers ending in 1, ``nd`` for 2, ``rd`` for 3, and ``th``
@@ -147,7 +164,7 @@ def ordinal(
 
     Parameters
     ----------
-    n : int
+    n
         Positional-only integer whose decimal representation is to be
         suffixed. Negative and zero values are accepted; the suffix is
         chosen from the final two digits of ``n`` using the same rules
@@ -155,9 +172,16 @@ def ordinal(
 
     Returns
     -------
-    str
         The decimal form of ``n`` concatenated with the two-character
         ordinal suffix appropriate for its final digits.
+
+    See Also
+    --------
+    prettify : Render a number as a compact magnitude-suffixed string.
+    format : Built-in Python string formatting mini-language used to
+        embed ``n`` in the returned f-string.
+    decimal.Decimal : Fixed-point arithmetic type available when the
+        integer-only interface here is too restrictive.
 
     Notes
     -----

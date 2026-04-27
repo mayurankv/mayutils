@@ -1,12 +1,33 @@
-"""Datetime primitives, timezone utilities, intervals, and time-travel helpers.
+"""
+Expose datetime primitives, timezone utilities, intervals, and travellers.
 
-This package aggregates the ``pendulum``-backed ``DateTime``, ``Date``,
-``Time``, ``Interval`` and ``Traveller`` wrappers defined across the
-sibling submodules together with a curated set of pendulum constants,
-formatters, and timezone helpers. It also re-exports the corresponding
-standard-library ``datetime`` types under ``Base*`` aliases so downstream
+Aggregate the ``pendulum``-backed :class:`DateTime`, :class:`Date`,
+:class:`Time`, :class:`Interval`, and :class:`Traveller` wrappers defined
+across the sibling submodules together with a curated set of pendulum
+constants, formatters, and timezone helpers. Re-export the corresponding
+standard-library :mod:`datetime` types under ``Base*`` aliases so downstream
 code can access both the enriched and the native implementations from a
-single import surface.
+single import surface. The namespace is designed to serve as the canonical
+temporal toolkit for the rest of :mod:`mayutils`.
+
+See Also
+--------
+pendulum : Upstream library providing timezone-aware datetime primitives.
+datetime : Standard-library module exposed through ``Base*`` aliases.
+mayutils.objects.datetime.datetime : Enriched ``DateTime``/``Date``/``Time``.
+mayutils.objects.datetime.interval : :class:`Interval` and related helpers.
+mayutils.objects.datetime.timezone : :class:`Tz` wrapper and :data:`UTC`.
+mayutils.objects.datetime.traveller : :class:`Traveller` time-travel helper.
+mayutils.objects.datetime.constants : Shared formatters and duration tables.
+
+Examples
+--------
+>>> from mayutils.objects.datetime import DateTime, UTC, Interval
+>>> start = DateTime(2026, 4, 22, tzinfo=UTC)
+>>> end = start.add(days=7)
+>>> span = Interval(start=start, end=end)
+>>> span.in_days()
+7
 """
 
 from __future__ import annotations

@@ -1,27 +1,36 @@
-"""Resolve which optional extra provides a given optional dependency.
+"""
+Resolve which optional extra provides a given optional dependency.
 
 This module inspects the ``mayutils`` distribution metadata at runtime to
 map importable module names back to the ``[project.optional-dependencies]``
 extras that declare them, and exposes context managers that convert bare
-:class:`ImportError` failures into actionable ``uv add``/``pip install``
+:class:`ImportError` failures into actionable ``uv add`` / ``pip install``
 hints. Mapping data is derived dynamically from the installed package
 metadata: extras-to-distributions comes from parsing the ``Requires-Dist``
 headers for ``extra == '<name>'`` markers, while distribution-to-modules
 is read from the dist-info ``top_level.txt`` when the distribution is
-installed, falling back to ``dist_name.replace("-", "_")`` when it is not
-(so hints for distributions with non-obvious import names, such as
-``pillow`` -> ``PIL`` or ``scikit-learn`` -> ``sklearn``, may be generic
-when the dist is absent). The :func:`may_require_extras` context manager
-is the primary entry point for submodules with heavy top-of-file imports
-because it auto-resolves the matching extra(s) from ``pyproject.toml`` at
-``ImportError`` time; :func:`requires_extras` remains available when a
-specific hint must be forced.
+installed, falling back to ``dist_name.replace("-", "_")`` when it is not.
+The :func:`may_require_extras` context manager is the primary entry point
+for submodules with heavy top-of-file imports because it auto-resolves
+the matching extras at ``ImportError`` time, while :func:`requires_extras`
+remains available when a specific hint must be forced.
+
+See Also
+--------
+importlib.metadata : Standard-library access to installed distribution
+    metadata used to read ``Requires-Dist`` headers and ``top_level.txt``.
+packaging.requirements.Requirement : PEP 508 requirement parser whose
+    grammar describes the ``Requires-Dist`` strings this module handles.
+mayutils.__init__.setup : Package bootstrap that pairs with these
+    helpers to give optional imports clear failure modes.
 
 Examples
 --------
 >>> from mayutils.core.extras import may_require_extras
 >>> with may_require_extras():
-...     import plotly.graph_objects as go  # doctest: +SKIP
+...     import mayutils
+>>> mayutils.__name__
+'mayutils'
 """
 
 from __future__ import annotations
@@ -41,24 +50,48 @@ def normalise_dist_name(
     dist: str,
     /,
 ) -> str:
-    """Canonicalise a PyPI distribution name for comparison.
+    """
+    Canonicalise a PyPI distribution name for comparison.
 
     Applies PEP 503-style lower-casing, whitespace stripping, and
     underscore-to-hyphen conversion so that distribution names can be
     matched irrespective of how they appear in ``Requires-Dist`` metadata
-    or user input.
+    or user input. The canonical form is what
+    :func:`importlib.metadata.distribution` expects and what
+    :class:`packaging.requirements.Requirement` emits, so this keeps the
+    lookup layer consistent across heterogeneous data sources.
 
     Parameters
     ----------
-    dist : str
+    dist
         Raw distribution name as it appears in packaging metadata or a
         user-supplied string (for example ``"Scikit_Learn"``).
 
     Returns
     -------
-    str
         The canonical, lower-case, hyphen-separated form suitable for
         equality comparison against other normalised distribution names.
+
+    See Also
+    --------
+    modules_for_distribution : Consumes the canonical form to resolve
+        importable module names from dist-info metadata.
+    parse_requires_dist_line : Upstream parser that yields raw
+        distribution names requiring normalisation.
+    importlib.metadata : Library whose ``distribution`` and ``metadata``
+        helpers assume PEP 503-normalised project names.
+    packaging.requirements.Requirement : Reference parser that applies
+        the same canonicalisation rules to ``Requires-Dist`` strings.
+    mayutils.__init__.setup : Entry point that invokes these utilities
+        when optional dependencies are resolved.
+
+    Examples
+    --------
+    >>> from mayutils.core.extras import normalise_dist_name
+    >>> normalise_dist_name(" Scikit_Learn ")
+    'scikit-learn'
+    >>> normalise_dist_name("Plotly")
+    'plotly'
     """
     return dist.strip().lower().replace("_", "-")
 
@@ -67,30 +100,54 @@ def modules_for_distribution(
     dist: str,
     /,
 ) -> tuple[str, ...]:
-    """Return the top-level importable modules shipped by ``dist``.
+    """
+    Return the top-level importable modules shipped by ``dist``.
 
     Reads ``top_level.txt`` from the installed distribution's dist-info
     metadata when available, which is the authoritative source of the
     import names a distribution exposes. If the distribution is not
     installed or has no ``top_level.txt``, a single-element tuple is
-    returned using the hyphen-to-underscore fallback — this is a best
-    effort that is correct for most PyPI packages but can miss cases
-    where the import name differs from the distribution name (e.g.
-    ``pillow`` -> ``PIL``).
+    returned using the hyphen-to-underscore fallback. This best-effort
+    fallback is correct for most PyPI packages but can miss cases where
+    the import name differs from the distribution name (for example
+    ``pillow`` exposes ``PIL`` and ``scikit-learn`` exposes ``sklearn``).
 
     Parameters
     ----------
-    dist : str
+    dist
         PyPI distribution name (the string that appears on the left-hand
         side of a ``Requires-Dist`` entry) whose import-time module
         names should be resolved.
 
     Returns
     -------
-    tuple[str, ...]
         Top-level module names that ``import`` statements would target
         when using the distribution. Always non-empty; contains the
         fallback guess when metadata cannot be read.
+
+    See Also
+    --------
+    normalise_dist_name : Applied to build the fallback module name when
+        ``top_level.txt`` is unavailable.
+    load_extras_map : Consumer that expands each requirement into the
+        set of modules this helper returns.
+    importlib.metadata : Source of ``distribution`` and
+        ``PackageNotFoundError`` used to locate dist-info metadata.
+    packaging.requirements.Requirement : Describes the distribution
+        names passed in by upstream parsing.
+    mayutils.__init__.setup : Bootstrap layer that depends on these
+        module lookups to give actionable hints.
+
+    Examples
+    --------
+    >>> from mayutils.core.extras import modules_for_distribution
+    >>> modules = modules_for_distribution("mayutils")
+    >>> isinstance(modules, tuple)
+    True
+    >>> len(modules) >= 1
+    True
+    >>> "mayutils" in modules
+    True
     """
     try:
         distribution = metadata.distribution(distribution_name=dist)
@@ -110,30 +167,53 @@ def parse_requires_dist_line(
     line: str,
     /,
 ) -> tuple[str, str | None]:
-    """Split a ``Requires-Dist`` metadata line into its component parts.
+    """
+    Split a ``Requires-Dist`` metadata line into its component parts.
 
     Parses a single PEP 508 requirement string as it appears in the
     ``Requires-Dist`` headers of ``METADATA``, isolating the bare
     distribution name from any version specifiers, extras brackets, or
-    environment markers, and identifying the ``extra == '<name>'``
-    marker clause (if any) that associates the requirement with an
-    optional-dependency group.
+    environment markers. The ``extra == '<name>'`` marker clause, if
+    present, is extracted so the caller can associate the requirement
+    with an optional-dependency group. Other marker clauses such as
+    ``python_version`` or ``sys_platform`` are ignored for this purpose
+    because they do not partition requirements by extras.
 
     Parameters
     ----------
-    line : str
+    line
         Full ``Requires-Dist`` value, including any version specifiers
         and PEP 508 environment markers after a semicolon (for example
         ``"plotly>=5.0; extra == 'plotting'"``).
 
     Returns
     -------
-    tuple[str, str | None]
-        A two-tuple whose first element is the canonicalised-by-slicing
-        distribution name with all specifier characters stripped, and
-        whose second element is the name of the extras group the
-        requirement belongs to, or ``None`` if the requirement is
-        unconditional.
+        A two-tuple whose first element is the distribution name with
+        all specifier characters stripped, and whose second element is
+        the name of the extras group the requirement belongs to, or
+        ``None`` if the requirement is unconditional.
+
+    See Also
+    --------
+    load_extras_map : Primary consumer that feeds each parsed line into
+        the module-to-extras lookup table.
+    normalise_dist_name : Used downstream to canonicalise the extracted
+        distribution name.
+    importlib.metadata : Provides the ``Requires-Dist`` values this
+        function parses.
+    packaging.requirements.Requirement : Reference parser for PEP 508
+        requirement strings; used here in a lightweight form to avoid
+        a hard dependency.
+    mayutils.__init__.setup : Consumer that relies on the parsed
+        extras to surface install hints.
+
+    Examples
+    --------
+    >>> from mayutils.core.extras import parse_requires_dist_line
+    >>> parse_requires_dist_line("plotly>=5.0; extra == 'plotting'")
+    ('plotly', 'plotting')
+    >>> parse_requires_dist_line("numpy>=1.24")
+    ('numpy', None)
     """
     dep, _, markers = line.partition(";")
     dist_name = (
@@ -157,24 +237,48 @@ def parse_requires_dist_line(
 
 @lru_cache(maxsize=1)
 def load_extras_map() -> dict[str, frozenset[str]]:
-    """Build the module-to-extras lookup table from installed metadata.
+    """
+    Build the module-to-extras lookup table from installed metadata.
 
     Iterates the ``Requires-Dist`` headers of the ``mayutils``
     distribution, keeps only entries guarded by an ``extra == '<name>'``
     marker, and expands each distribution into the top-level module
     names it exposes. The resulting mapping is the authoritative
     runtime view of which optional-dependency group(s) satisfy any
-    given import. The result is memoised via :func:`functools.lru_cache`
-    because the underlying metadata does not change during a process
-    lifetime and parsing is non-trivial.
+    given import. The result is memoised via
+    :func:`functools.lru_cache` because the underlying metadata does
+    not change during a process lifetime and parsing is non-trivial.
 
     Returns
     -------
-    dict[str, frozenset[str]]
         Mapping from top-level module name to the set of extras whose
         requirement entries provide that module. Empty when the
-        ``mayutils`` distribution itself cannot be located (e.g. during
-        unusual editable-install scenarios).
+        ``mayutils`` distribution itself cannot be located (for example
+        during unusual editable-install scenarios).
+
+    See Also
+    --------
+    parse_requires_dist_line : Parses the individual requirement lines
+        consumed here.
+    modules_for_distribution : Expands each requirement's distribution
+        name into importable module names.
+    extras_for_module : Primary consumer that queries this table at
+        ``ImportError`` time.
+    importlib.metadata : Provides the ``Requires-Dist`` headers this
+        function iterates.
+    packaging.requirements.Requirement : Describes the PEP 508 grammar
+        of the strings processed here.
+    mayutils.__init__.setup : Relies on the populated map to surface
+        install hints to end users.
+
+    Examples
+    --------
+    >>> from mayutils.core.extras import load_extras_map
+    >>> mapping = load_extras_map()
+    >>> isinstance(mapping, dict)
+    True
+    >>> len(mapping) > 0
+    True
     """
     try:
         meta = metadata.metadata(distribution_name=DISTRIBUTION_NAME)
@@ -198,29 +302,48 @@ def extras_for_module(
     module_name: str,
     /,
 ) -> frozenset[str]:
-    """Resolve the optional-dependency extras that supply a given import.
+    """
+    Resolve the optional-dependency extras that supply a given import.
 
-    Walks the dotted components of ``module_name`` from the most specific
-    prefix to the least specific, returning the first match found in the
-    extras map. This prefix walk means a failed ``import
-    plotly.graph_objects`` still resolves to the extras that ship
-    ``plotly``, even though only the top-level package appears in
-    ``top_level.txt``.
+    Walks the dotted components of ``module_name`` from the most
+    specific prefix to the least specific, returning the first match
+    found in the extras map. This prefix walk means a failed
+    ``import plotly.graph_objects`` still resolves to the extras that
+    ship ``plotly``, even though only the top-level package appears in
+    ``top_level.txt``. Returning an empty frozenset signals that no
+    declared extra ships the module, in which case callers should fall
+    back to a generic "not installed" message.
 
     Parameters
     ----------
-    module_name : str
+    module_name
         Dotted import path of the module whose provenance is being
         queried (for example ``"plotly.graph_objects"``). The exact
         string as reported by :attr:`ImportError.name` is suitable.
 
     Returns
     -------
-    frozenset[str]
         Names of the extras groups whose requirements include a
         distribution exposing ``module_name`` (or any ancestor dotted
-        prefix). Empty when no declared extra ships the module, in
-        which case callers should fall back to a generic message.
+        prefix). Empty when no declared extra ships the module.
+
+    See Also
+    --------
+    load_extras_map : Source of the underlying lookup table.
+    format_missing_extra_hint : Primary consumer that formats the
+        extras returned here into a user-facing message.
+    importlib.metadata : Ultimate source of the data used to build the
+        extras map.
+    packaging.requirements.Requirement : Describes the PEP 508 grammar
+        of the underlying metadata.
+    mayutils.__init__.setup : Downstream consumer that relies on these
+        lookups to surface install hints.
+
+    Examples
+    --------
+    >>> from mayutils.core.extras import extras_for_module
+    >>> isinstance(extras_for_module("plotly.graph_objects"), frozenset)
+    True
     """
     mapping = load_extras_map()
     parts = module_name.split(".")
@@ -237,22 +360,25 @@ def format_missing_extra_hint(
     *,
     extras: tuple[str, ...] | None = None,
 ) -> str:
-    """Build a human-readable install hint for a missing optional dependency.
+    """
+    Build a human-readable install hint for a missing optional dependency.
 
     Produces the diagnostic string appended to :class:`ImportError`
     messages raised inside :func:`requires_extras` and
     :func:`may_require_extras`. The wording changes depending on whether
     a single extra, multiple extras, or no extras satisfy the failing
     import, so that users see an actionable command wherever possible.
+    Keeping this formatting in one place ensures both context managers
+    and any future callers emit identical guidance.
 
     Parameters
     ----------
-    module_name : str
+    module_name
         Dotted import path that failed to resolve, typically sourced
         from :attr:`ImportError.name`. Used both in the rendered message
         and as the lookup key against the extras map when ``extras`` is
         omitted.
-    extras : tuple[str, ...] | None, optional
+    extras
         Explicit override of the extras groups to suggest, bypassing the
         automatic lookup. Supply this when a submodule is known to
         depend on multiple extras simultaneously or when the automatic
@@ -262,11 +388,35 @@ def format_missing_extra_hint(
 
     Returns
     -------
-    str
-        A ready-to-display diagnostic ending in a ``uv add`` / ``pip
-        install`` suggestion naming the relevant extras, or a generic
-        "not installed" fallback when no extra is known to ship the
-        module.
+        A ready-to-display diagnostic ending in a ``uv add`` /
+        ``pip install`` suggestion naming the relevant extras, or a
+        generic "not installed" fallback when no extra is known to ship
+        the module.
+
+    See Also
+    --------
+    extras_for_module : Consulted to auto-resolve extras when none are
+        supplied explicitly.
+    requires_extras : Context manager that emits this hint on failure
+        with a caller-provided extras list.
+    may_require_extras : Context manager that emits this hint on
+        failure using the auto-resolved extras.
+    importlib.metadata : Foundation of the extras map this helper
+        ultimately reads from.
+    packaging.requirements.Requirement : PEP 508 grammar underlying the
+        extras-to-distribution resolution.
+    mayutils.__init__.setup : Consumer that relies on the resulting
+        message to guide installation.
+
+    Examples
+    --------
+    >>> from mayutils.core.extras import format_missing_extra_hint
+    >>> hint = format_missing_extra_hint(
+    ...     "plotly.graph_objects",
+    ...     extras=("plotting",),
+    ... )
+    >>> "mayutils[plotting]" in hint
+    True
     """
     hint_extras = tuple(sorted(extras)) if extras else tuple(sorted(extras_for_module(module_name)))
     if not hint_extras:
@@ -289,20 +439,21 @@ def format_missing_extra_hint(
 def requires_extras(
     *extras: str,
 ) -> Iterator[None]:
-    """Re-raise any :class:`ImportError` with an explicit install hint.
+    """
+    Re-raise any :class:`ImportError` with an explicit install hint.
 
     Context manager intended to wrap the optional-dependency imports at
     the top of a submodule. When an :class:`ImportError` escapes the
     ``with`` block, the original exception is chained and a new
     :class:`ImportError` is raised whose message includes an install
     suggestion naming the extras passed as arguments. Use this variant
-    when the caller needs to force a specific hint — for example when a
+    when the caller needs to force a specific hint, for example when a
     namespaced import is not present in the extras map or when multiple
     extras must be installed together.
 
     Parameters
     ----------
-    *extras : str
+    *extras
         Names of extras (groups defined in
         ``[project.optional-dependencies]`` of ``pyproject.toml``) that
         together satisfy the wrapped imports. When empty, the hint is
@@ -311,7 +462,6 @@ def requires_extras(
 
     Yields
     ------
-    None
         Control is yielded once, during which the guarded imports
         execute.
 
@@ -322,11 +472,33 @@ def requires_extras(
         appended to the message so it surfaces in tracebacks and
         REPL output.
 
+    See Also
+    --------
+    may_require_extras : Zero-argument variant that derives the hint
+        automatically from ``pyproject.toml``.
+    format_missing_extra_hint : Formats the hint appended to the
+        re-raised exception.
+    extras_for_module : Consulted when ``extras`` is empty to match the
+        behaviour of :func:`may_require_extras`.
+    importlib.metadata : Source of the metadata backing the hint.
+    packaging.requirements.Requirement : Describes the PEP 508 grammar
+        underlying the extras resolution.
+    mayutils.__init__.setup : Downstream consumer that relies on this
+        guard to turn silent import failures into actionable messages.
+
     Examples
     --------
     >>> from mayutils.core.extras import requires_extras
     >>> with requires_extras("plotting"):
-    ...     import plotly  # doctest: +SKIP
+    ...     import mayutils
+    >>> mayutils.__name__
+    'mayutils'
+    >>> try:
+    ...     with requires_extras("plotting"):
+    ...         import definitely_not_a_real_module_xyz
+    ... except ImportError as err:
+    ...     "mayutils[plotting]" in str(err)
+    True
     """
     try:
         yield
@@ -345,7 +517,8 @@ def requires_extras(
 
 @contextlib.contextmanager
 def may_require_extras() -> Iterator[None]:
-    """Re-raise any :class:`ImportError` with an auto-resolved install hint.
+    """
+    Re-raise any :class:`ImportError` with an auto-resolved install hint.
 
     Behaves like :func:`requires_extras` but takes no arguments: the
     failing import's module name is looked up against the extras map
@@ -358,22 +531,34 @@ def may_require_extras() -> Iterator[None]:
 
     Yields
     ------
-    None
         Control is yielded once, during which the guarded imports
         execute.
 
-    Raises
-    ------
-    ImportError
-        Chained from the original import failure, with the
-        automatically resolved install hint appended to the message so
-        it surfaces in tracebacks.
+    See Also
+    --------
+    requires_extras : Variant that accepts an explicit extras list when
+        automatic resolution is insufficient.
+    extras_for_module : Performs the auto-resolution consulted here.
+    format_missing_extra_hint : Formats the appended diagnostic.
+    importlib.metadata : Source of the metadata backing the hint.
+    packaging.requirements.Requirement : Describes the PEP 508 grammar
+        underlying the extras resolution.
+    mayutils.__init__.setup : Downstream consumer that wraps heavy
+        top-of-file imports with this guard.
 
     Examples
     --------
     >>> from mayutils.core.extras import may_require_extras
     >>> with may_require_extras():
-    ...     import plotly  # doctest: +SKIP
+    ...     import mayutils
+    >>> mayutils.__name__
+    'mayutils'
+    >>> try:
+    ...     with may_require_extras():
+    ...         import definitely_not_a_real_module_xyz
+    ... except ImportError as err:
+    ...     "not installed" in str(err)
+    True
     """
     with requires_extras():
         yield

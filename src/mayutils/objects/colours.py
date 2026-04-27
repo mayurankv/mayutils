@@ -1,4 +1,5 @@
-"""Colour primitives, named palettes, and interoperability helpers.
+"""
+Provide colour primitives, named palettes, and interoperability helpers.
 
 This module exposes a :class:`Colour` dataclass that stores RGBA channel
 values and provides parsing from and serialisation to the most common
@@ -12,6 +13,20 @@ plotly-compatible position/colour pairs for continuous and diverging
 scales, and ``OPACITIES`` lists standard alpha tiers. The helper
 :func:`hex_to_rgba` is retained for lightweight conversion without
 constructing a :class:`Colour` instance.
+
+See Also
+--------
+matplotlib.colors : General matplotlib colour conversion utilities.
+plotly.colors : Plotly palette and colourscale primitives.
+Colour : Core RGBA wrapper defined in this module.
+hex_to_rgba : Lightweight hex-to-rgba conversion helper.
+
+Examples
+--------
+>>> Colour.parse("#ff0000").to_str(method="hex")
+'#ff0000'
+>>> hex_to_rgba("#336699", alpha=0.5)
+'rgba(51, 102, 153, 0.5)'
 """
 
 from colorsys import rgb_to_hls, rgb_to_hsv
@@ -100,30 +115,35 @@ OPACITIES = {
     "quaternary": 0.3,
 }
 
+TRANSPARENT_RGBA = "rgba(0,0,0,0)"
+
 
 @dataclass
 class Colour:
-    """Mutable RGBA colour with parsing, conversion, and rich display helpers.
+    """
+    Model a mutable RGBA colour with parsing, conversion, and display helpers.
 
     The instance stores the three 8-bit colour channels alongside a
     floating-point alpha channel and validates their ranges at
     construction time. Instances act as the canonical bridge between
     string-based colour encodings (hex, CSS functional, named CSS) and
     the numeric representations required by plotly, matplotlib and
-    ``python-pptx``.
+    ``python-pptx``. Conversion methods cover HSV, HLS, CMYK and BT.601
+    luminance; :meth:`blend` performs source-over alpha compositing so
+    transparent colours can be flattened against an opaque backdrop.
 
-    Parameters
+    Attributes
     ----------
-    r : float
+    r
         Red intensity on the ``[0, 255]`` scale. Values nearer ``255``
         push the output toward pure red.
-    g : float
+    g
         Green intensity on the ``[0, 255]`` scale. Values nearer ``255``
         push the output toward pure green.
-    b : float
+    b
         Blue intensity on the ``[0, 255]`` scale. Values nearer ``255``
         push the output toward pure blue.
-    a : float, default 1.0
+    a
         Alpha (opacity) on the ``[0, 1]`` scale, where ``0`` is fully
         transparent and ``1`` is fully opaque. Controls how the colour
         composites over a background in :meth:`blend` and in any
@@ -135,10 +155,18 @@ class Colour:
         If any of ``r``, ``g``, ``b`` is outside ``[0, 255]`` or ``a``
         is outside ``[0, 1]``.
 
+    See Also
+    --------
+    matplotlib.colors.to_rgba : Parallel matplotlib parsing helper.
+    plotly.colors : Plotly palette and colourscale primitives.
+    hex_to_rgba : Functional hex-to-rgba string conversion.
+
     Examples
     --------
     >>> Colour.parse("rgba(255, 0, 0, 0.5)").to_str()
     'rgba(255, 0, 0, 0.5)'
+    >>> Colour(r=0, g=128, b=255).to_str(method="hex")
+    '#0080ff'
     """
 
     r: float
@@ -150,36 +178,63 @@ class Colour:
     def css_map(
         self,
     ) -> dict[str, str]:
-        """Lookup from lower-case hex string to the matching CSS colour name.
+        """
+        Expose the hex-to-CSS-name lookup used for named-colour serialisation.
 
         The mapping is derived once from :data:`PIL.ImageColor.colormap`
         by inverting it so that ``to_str(method="css")`` can resolve a
-        canonical CSS name for a given hex value.
+        canonical CSS name for a given hex value. The inversion keeps
+        only entries whose value is a string, discarding any numeric
+        tuple aliases that PIL ships alongside the CSS names.
 
         Returns
         -------
-        dict[str, str]
             Hex strings in the form ``"#rrggbb"`` mapped to their CSS
             name such as ``"red"``. Only entries whose underlying value
             is a string (i.e. a real hex colour) are included.
+
+        See Also
+        --------
+        matplotlib.colors.CSS4_COLORS : Comparable named-colour mapping.
+        PIL.ImageColor.colormap : Source of the inverted mapping.
+        Colour.to_str : Consumer of the lookup in ``method="css"`` mode.
+
+        Examples
+        --------
+        >>> "#ff0000" in Colour.css_map
+        True
         """
         return reverse_colourmap
 
     def __post_init__(
         self,
     ) -> None:
-        """Validate channel ranges immediately after dataclass construction.
+        """
+        Validate channel ranges immediately after dataclass construction.
 
         Runs automatically as part of the dataclass-generated
         ``__init__`` and ensures that no instance can be created with
         out-of-range values that would silently produce invalid
-        downstream colour strings.
+        downstream colour strings. Keeping the check at construction
+        time means later conversions can assume well-formed 8-bit
+        channel values and a normalised alpha.
 
         Raises
         ------
         ValueError
             If ``r``, ``g`` or ``b`` lies outside ``[0, 255]``, or if
             ``a`` lies outside ``[0, 1]``.
+
+        See Also
+        --------
+        matplotlib.colors.to_rgba : Alternative validation pathway.
+        Colour : Class on which this hook runs.
+        Colour.set_opacity : Runs the alpha check after construction.
+
+        Examples
+        --------
+        >>> Colour(r=10, g=20, b=30)  # triggers post-init validation
+        Colour(r=10, g=20, b=30, a=1.0)
         """
         if not (0 <= self.r <= 256 - 1):
             msg = f"r out of range [0,255]: {self.r}"
@@ -197,18 +252,31 @@ class Colour:
     def round(
         self,
     ) -> Self:
-        """Round each channel in place to the nearest integer.
+        """
+        Round each channel in place to the nearest integer.
 
         Useful after arithmetic operations such as :meth:`blend` that
         can produce fractional channel values which are not meaningful
-        for 8-bit hex serialisation.
+        for 8-bit hex serialisation. The method mutates the instance
+        and returns ``self`` so callers can chain it with builders such
+        as :meth:`set_opacity` or conversions like :meth:`to_str`.
 
         Returns
         -------
-        Colour
             The same instance (``self``) with ``r``, ``g``, ``b`` and
             ``a`` replaced by their rounded equivalents, enabling
             method chaining.
+
+        See Also
+        --------
+        Colour.blend : Produces the fractional values this method tidies.
+        Colour.set_opacity : Sibling mutator returning ``self``.
+        matplotlib.colors.to_hex : Related quantisation pathway.
+
+        Examples
+        --------
+        >>> Colour(r=128.7, g=64.2, b=32.9).round().values()[:3]
+        (129, 64, 33)
         """
         self.r = round(number=self.r)
         self.g = round(number=self.g)
@@ -220,17 +288,31 @@ class Colour:
     def values(
         self,
     ) -> tuple[float, float, float, float]:
-        """Expose the four channels as a plain tuple.
+        """
+        Expose the four channels as a plain tuple.
 
         Provides positional access to the channel values for callers
         that want to unpack or iterate over them without touching
-        dataclass attributes.
+        dataclass attributes. Internal conversions such as
+        :meth:`to_hsv`, :meth:`to_hls` and :meth:`to_cmyk` rely on this
+        method so that any future attribute layout change is shielded
+        from downstream code.
 
         Returns
         -------
-        tuple[float, float, float, float]
             The ``(r, g, b, a)`` quadruple, with ``r``, ``g``, ``b`` in
             ``[0, 255]`` and ``a`` in ``[0, 1]``.
+
+        See Also
+        --------
+        Colour.to_hsv : Conversion that consumes this tuple.
+        Colour.to_cmyk : Conversion that consumes this tuple.
+        matplotlib.colors.to_rgba : Comparable tuple-returning helper.
+
+        Examples
+        --------
+        >>> Colour(r=10, g=20, b=30, a=0.5).values()
+        (10, 20, 30, 0.5)
         """
         return (
             self.r,
@@ -245,16 +327,21 @@ class Colour:
         colour: str,
         /,
     ) -> Self:
-        """Construct a :class:`Colour` from any common string encoding.
+        """
+        Construct a :class:`Colour` from any common string encoding.
 
         Delegates the bulk of the parsing to
         :func:`PIL.ImageColor.getrgb` while adding handling for the
         ``rgba(r, g, b, a)`` form with an explicit floating-point alpha
-        channel, which PIL does not accept natively.
+        channel, which PIL does not accept natively. The method splits
+        the input on commas, detects four-element CSS functional
+        notation, extracts the alpha as a float in ``[0, 1]``, and
+        rewrites the remainder into an ``rgb(...)`` payload that PIL
+        can decode.
 
         Parameters
         ----------
-        colour : str
+        colour
             Colour string to parse. Accepts hex (``"#rrggbb"``),
             functional ``rgb(...)`` / ``rgba(...)``, CSS names such as
             ``"red"`` and any other form supported by
@@ -264,10 +351,22 @@ class Colour:
 
         Returns
         -------
-        Colour
             A new instance populated with the parsed channel values.
             The alpha defaults to ``1.0`` when not supplied and is
             promoted to the PIL-returned alpha byte when present.
+
+        See Also
+        --------
+        matplotlib.colors.to_rgba : Analogous matplotlib parser.
+        PIL.ImageColor.getrgb : Underlying PIL decoder.
+        Colour.to_str : Inverse serialisation helper.
+
+        Examples
+        --------
+        >>> Colour.parse("rgba(255, 0, 0, 0.25)").a
+        0.25
+        >>> Colour.parse("#00ff00").g
+        255
         """
         alpha_length = 4
 
@@ -292,21 +391,23 @@ class Colour:
         opacity: float,
         /,
     ) -> Self:
-        """Replace the alpha channel in place.
+        """
+        Replace the alpha channel in place.
 
         Mutates the instance so that the same :class:`Colour` object
         can be threaded through builders that want different opacities
-        without allocating a new instance each time.
+        without allocating a new instance each time. The check mirrors
+        the validation in :meth:`__post_init__` so that partial updates
+        cannot leave the instance in an invalid state.
 
         Parameters
         ----------
-        opacity : float
+        opacity
             New alpha value on the ``[0, 1]`` scale. Lower values make
             the colour more transparent when composited.
 
         Returns
         -------
-        Colour
             The same instance with its ``a`` attribute updated, to
             allow chained calls.
 
@@ -314,6 +415,17 @@ class Colour:
         ------
         ValueError
             If ``opacity`` is outside ``[0, 1]``.
+
+        See Also
+        --------
+        Colour.blend : Performs full alpha compositing using ``a``.
+        matplotlib.colors.to_rgba : Parallel alpha-aware helper.
+        Colour.round : Sibling mutator returning ``self``.
+
+        Examples
+        --------
+        >>> Colour(r=255, g=0, b=0).set_opacity(0.3).a
+        0.3
         """
         if not (0.0 <= opacity <= 1.0):
             msg = f"a out of range [0,1]: {opacity}"
@@ -328,35 +440,58 @@ class Colour:
         size: int = 50,
         /,
     ) -> str:
-        """Build a minimal HTML swatch showing the colour.
+        """
+        Build a minimal HTML swatch showing the colour.
 
         Produces a self-contained ``<div>`` whose background is painted
         using the instance's ``rgba(...)`` serialisation, suitable for
-        embedding in Jupyter rich display output.
+        embedding in Jupyter rich display output. Because the background
+        uses the CSS functional form, alpha composites correctly against
+        the surrounding document when the swatch is rendered in a
+        notebook or web page.
 
         Parameters
         ----------
-        size : int, default 50
+        size
             Side length of the square swatch in CSS pixels. The same
             value is applied to both width and height.
 
         Returns
         -------
-        str
             HTML string containing a single inline-styled ``<div>``
             element rendered in the requested colour.
+
+        See Also
+        --------
+        Colour.show : User-facing display wrapper.
+        Colour.__repr_html__ : Rich notebook representation using this.
+        matplotlib.colors : Alternative visualisation toolkit.
+
+        Examples
+        --------
+        >>> "background-color:" in Colour(r=255, g=0, b=0)._html_show()
+        True
         """
         return f'<div style="width:{size}px;height:{size}px;background-color:{self.to_str()};"></div>'
 
     def show(
         self,
     ) -> None:
-        """Display the colour as a swatch in the active environment.
+        """
+        Display the colour as a swatch in the active environment.
 
         Preferentially uses IPython's rich HTML display so the swatch
         renders inline in Jupyter. When IPython is not importable,
         falls back to matplotlib and draws a 1x1 inch axes patch
-        coloured with the instance's hex value.
+        coloured with the instance's hex value. The fallback path
+        discards alpha because matplotlib's ``set_facecolor`` consumes
+        the ``method="hex"`` form which omits the alpha byte.
+
+        See Also
+        --------
+        Colour._html_show : Underlying HTML swatch builder.
+        matplotlib.colors : Fallback rendering toolkit.
+        IPython.display.display : Preferred notebook display entry.
 
         Notes
         -----
@@ -364,6 +499,11 @@ class Colour:
         effects. The fallback rendering discards alpha because
         matplotlib's ``set_facecolor`` is given the ``method="hex"``
         form of the colour.
+
+        Examples
+        --------
+        >>> from mayutils.objects.colours import Colour
+        >>> Colour(r=255, g=0, b=0).show()  # doctest: +SKIP
         """
         try:
             from IPython.core.display import HTML  # noqa: PLC0415
@@ -414,22 +554,26 @@ class Colour:
             "grayscale",
         ] = "rgba",
     ) -> str:
-        """Serialise the colour to a string in one of several encodings.
+        """
+        Serialise the colour to a string in one of several encodings.
 
         Acts as the primary dispatch point for converting the instance
         to any of the textual colour forms understood by CSS, plotly,
         the HTML ``style`` attribute and similar consumers. Variants
         suffixed with ``?`` emit the alpha component only when it is
         strictly less than one, mirroring common CSS short-hand rules.
+        Hex output applies gamma-agnostic truncation to 8-bit channels,
+        while HSV and HSL paths reuse :func:`colorsys.rgb_to_hsv` and
+        :func:`colorsys.rgb_to_hls` after normalising to ``[0, 1]``.
 
         Parameters
         ----------
-        opacity : float or None, default None
+        opacity
             When provided, overrides the instance's alpha channel for
             this call only. Leaves the stored ``a`` untouched. Callers
             use this to render the same colour at multiple opacities
             without mutating the instance.
-        method : str, default ``"rgba"``
+        method
             Selects the output encoding. Accepted values are:
 
             - ``"hex"`` — six-digit ``#rrggbb`` without alpha.
@@ -456,7 +600,6 @@ class Colour:
 
         Returns
         -------
-        str
             The serialised colour in the requested encoding.
 
         Raises
@@ -467,6 +610,19 @@ class Colour:
             not divisible by ``17``, or if ``method="css"`` is
             requested but the colour has no matching named entry in
             :attr:`css_map`.
+
+        See Also
+        --------
+        matplotlib.colors.to_hex : Parallel matplotlib serialiser.
+        plotly.colors : Plotly string colour formats.
+        Colour.parse : Inverse parser for most encodings.
+
+        Examples
+        --------
+        >>> Colour(r=255, g=0, b=0).to_str(method="hex")
+        '#ff0000'
+        >>> Colour(r=255, g=0, b=0, a=0.5).to_str(method="hexa")
+        '#ff000080'
         """
         r, g, b, a = self.values()
         a = a if opacity is None else opacity
@@ -522,90 +678,160 @@ class Colour:
     def __str__(
         self,
     ) -> str:
-        """Return the default string representation using ``rgba(...)`` form.
+        """
+        Return the default string representation using ``rgba(...)`` form.
 
         Equivalent to calling :meth:`to_str` with its default
         ``method="rgba"`` argument, so ``str(colour)`` always produces
         a valid CSS functional string including the alpha channel.
+        This keeps interpolation into templates, logs and f-strings
+        stable regardless of whether the instance is later mutated via
+        :meth:`set_opacity` or :meth:`round`.
 
         Returns
         -------
-        str
             The ``rgba(r, g, b, a)`` serialisation of the instance.
+
+        See Also
+        --------
+        Colour.to_str : Full dispatch helper invoked by this method.
+        Colour.__repr_html__ : Rich notebook representation counterpart.
+        matplotlib.colors.to_rgba : Analogous conversion helper.
+
+        Examples
+        --------
+        >>> str(Colour(r=10, g=20, b=30, a=1.0))
+        'rgba(10, 20, 30, 1.0)'
         """
         return self.to_str()
 
     def __repr_html__(
         self,
     ) -> str:
-        """Build a rich HTML representation for notebook environments.
+        """
+        Build a rich HTML representation for notebook environments.
 
         Combines the visual swatch produced by :meth:`_html_show` with
         the textual form returned by :meth:`to_str` so that both the
         hue and the exact value are visible in Jupyter-style displays.
+        This format helps when eyeballing transparent colours whose
+        alpha cannot be inferred from the swatch colour alone.
 
         Returns
         -------
-        str
             HTML string containing the swatch ``<div>`` followed by a
             ``<p>`` element holding the default ``rgba(...)`` form.
+
+        See Also
+        --------
+        Colour._html_show : Produces the swatch markup reused here.
+        Colour.show : Imperative display wrapper.
+        matplotlib.colors : Alternative rendering pathway.
+
+        Examples
+        --------
+        >>> "<p>rgba(" in Colour(r=1, g=2, b=3).__repr_html__()
+        True
         """
         return self._html_show() + f"<p>{self.to_str()}</p>"
 
     def to_hsv(
         self,
     ) -> tuple[float, float, float]:
-        """Convert the colour to the HSV colour model.
+        """
+        Convert the colour to the HSV colour model.
 
         Uses :func:`colorsys.rgb_to_hsv` after normalising the RGB
         channels from ``[0, 255]`` to ``[0, 1]``. The alpha channel is
         not part of the output because HSV is defined on RGB alone.
+        Returning hue on the unit interval matches :mod:`colorsys`
+        conventions; multiply by ``360`` to obtain a degree reading.
 
         Returns
         -------
-        tuple[float, float, float]
             The ``(h, s, v)`` triple with each component in ``[0, 1]``,
             where ``h`` is the hue angle normalised to a unit interval,
             ``s`` is saturation and ``v`` is value (brightness).
+
+        See Also
+        --------
+        Colour.to_hls : HLS sibling conversion method.
+        colorsys.rgb_to_hsv : Underlying standard-library helper.
+        matplotlib.colors.rgb_to_hsv : Analogous numpy-aware helper.
+
+        Examples
+        --------
+        >>> h, s, v = Colour(r=255, g=0, b=0).to_hsv()
+        >>> round(h, 3), round(s, 3), round(v, 3)
+        (0.0, 1.0, 1.0)
         """
         return rgb_to_hsv(*[val / 255 for val in self.values()[:3]])
 
     def to_hls(
         self,
     ) -> tuple[float, float, float]:
-        """Convert the colour to the HLS colour model.
+        """
+        Convert the colour to the HLS colour model.
 
         Uses :func:`colorsys.rgb_to_hls` after normalising the RGB
         channels from ``[0, 255]`` to ``[0, 1]``. The alpha channel is
         not part of the output because HLS is defined on RGB alone.
+        Note the component order is ``(h, l, s)`` to match
+        :mod:`colorsys`; swap lightness and saturation when feeding a
+        consumer that expects the CSS ``hsl(...)`` ordering.
 
         Returns
         -------
-        tuple[float, float, float]
             The ``(h, l, s)`` triple with each component in ``[0, 1]``,
             where ``h`` is the hue angle normalised to a unit interval,
             ``l`` is lightness and ``s`` is saturation.
+
+        See Also
+        --------
+        Colour.to_hsv : HSV sibling conversion method.
+        colorsys.rgb_to_hls : Underlying standard-library helper.
+        matplotlib.colors : Analogous colour-model utilities.
+
+        Examples
+        --------
+        >>> h, l, s = Colour(r=255, g=0, b=0).to_hls()
+        >>> round(h, 3), round(l, 3), round(s, 3)
+        (0.0, 0.5, 1.0)
         """
         return rgb_to_hls(*[val / 255 for val in self.values()[:3]])
 
     def to_cmyk(
         self,
     ) -> tuple[float, float, float, float]:
-        """Convert the colour to the CMYK colour model.
+        """
+        Convert the colour to the CMYK colour model.
 
         Uses the standard subtractive conversion from normalised RGB
         without ICC profile adjustment, which is adequate for screen
         and documentation use. If the computed key is ``1`` (pure
         black) the chromatic components collapse to zero to avoid
-        division by zero.
+        division by zero. Because the transformation skips a real
+        colour-profile step, the result should not be relied on for
+        print-critical workflows.
 
         Returns
         -------
-        tuple[float, float, float, float]
             The ``(c, m, y, k)`` quadruple with each component in
             ``[0, 1]``, where ``c``, ``m`` and ``y`` are the cyan,
             magenta and yellow proportions and ``k`` is the key
             (black) proportion.
+
+        See Also
+        --------
+        Colour.to_hsv : Alternative chromatic representation.
+        Colour.to_grayscale : Luminance-based reduction.
+        matplotlib.colors : Related colour-space tooling.
+
+        Examples
+        --------
+        >>> c, m, y, k = Colour(r=0, g=0, b=0).to_cmyk()
+        >>> (c, m, y, k)
+        (0, 0, 0, 1.0)
         """
         r, g, b, _a = [val / 255 for val in self.values()]
 
@@ -622,18 +848,31 @@ class Colour:
     def to_grayscale(
         self,
     ) -> float:
-        """Compute the perceptual luminance using BT.601 weights.
+        """
+        Compute the perceptual luminance using BT.601 weights.
 
         Applies the ITU-R BT.601 coefficients ``(0.2989, 0.5870,
         0.1140)`` to the RGB channels, matching the luma calculation
         used by legacy standard-definition video and many greyscale
-        conversion utilities.
+        conversion utilities. Because the computation is performed in
+        gamma-encoded 8-bit space, it approximates perceptual
+        luminance rather than true linear-light luminance.
 
         Returns
         -------
-        float
             The scalar luminance on the ``[0, 255]`` scale. Higher
             values correspond to lighter colours.
+
+        See Also
+        --------
+        Colour.to_cmyk : Subtractive alternative reduction.
+        matplotlib.colors : Related conversion helpers.
+        Colour.to_hsv : Perception-ordered chromatic conversion.
+
+        Examples
+        --------
+        >>> round(Colour(r=255, g=255, b=255).to_grayscale(), 3)
+        254.974
         """
         r, g, b = self.values()[:3]
         return 0.2989 * r + 0.5870 * g + 0.1140 * b
@@ -645,26 +884,28 @@ class Colour:
         foreground: Self,
         background: Self,
     ) -> Self:
-        """Alpha-composite a foreground colour over an opaque background.
+        """
+        Alpha-composite a foreground colour over an opaque background.
 
         Implements the standard source-over compositing formula
         ``out = fg * a + bg * (1 - a)`` channel-by-channel. Because
         the formula assumes an opaque backdrop, the ``background``
         argument must have alpha equal to one; the resulting colour is
-        always fully opaque.
+        always fully opaque. Callers typically follow this with
+        :meth:`round` to collapse fractional channel values produced by
+        the mix into 8-bit integers suitable for hex serialisation.
 
         Parameters
         ----------
-        foreground : Colour
+        foreground
             The overlay colour. Its alpha channel controls the mix
             ratio with the background.
-        background : Colour
+        background
             The base colour underneath the overlay. Must be fully
             opaque because the formula does not accumulate alpha.
 
         Returns
         -------
-        Colour
             A new instance whose RGB channels are the weighted
             combination of ``foreground`` and ``background`` and whose
             alpha is the default ``1.0``.
@@ -673,6 +914,20 @@ class Colour:
         ------
         ValueError
             If ``background.a`` is not exactly ``1``.
+
+        See Also
+        --------
+        Colour.round : Post-blend quantisation helper.
+        Colour.set_opacity : Produces the alpha value driving the mix.
+        matplotlib.colors : Alternative compositing utilities.
+
+        Examples
+        --------
+        >>> fg = Colour(r=255, g=0, b=0, a=0.5)
+        >>> bg = Colour(r=0, g=0, b=255, a=1.0)
+        >>> blended = Colour.blend(foreground=fg, background=bg)
+        >>> blended.round().values()[:3]
+        (128, 0, 128)
         """
         if background.a != 1:
             msg = "Background colour must have 0 opacity"
@@ -691,18 +946,33 @@ class Colour:
     def pptx_colour(
         self,
     ) -> RGBColor:
-        """Build a ``python-pptx`` ``RGBColor`` from this instance.
+        """
+        Build a ``python-pptx`` ``RGBColor`` from this instance.
 
         PowerPoint's object model uses the :class:`pptx.dml.color.RGBColor`
         wrapper to represent solid fill colours. This property
         constructs one from the current ``r``, ``g`` and ``b`` values.
+        Transparency is not preserved because the PowerPoint wire
+        format handles alpha through a separate ``lumOff``/``lumMod``
+        mechanism that lies outside the scope of ``RGBColor``.
 
         Returns
         -------
-        pptx.dml.color.RGBColor
             Equivalent PowerPoint colour carrying only the RGB
             channels. The alpha component is dropped because
             ``RGBColor`` does not model transparency.
+
+        See Also
+        --------
+        pptx.dml.color.RGBColor : PowerPoint wrapper consumed here.
+        matplotlib.colors : Alternative colour interchange utilities.
+        Colour.to_str : Hex-string equivalent for other consumers.
+
+        Examples
+        --------
+        >>> from pptx.dml.color import RGBColor
+        >>> isinstance(Colour(r=255, g=128, b=64).pptx_colour, RGBColor)
+        True
         """
         return RGBColor(
             r=self.r,
@@ -717,27 +987,29 @@ def hex_to_rgba(
     *,
     alpha: float = 1.0,
 ) -> str:
-    """Convert a hex colour string into a CSS ``rgba(...)`` string.
+    """
+    Convert a hex colour string into a CSS ``rgba(...)`` string.
 
     Provides a lightweight conversion that does not require
     constructing a :class:`Colour` instance. Supports both the
     six-digit ``#rrggbb`` form (where the caller supplies alpha via
     ``alpha``) and the eight-digit ``#rrggbbaa`` form (where the alpha
-    byte is read from the string and rescaled to ``[0, 1]``).
+    byte is read from the string and rescaled to ``[0, 1]``). The
+    eight-digit path rounds the normalised alpha to two decimal places
+    so the emitted CSS string remains short and human-readable.
 
     Parameters
     ----------
-    hex_colour : str
+    hex_colour
         Hex colour to convert, with or without a leading ``#``. The
         stripped payload must be exactly six or eight hex characters.
-    alpha : float, default 1.0
+    alpha
         Fallback alpha value used when ``hex_colour`` contains only
         six hex digits. Ignored when the string already carries an
         alpha byte.
 
     Returns
     -------
-    str
         A CSS-compatible ``rgba(r, g, b, a)`` string, with ``r``,
         ``g``, ``b`` as integers and ``a`` as a float.
 
@@ -746,6 +1018,19 @@ def hex_to_rgba(
     ValueError
         If the stripped hex payload is neither six nor eight
         characters long.
+
+    See Also
+    --------
+    Colour.parse : Full-featured parser returning a :class:`Colour`.
+    matplotlib.colors.to_rgba : Parallel matplotlib conversion.
+    plotly.colors : Plotly colour string utilities.
+
+    Examples
+    --------
+    >>> hex_to_rgba("#ff0000", alpha=0.25)
+    'rgba(255, 0, 0, 0.25)'
+    >>> hex_to_rgba("#ff000080")
+    'rgba(255, 0, 0, 0.5)'
     """
     alphahex_length = 8
 

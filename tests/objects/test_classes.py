@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 import pytest
 
 from mayutils.objects.classes import (
@@ -82,9 +80,9 @@ class TestAddMethod:
         class Foo:
             pass
 
-        captured: dict[str, Any] = {}
+        captured: dict[str, object] = {}
 
-        def hook(self_obj: Foo, *_: Any, prior_value: int | None, **__: Any) -> int:  # noqa: ANN401, ARG001
+        def hook(self_obj: Foo, *_: object, prior_value: int | None, **__: object) -> int:  # noqa: ARG001
             captured["prior"] = prior_value
             return 7
 
@@ -102,7 +100,7 @@ class TestAddMethod:
             def run(self) -> int:
                 return 3
 
-        def hook(self_obj: Foo, *_: Any, prior_value: int | None, **__: Any) -> int:  # noqa: ANN401, ARG001
+        def hook(self_obj: Foo, *_: object, prior_value: int | None, **__: object) -> int:  # noqa: ARG001
             assert prior_value == 3  # noqa: PLR2004
             return prior_value + 1
 
@@ -117,7 +115,7 @@ class TestAddMethod:
             def run(self) -> int:
                 return 5
 
-        def hook(self_obj: Foo, *_: Any, prior_value: int | None, **__: Any) -> int | None:  # noqa: ANN401, ARG001
+        def hook(self_obj: Foo, *_: object, prior_value: int | None, **__: object) -> int | None:  # noqa: ARG001
             return None
 
         add_method(cls=Foo, method=hook, method_name="run")
@@ -130,7 +128,7 @@ class TestAddMethod:
         class Foo:
             pass
 
-        def hook(self_obj: Foo, *_: Any, prior_value: int | None, **__: Any) -> int | None:  # noqa: ANN401, ARG001
+        def hook(self_obj: Foo, *_: object, prior_value: int | None, **__: object) -> int | None:  # noqa: ARG001
             return None
 
         assert add_method(cls=Foo, method=hook, method_name="run") is Foo
@@ -143,10 +141,10 @@ class TestAddMethod:
 
         def hook(
             self_obj: Foo,  # noqa: ARG001
-            *args: Any,  # noqa: ANN401
-            prior_value: tuple[tuple[Any, ...], dict[str, Any]] | None,  # noqa: ARG001
-            **kwargs: Any,  # noqa: ANN401
-        ) -> tuple[tuple[Any, ...], dict[str, Any]] | None:
+            *args: object,
+            prior_value: tuple[tuple[object, ...], dict[str, object]] | None,  # noqa: ARG001
+            **kwargs: object,
+        ) -> tuple[tuple[object, ...], dict[str, object]] | None:
             return args, kwargs
 
         add_method(cls=Foo, method=hook, method_name="run")

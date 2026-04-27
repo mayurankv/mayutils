@@ -1,16 +1,19 @@
 """Tests for ``mayutils.mathematics.numba``.
 
-The tests exercise the ``.py_func`` attribute of each ``@njit``-wrapped
-routine, i.e. the pure-Python implementation. This keeps the suite fast
-and avoids relying on Numba's nopython compiler — which does not
-support ``numpy.random.default_rng`` nor every calling convention used
-in :mod:`mayutils.mathematics.numba`.
+The reducers passed to :func:`np_apply_along_axis_2d` are wrapped with
+``@njit`` so Numba can type them as :class:`CPUDispatcher` arguments
+across the JIT boundary; passing :data:`numpy.sum` and friends directly
+fails type inference because Numba cannot resolve a NumPy
+``ArrayFunctionDispatcher`` as a first-class function argument.
 """
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pytest
+from numba import njit  # pyright: ignore[reportUnknownVariableType, reportAttributeAccessIssue]
 
 from mayutils.mathematics.numba import (
     choice_replacement,
@@ -18,6 +21,45 @@ from mayutils.mathematics.numba import (
     np_apply_along_axis_2d,
     std2d,
 )
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
+
+@njit  # pyright: ignore[reportUntypedFunctionDecorator]
+def nb_sum(slice_: NDArray[np.float64]) -> float:
+    """Numba-typeable reducer wrapping :func:`numpy.sum`.
+
+    Returns
+    -------
+    float
+        The sum of ``slice_``.
+    """
+    return float(np.sum(slice_))
+
+
+@njit  # pyright: ignore[reportUntypedFunctionDecorator]
+def nb_mean(slice_: NDArray[np.float64]) -> float:
+    """Numba-typeable reducer wrapping :func:`numpy.mean`.
+
+    Returns
+    -------
+    float
+        The arithmetic mean of ``slice_``.
+    """
+    return float(np.mean(slice_))
+
+
+@njit  # pyright: ignore[reportUntypedFunctionDecorator]
+def nb_std(slice_: NDArray[np.float64]) -> float:
+    """Numba-typeable reducer wrapping :func:`numpy.std`.
+
+    Returns
+    -------
+    float
+        The population standard deviation of ``slice_``.
+    """
+    return float(np.std(slice_))
 
 
 class TestChoiceReplacement:
@@ -58,67 +100,55 @@ class TestNpApplyAlongAxis2d:
     def test_column_sum(self) -> None:
         """``axis=0`` reduces each column to a scalar."""
         arr = np.array([[1.0, 2.0], [3.0, 4.0]])
-        result = np_apply_along_axis_2d(np.sum, arr=arr, axis=0)
+        result = np_apply_along_axis_2d(nb_sum, arr=arr, axis=0)
         assert np.allclose(result, [4.0, 6.0])
 
     def test_row_sum(self) -> None:
         """``axis=1`` reduces each row to a scalar."""
         arr = np.array([[1.0, 2.0], [3.0, 4.0]])
-        result = np_apply_along_axis_2d(np.sum, arr=arr, axis=1)
+        result = np_apply_along_axis_2d(nb_sum, arr=arr, axis=1)
         assert np.allclose(result, [3.0, 7.0])
 
     def test_rejects_non_2d_input(self) -> None:
         """A 1-D array is rejected with an :class:`AssertionError`."""
         with pytest.raises(expected_exception=AssertionError, match="2-D"):
-            np_apply_along_axis_2d(np.sum, arr=np.array([1.0, 2.0]), axis=0)
+            np_apply_along_axis_2d(nb_sum, arr=np.array([1.0, 2.0]), axis=0)
 
     def test_rejects_invalid_axis(self) -> None:
         """An axis other than ``0`` or ``1`` is rejected with an :class:`AssertionError`."""
         with pytest.raises(expected_exception=AssertionError, match="Axis"):
-            np_apply_along_axis_2d(np.sum, arr=np.array([[1.0]]), axis=2)
+            np_apply_along_axis_2d(nb_sum, arr=np.array([[1.0]]), axis=2)
 
 
 class TestMean2d:
-    """Tests for :func:`mean2d` — column/row means of a 2-D array.
-
-    ``mean2d`` is a ``@njit`` wrapper that calls :func:`np_apply_along_axis_2d`
-    with :func:`numpy.mean`. Numba cannot resolve ``np.mean`` as a function
-    type in nopython mode, so the tests exercise the same computation path
-    through :attr:`np_apply_along_axis_2d.py_func`.
-    """
+    """Tests for :func:`mean2d` — column/row means of a 2-D array."""
 
     def test_column_means(self) -> None:
         """``axis=0`` produces the mean of each column."""
         assert mean2d is not None
         arr = np.array([[1.0, 10.0], [3.0, 20.0]])
-        result = np_apply_along_axis_2d(np.mean, arr=arr, axis=0)
+        result = np_apply_along_axis_2d(nb_mean, arr=arr, axis=0)
         assert np.allclose(result, [2.0, 15.0])
 
     def test_row_means(self) -> None:
         """``axis=1`` produces the mean of each row."""
         arr = np.array([[1.0, 3.0], [10.0, 20.0]])
-        result = np_apply_along_axis_2d(np.mean, arr=arr, axis=1)
+        result = np_apply_along_axis_2d(nb_mean, arr=arr, axis=1)
         assert np.allclose(result, [2.0, 15.0])
 
 
 class TestStd2d:
-    """Tests for :func:`std2d` — column/row standard deviations of a 2-D array.
+    """Tests for :func:`std2d` — column/row standard deviations of a 2-D array."""
 
-    ``std2d`` is a ``@njit`` wrapper that calls :func:`np_apply_along_axis_2d`
-    with :func:`numpy.std`. Numba cannot resolve ``np.std`` as a function
-    type in nopython mode, so the tests exercise the same computation path
-    through :attr:`np_apply_along_axis_2d.py_func`.
-    """
-
-    def test_column_std_matches_numpy(self) -> None:
+    def test_column_nb_stdmatches_numpy(self) -> None:
         """``axis=0`` produces the population standard deviation per column."""
         assert std2d is not None
         arr = np.array([[1.0, 10.0], [3.0, 20.0], [5.0, 30.0]])
-        result = np_apply_along_axis_2d(np.std, arr=arr, axis=0)
+        result = np_apply_along_axis_2d(nb_std, arr=arr, axis=0)
         assert np.allclose(result, np.std(arr, axis=0))
 
-    def test_row_std_matches_numpy(self) -> None:
+    def test_row_nb_stdmatches_numpy(self) -> None:
         """``axis=1`` produces the population standard deviation per row."""
         arr = np.array([[1.0, 3.0, 5.0], [2.0, 4.0, 6.0]])
-        result = np_apply_along_axis_2d(np.std, arr=arr, axis=1)
+        result = np_apply_along_axis_2d(nb_std, arr=arr, axis=1)
         assert np.allclose(result, np.std(arr, axis=1))

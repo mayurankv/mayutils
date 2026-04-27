@@ -1,34 +1,36 @@
-"""Environment, configuration, and infrastructure helpers.
+"""
+Group runtime-facing helpers for interacting with the host environment.
 
-This package groups the runtime-facing utilities of the ``mayutils`` library:
-components that interact with the host environment rather than with pure data
-transformations. It collects helpers for benchmarking execution, constructing
-database engines, resolving filesystem and git-aware paths, structured
-logging, in-process memoisation, OAuth and key-management flows, secret and
-``.env`` ingestion, and webdriver factories used by the export and scraping
-pipelines. Submodules are designed to be imported individually so optional
-dependencies (declared as package extras) remain opt-in.
+This package collects the runtime-facing utilities of the ``mayutils``
+library: components that manage execution context rather than pure data
+transformations. It aggregates helpers for benchmarking execution time,
+constructing database engines, resolving filesystem and git-aware paths,
+structured logging, in-process memoisation, OAuth and key-management
+flows, secret and ``.env`` ingestion, and webdriver factories used by the
+export and scraping pipelines. Submodules are designed to be imported
+individually so that optional dependencies declared as package extras
+remain opt-in at install time.
 
-Submodules
-----------
-benchmarking
-    Lightweight timing and profiling helpers for measuring code execution.
-databases
-    SQLAlchemy and Snowflake engine factories (``snowflake`` extra).
-filesystem
-    Git- and path-aware filesystem helpers (``filesystem`` extra for git
-    integration).
-logging
-    Rich-backed :class:`Logger` with structured defaults for consistent
-    console and file output.
-memoisation
-    Caching decorators for memoising expensive function calls across runs.
-oauth
-    OAuth helpers, including Fernet key generation, used for authenticating
-    against external services (``google``/``keyring`` extras).
-secrets
-    ``.env`` parsing and secret loading utilities.
-webdrivers
-    Selenium and Playwright webdriver factories (``web`` extra) used for
-    headless browser automation.
+See Also
+--------
+mayutils.environment.benchmarking : Lightweight timing and profiling helpers.
+mayutils.environment.databases : SQLAlchemy and Snowflake engine factories.
+mayutils.environment.filesystem : Git- and path-aware filesystem utilities.
+mayutils.environment.logging : Rich-backed structured logger defaults.
+mayutils.environment.memoisation : Caching decorators for expensive calls.
+mayutils.environment.oauth : OAuth helpers and Fernet key generation.
+mayutils.environment.secrets : ``.env`` parsing and secret loading helpers.
+mayutils.environment.webdrivers : Selenium and Playwright factories.
+
+Examples
+--------
+>>> from mayutils.environment.logging import Logger
+>>> from mayutils.environment.memoisation import cache
+>>> logger = Logger(name="pipeline")
+>>> @cache
+... def load_reference_data() -> dict[str, int]:
+...     logger.info("Loading reference data")
+...     return {"rows": 42}
+>>> load_reference_data()["rows"]
+42
 """

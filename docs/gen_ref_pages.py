@@ -1,4 +1,41 @@
-"""Generate API reference pages for mkdocstrings."""  # noqa: INP001
+"""
+Generate API reference pages for every package module at docs build time.
+
+Walk the ``src/`` source tree, filter out private packages and
+``__pycache__`` artefacts, emit a stub ``reference/<module>.md`` file for
+each surviving module via ``mkdocs_gen_files`` and assemble a literate
+``reference/SUMMARY.md`` navigation file. The script executes at the
+``on_files`` phase of MkDocs (that is the phase at which
+``mkdocs-gen-files`` invokes configured scripts) and therefore runs once
+per ``mkdocs build`` or ``mkdocs serve`` invocation. All writes are
+routed through ``mkdocs_gen_files.open`` so the generated pages live
+only in the virtual file tree that MkDocs then treats as part of
+``docs/``.
+
+See Also
+--------
+mkdocs_gen_files : Runtime used to materialise the virtual pages produced here.
+mkdocstrings : Renders the ``::: <dotted.path>`` directives emitted for each module.
+docs.hooks.readme_to_index : Companion build hook that writes ``docs/index.md``.
+docs.hooks.generate_dependency_groups : Companion build hook that refreshes the extras table.
+
+Examples
+--------
+Enable ``mkdocs-gen-files`` in ``mkdocs.yml`` so this script executes on build:
+
+>>> # mkdocs.yml
+>>> # plugins:
+>>> #   - gen-files:
+>>> #       scripts:
+>>> #         - docs/gen_ref_pages.py
+>>> #   - literate-nav:
+>>> #       nav_file: SUMMARY.md
+
+Build the site from the command line and the script runs automatically:
+
+>>> # $ mkdocs build
+>>> # $ mkdocs serve  # live-reload workflow
+"""  # noqa: INP001
 
 from pathlib import Path
 

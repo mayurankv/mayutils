@@ -117,6 +117,7 @@ plugins:
             show_if_no_docstring: false
             signature_crossrefs: true
             separate_signature: true
+            show_signature_annotations: true
 
 nav:
   - Home: index.md

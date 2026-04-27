@@ -4,6 +4,8 @@ docs/index.md
 logs/
 temp/
 Notebooks/tests/
+.claude
+.worktrees
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

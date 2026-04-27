@@ -17,11 +17,17 @@ class TestFlexwrap:
 
     @staticmethod
     def _make_shout() -> Callable[..., Any]:
-        """Build a flexwrap-adapted decorator used across the tests."""
+        """Build a flexwrap-adapted decorator used across the tests.
+
+        Returns
+        -------
+            A decorator built via :func:`flexwrap` that uppercases the
+            wrapped function's string result and prepends ``prefix``.
+        """
 
         @flexwrap
         def shout(func: Callable[..., str], prefix: str = "!") -> Callable[..., str]:
-            def wrapper(*args: Any, **kwargs: Any) -> str:  # noqa: ANN401
+            def wrapper(*args: object, **kwargs: object) -> str:
                 return prefix + func(*args, **kwargs).upper()
 
             return wrapper
@@ -54,11 +60,17 @@ class TestFlexwrap:
 
         @shout
         def greet() -> str:
-            """Say hello."""
+            """Say hello.
+
+            Returns
+            -------
+                The greeting text.
+            """
             return "hello"
 
         assert greet.__name__ == "greet"
-        assert greet.__doc__ == "Say hello."
+        assert greet.__doc__ is not None
+        assert "Say hello." in greet.__doc__
 
     def test_positional_args_rejected(self) -> None:
         """The parameterised form refuses non-callable positional arguments."""
@@ -73,9 +85,15 @@ class TestFlexwrap:
 
         @shout(prefix="? ")
         def question() -> str:
-            """Ask something."""
+            """Ask something.
+
+            Returns
+            -------
+                The question text.
+            """
             return "what"
 
         assert question.__name__ == "question"
-        assert question.__doc__ == "Ask something."
+        assert question.__doc__ is not None
+        assert "Ask something." in question.__doc__
         assert question() == "? WHAT"

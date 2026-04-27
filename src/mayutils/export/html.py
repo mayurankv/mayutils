@@ -1,12 +1,31 @@
-"""HTML rendering and screenshotting helpers.
+r"""
+Render and screenshot HTML fragments for export workflows.
 
-This module provides thin wrappers around :mod:`markdown` for converting
-Markdown source into HTML, :mod:`html2image` for rasterising arbitrary
-HTML fragments into image files via a headless browser, and a small
+Provide thin wrappers around :mod:`markdown` for converting Markdown
+source into HTML, :mod:`html2image` for rasterising arbitrary HTML
+fragments into image files via a headless browser, and a small
 inline-style helper for producing pill-style badge elements. A
 module-level :class:`html2image.Html2Image` instance and logger are
 created on import so that callers can invoke the helpers without
-managing browser state themselves.
+managing browser state themselves. These utilities underpin the
+notebook and PDF export pipelines elsewhere in :mod:`mayutils`.
+
+See Also
+--------
+markdown : Upstream Markdown-to-HTML conversion library used by
+    :func:`markdown_to_html`.
+mistune : Alternative Markdown parser occasionally used in sibling
+    modules.
+jinja2 : Template engine used elsewhere in the export stack to
+    compose HTML fragments.
+mayutils.interfaces.filetypes.pdf : Companion module that consumes
+    rendered HTML when producing PDF artefacts.
+
+Examples
+--------
+>>> from mayutils.export.html import html_pill, markdown_to_html
+>>> badge = html_pill("PASS", background_colour="#d1fae5")
+>>> snippet = markdown_to_html("**hello**\\nworld")
 """
 
 import time
@@ -27,13 +46,17 @@ def markdown_to_html(
     text: str,
     /,
 ) -> str:
-    r"""Render a Markdown document to HTML while preserving newlines.
+    r"""
+    Render a Markdown document to HTML while preserving newlines.
 
-    Delegates to :func:`markdown.markdown` and then rewrites any
-    residual newline characters to ``<br>`` tags, so that soft line
-    breaks in the Markdown source remain visually present in the
-    rendered HTML output rather than being collapsed by the HTML
-    whitespace-normalisation rules.
+    Delegate to :func:`markdown.markdown` to perform the heavy lifting
+    of parsing headings, emphasis, lists and links, then rewrite any
+    residual newline characters to ``<br>`` tags. This step guarantees
+    that soft line breaks in the Markdown source remain visually
+    present in the rendered HTML output rather than being collapsed by
+    the HTML whitespace-normalisation rules. The post-processing is
+    deliberately minimal so that downstream templating layers retain
+    full control over structural CSS and asset handling.
 
     Parameters
     ----------
@@ -46,9 +69,27 @@ def markdown_to_html(
     Returns
     -------
     str
-        The HTML representation of ``text`` with literal ``\n``
-        characters replaced by ``<br>`` tags, ready to be embedded in
-        an HTML document or passed to :func:`html_to_image`.
+        HTML representation of ``text`` with literal ``\n`` characters
+        replaced by ``<br>`` tags, ready to be embedded in an HTML
+        document or passed to :func:`html_to_image`.
+
+    See Also
+    --------
+    markdown.markdown : Upstream parser invoked to perform the initial
+        Markdown-to-HTML conversion.
+    mistune : Alternative parser that can be substituted when extended
+        syntax is required.
+    jinja2 : Template engine used to wrap the returned fragment inside
+        a full HTML document when exporting.
+    html_to_image : Sibling helper that rasterises the returned HTML
+        into an image file.
+    mayutils.interfaces.filetypes.pdf : Consumer of the rendered HTML
+        when producing PDF output.
+
+    Examples
+    --------
+    >>> markdown_to_html("**bold**\ntext")
+    '<p><strong>bold</strong><br>text</p>'
     """
     return markdown(
         text=text,
@@ -67,21 +108,26 @@ def html_to_image(
     size: tuple[int, int] | None = None,
     sleep_time: int = 1,
 ) -> Path:
-    """Rasterise an HTML fragment to a static image file on disk.
+    """
+    Rasterise an HTML fragment to a static image file on disk.
 
-    Drives a headless browser through the module-level
-    :class:`html2image.Html2Image` instance to render ``html`` (with an
-    optional ``css`` stylesheet and viewport ``size``), then relocates
-    the browser's output file to ``path``. Because the screenshot is
-    written asynchronously by the browser, the function polls the
-    filesystem on a ``sleep_time`` cadence until the target file
-    appears before returning.
+    Drive a headless browser through the module-level
+    :class:`html2image.Html2Image` instance to render ``html`` with an
+    optional ``css`` stylesheet applied inline and an optional viewport
+    ``size``, then relocate the browser's output file to ``path``. The
+    CSS string is concatenated with the document's own ``<style>``
+    blocks, giving callers a single hook for injecting theme tokens or
+    font declarations without mutating the source fragment. Because the
+    screenshot is written asynchronously by the browser, the helper
+    polls the filesystem on a ``sleep_time`` cadence until the target
+    file appears before returning, guaranteeing the caller receives a
+    fully-materialised artefact.
 
     Parameters
     ----------
     html : str
-        Complete HTML source to render. Anything that is valid inside
-        the ``<body>`` of a minimal document is acceptable; the library
+        Complete HTML source to render. Anything valid inside the
+        ``<body>`` of a minimal document is acceptable; the library
         wraps the fragment automatically.
     path : Path | str
         Final destination for the rendered image. The directory must
@@ -105,17 +151,45 @@ def html_to_image(
     Returns
     -------
     Path
-        The resolved :class:`pathlib.Path` at which the rendered image
+        Resolved :class:`pathlib.Path` at which the rendered image
         now lives. This is the same logical location as the input
         ``path`` but normalised to a :class:`~pathlib.Path` instance.
+
+    See Also
+    --------
+    html2image.Html2Image : Underlying headless-browser wrapper that
+        performs the actual rasterisation.
+    markdown : Used via :func:`markdown_to_html` to prepare rich HTML
+        input before rendering.
+    jinja2 : Template engine useful for composing the HTML body passed
+        to this function.
+    markdown_to_html : Sibling helper that produces suitable HTML from
+        Markdown source.
+    mayutils.interfaces.filetypes.pdf : Alternative export target when
+        a vector document is preferred to a raster image.
 
     Notes
     -----
     :class:`html2image.Html2Image` writes screenshots to the current
-    working directory using only the filename component of
-    ``save_as``. This function relies on that behaviour by first
-    taking a screenshot under ``path.name`` and then moving it to the
-    full ``path`` via :meth:`pathlib.Path.replace`.
+    working directory using only the filename component of ``save_as``.
+    This function relies on that behaviour by first taking a
+    screenshot under ``path.name`` and then moving it to the full
+    ``path`` via :meth:`pathlib.Path.replace`.
+
+    Examples
+    --------
+    Rasterise an HTML fragment to a PNG file:
+
+    >>> from pathlib import Path
+    >>> from mayutils.export.html import html_to_image
+    >>> out = html_to_image(  # doctest: +SKIP
+    ...     "<h1>Report</h1>",
+    ...     path=Path("output/report.png"),
+    ...     css="body { font-family: sans-serif; }",
+    ...     size=(1200, 800),
+    ... )
+    >>> out.exists()  # doctest: +SKIP
+    True
     """
     path = Path(path)
 
@@ -152,13 +226,19 @@ def html_pill(
     relative_font_size: float = 0.9,
     rounding: float = 5.625,
 ) -> str:
-    """Build an inline HTML ``<span>`` styled as a rounded pill badge.
+    """
+    Build an inline HTML span styled as a rounded pill badge.
 
-    Assembles an inline-block span whose CSS declarations produce a
-    compact, rounded-corner badge suitable for embedding next to
+    Assemble an inline-block ``<span>`` whose CSS declarations produce
+    a compact, rounded-corner badge suitable for embedding next to
     tabular or narrative content. All sizing parameters are expressed
     in ``em`` units so that the pill scales with the surrounding
-    typography.
+    typography, which keeps the rendering consistent when the same
+    fragment is reused across notebooks, slide decks and PDF exports.
+    Inline styling is used rather than class references so the markup
+    remains self-contained and can be dropped into environments that
+    do not process external stylesheets, such as email clients and
+    certain notebook viewers.
 
     Parameters
     ----------
@@ -193,11 +273,38 @@ def html_pill(
     Returns
     -------
     str
-        A self-contained ``<span>`` element string carrying inline
+        Self-contained ``<span>`` element string carrying inline
         ``style`` declarations that apply all of the requested visual
         properties. The span is ``display: inline-block`` so it can be
         composed into paragraphs, table cells, or other flow content
         without disturbing line-height.
+
+    See Also
+    --------
+    markdown : Companion library for producing richer HTML bodies in
+        which pills can be embedded.
+    jinja2 : Template engine used to splice pill fragments into larger
+        HTML reports.
+    mistune : Alternative Markdown parser whose output accepts the
+        same inline pill markup.
+    markdown_to_html : Sibling helper that prepares Markdown content
+        into which these pills are commonly inserted.
+    html_to_image : Sibling helper that rasterises HTML containing
+        pills into image files.
+    mayutils.interfaces.filetypes.pdf : Export target that preserves
+        pill styling when generating PDF documents.
+
+    Examples
+    --------
+    >>> html_pill("ACTIVE", background_colour="#d1fae5")
+    '<span style="display: inline-block; background-color: #d1fae5; ...'
+    >>> html_pill(
+    ...     "WARN",
+    ...     background_colour="#fef3c7",
+    ...     text_colour="#92400e",
+    ...     bold=False,
+    ... )
+    '<span style="display: inline-block; background-color: #fef3c7; ...'
     """
     return (
         '<span style="'

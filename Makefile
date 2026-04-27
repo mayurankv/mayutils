@@ -26,6 +26,11 @@ uncache:
 lint:
 	uv run ruff check
 	uv run ruff format --check
+	$(MAKE) lint-docs
+
+.PHONY: lint-docs
+lint-docs:
+	uv run pre-commit run numpydoc-validation --all-files
 
 .PHONY: format
 format:

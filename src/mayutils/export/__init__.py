@@ -1,30 +1,15 @@
-"""Export utilities for rendering mayutils artefacts to external formats.
+"""
+Render mayutils artefacts to external distributable formats.
 
-This subpackage groups the exporters that convert in-memory mayutils
-objects (plots, tables, notebooks, markdown definitions) into
-distributable artefacts such as HTML documents, static images, PDF
-reports and PowerPoint decks. It also exposes a canonical
-``OUTPUT_FOLDER`` location, anchored to the project root discovered by
-:func:`mayutils.environment.filesystem.get_root`, so that every exporter
-writes to a consistent place on disk.
-
-Submodules
-----------
-html
-    HTML rendering backed by ``html2image`` and ``markdown`` (requires
-    the ``plotting`` extra).
-images
-    Image export helpers for converting figures and documents to raster
-    or vector images (requires the ``plotting`` or ``pdf`` extras).
-nbconvert
-    Multi-format notebook export driven by ``jupyter nbconvert``
-    (requires the ``notebook`` extra). Reveal.js slide-deck defaults
-    live in :data:`~mayutils.export.nbconvert.DEFAULT_SETTINGS` under
-    the ``"slides"`` key.
-quarto
-    Multi-format export (``pdf``, ``html``, ``docx``, ``pptx``,
-    ``revealjs``, …) delegated to the bundled ``quarto-cli`` binary
-    (requires the ``notebook`` extra).
+Group the exporters that convert in-memory mayutils objects such as
+plots, tables, notebooks and markdown definitions into distributable
+artefacts including HTML documents, static images, PDF reports and
+PowerPoint decks. Expose a canonical ``OUTPUT_FOLDER`` location,
+anchored to the project root discovered by
+:func:`mayutils.environment.filesystem.get_root`, so every exporter
+writes to a consistent place on disk. Submodules are import-gated so
+optional dependencies declared as package extras remain opt-in at
+install time.
 
 Attributes
 ----------
@@ -33,6 +18,23 @@ OUTPUT_FOLDER : pathlib.Path
     resolved via :func:`mayutils.environment.filesystem.get_root`. Used
     as the default destination for every exporter in this subpackage so
     generated files land in a predictable location.
+
+See Also
+--------
+mayutils.export.html : HTML rendering backed by ``html2image`` and ``markdown``.
+mayutils.export.images : Image export helpers for figures and documents.
+mayutils.export.nbconvert : Multi-format notebook export via ``jupyter nbconvert``.
+mayutils.export.quarto : Multi-format export delegated to the ``quarto-cli`` binary.
+mayutils.environment.filesystem : Git- and path-aware filesystem utilities.
+
+Examples
+--------
+>>> from mayutils.export import OUTPUT_FOLDER
+>>> from mayutils.export.quarto import export
+>>> OUTPUT_FOLDER.name
+'Outputs'
+>>> callable(export)
+True
 """
 
 from mayutils.environment.filesystem import get_root

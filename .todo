@@ -4,21 +4,29 @@
 	- Better caching for query pulls
 - Add all tests
 
+- Clean up of cache on call
+- Subplots don't have save_axis_dict applied properly
+
 - Notebooks/examples/charts.ipynb
 - Templates
 - temp/temp.ipy
 - src/mayutils/data/live
 - src/mayutils/data/read
-- src/mayutils/environment/logging
 - src/mayutils/environment/memoisation
-- src/mayutils/interfaces/filetypes/pptx/
-- src/mayutils/interfaces/filetypes/xlsx/
 - src/mayutils/visualisation/graphs/plotly/
-- src/mayutils/visualisation/graphs/combine
-- src/mayutils/visualisation/console
-- src/mayutils/visualisation/notebook
 - src/mayutils/__init__
 - misc:
 	- CHANGELOG
 	- gitignore
 	- .todo
+
+
+Check all: Doctest skip
+Check all: noqa
+Any -> object
+Combine plotly imports in the init
+Check all docstrings make sense
+Proper docstring testing etc.
+Remove all type hints from docstrings
+Fix repo docs builds
+Fix repo merge gates

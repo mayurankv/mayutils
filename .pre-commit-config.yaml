@@ -1,6 +1,6 @@
 repos:
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.11
+    rev: v0.15.12
     hooks:
     -   id: ruff-check
         exclude: '(Templates/Cookiecutter/|^typings/)'
@@ -14,7 +14,7 @@ repos:
     -   id: commitizen
         stages: [commit-msg]
 -   repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.11.7
+    rev: 0.11.8
     hooks:
     -   id: uv-lock
 -   repo: local
@@ -49,6 +49,11 @@ repos:
         language: system
         pass_filenames: false
         files: ^(pyproject\.toml|uv\.lock)$
+-   repo: https://github.com/numpy/numpydoc
+    rev: v1.10.0
+    hooks:
+    -   id: numpydoc-validation
+        exclude: '(Templates/Cookiecutter/|^typings/|^tests/)'
 -   repo: https://github.com/executablebooks/mdformat
     rev: 1.0.0
     hooks:
@@ -81,7 +86,7 @@ repos:
         exclude: src/uk_loans_pricing_update_packs/data/queries/testing/
         # additional_dependencies: ['<dbt-adapter>', 'sqlfluff-templater-dbt']
 -   repo: https://github.com/renovatebot/pre-commit-hooks
-    rev: 43.139.2
+    rev: 43.141.2
     hooks:
     -   id: renovate-config-validator
         args: [--strict]
