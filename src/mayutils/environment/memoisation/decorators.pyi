@@ -4,8 +4,6 @@ from functools import _CacheInfo as CacheInfo  # pyright: ignore[reportPrivateUs
 from pathlib import Path
 from typing import Any, overload
 
-from mayutils.environment.memoisation.files import FileStore
-from mayutils.environment.memoisation.memory import MemoryStore
 from mayutils.environment.memoisation.types import CacheStore
 from mayutils.objects.dataframes.backends import Backend
 from mayutils.objects.datetime import Duration
