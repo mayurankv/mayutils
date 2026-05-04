@@ -101,5 +101,5 @@ class Scatter(go.Scatter):
         yperiodalignment: str | None = ...,
         ysrc: str | None = ...,
         zorder: int | None = ...,
-        **kwargs: Any,
+        **kwargs: Any,  # noqa: ANN401
     ) -> None: ...

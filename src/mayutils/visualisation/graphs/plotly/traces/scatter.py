@@ -1,4 +1,5 @@
-"""Scatter trace with sensible defaults.
+"""
+Scatter trace with sensible defaults.
 
 Thin wrapper around :class:`plotly.graph_objects.Scatter` that defaults to
 ``mode="markers"`` and reserves the ``meta`` field for internal trace-type
@@ -14,7 +15,12 @@ with may_require_extras():
 
 
 class Scatter(go.Scatter):
-    """Scatter trace defaulting to marker mode.
+    """
+    Scatter trace defaulting to marker mode.
+
+    Thin wrapper around :class:`plotly.graph_objects.Scatter` that sets
+    ``mode="markers"`` by default and reserves ``meta`` for internal
+    trace-type identification.
 
     Parameters
     ----------
@@ -27,6 +33,15 @@ class Scatter(go.Scatter):
     ------
     ValueError
         If ``meta`` is passed, since it is reserved for internal use.
+
+    See Also
+    --------
+    mayutils.visualisation.graphs.plotly.traces.line.Line :
+        Line trace built on the same Scatter base.
+
+    Examples
+    --------
+    >>> Scatter(x=[1, 2, 3], y=[4, 5, 6])  # doctest: +SKIP
     """
 
     def __init__(
@@ -34,6 +49,32 @@ class Scatter(go.Scatter):
         mode: str | None = "markers",
         **kwargs: Any,  # noqa: ANN401
     ) -> None:
+        """
+        Initialise a Scatter trace.
+
+        Sets ``meta="scatter"`` for internal trace-type identification.
+
+        Parameters
+        ----------
+        mode : str | None, optional
+            Plotly drawing mode, by default ``"markers"``.
+        **kwargs : Any
+            Forwarded to :class:`plotly.graph_objects.Scatter`.
+
+        Raises
+        ------
+        ValueError
+            If ``meta`` is passed, since it is reserved for internal use.
+
+        See Also
+        --------
+        mayutils.visualisation.graphs.plotly.traces.line.Line :
+            Line trace built on the same Scatter base.
+
+        Examples
+        --------
+        >>> Scatter(x=[1, 2, 3], y=[4, 5, 6])  # doctest: +SKIP
+        """
         if "meta" in kwargs:
             msg = "The 'meta' argument is reserved for internal use and cannot be set by the user."
             raise ValueError(msg)
