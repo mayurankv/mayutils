@@ -14,18 +14,22 @@ from plotly.graph_objs.scatter import (
     Fillpattern,
     Hoverlabel,
     Legendgrouptitle,
-    Line,
     Marker,
     Selected,
     Stream,
     Textfont,
     Unselected,
 )
+from plotly.graph_objs.scatter import (
+    Line as _Line,
+)
 
-class Scatter(go.Scatter):
+class Line(go.Scatter):
     def __init__(
         self,
-        mode: str | None = "markers",
+        label_name: bool | str = False,
+        textposition: str = "middle right",
+        meta: str = "line",
         *,
         alignmentgroup: str | int | None = ...,
         cliponaxis: bool | None = ...,
@@ -56,10 +60,10 @@ class Scatter(go.Scatter):
         legendgrouptitle: Legendgrouptitle | dict[str, Any] | None = ...,
         legendrank: float | None = ...,
         legendwidth: float | None = ...,
-        line: Line | dict[str, str | int | float] | None = ...,
+        line: _Line | dict[str, str | int | float] | None = ...,
         marker: Marker | dict[str, Any] | None = ...,
-        meta: Sequence[Any] | dict[str, Any] | np.ndarray[tuple[int, ...], Any] | None = "scatter",
         metasrc: str | None = ...,
+        mode: str | None = ...,
         name: str | int | None = ...,
         offsetgroup: str | int | None = ...,
         opacity: float | None = ...,
@@ -72,7 +76,6 @@ class Scatter(go.Scatter):
         stream: Stream | dict[str, int | str] | None = ...,
         text: str | Sequence[str] | None = ...,
         textfont: Textfont | dict[str, Any] | None = ...,
-        textposition: str | Sequence[str] | np.ndarray[tuple[int, ...], np.dtype[np.str_]] | None = ...,
         textpositionsrc: str | None = ...,
         textsrc: str | None = ...,
         texttemplate: str | None = ...,

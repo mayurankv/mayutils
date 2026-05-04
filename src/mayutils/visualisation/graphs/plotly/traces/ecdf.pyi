@@ -1,12 +1,12 @@
 # pyright: reportPropertyTypeMismatch=false
 from collections.abc import Hashable, Sequence
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
 import plotly.graph_objs.scatter.selected as _selected
 import plotly.graph_objs.scatter.unselected as _unselected
+from numpy.typing import ArrayLike
 from plotly.graph_objs.scatter import (
     ErrorX,
     ErrorY,
@@ -14,29 +14,40 @@ from plotly.graph_objs.scatter import (
     Fillpattern,
     Hoverlabel,
     Legendgrouptitle,
-    Line,
     Marker,
     Selected,
     Stream,
     Textfont,
     Unselected,
 )
+from plotly.graph_objs.scatter import (
+    Line as _Line,
+)
 
-class Scatter(go.Scatter):
+from mayutils.visualisation.graphs.plotly.traces.line import Line
+
+class Ecdf(Line):
     def __init__(
         self,
-        mode: str | None = "markers",
+        x: ArrayLike = ...,
+        y: ArrayLike | None = None,
+        y_shift: float = 0,
+        norm: Literal["probability", "percentage", "count"] = "probability",
+        mode: Literal["standard", "reversed", "complementary"] = "standard",
+        fill: Literal["tozeroy", "tonexty", "toself"] = "toself",
+        left_inclusive: bool = False,
         *,
+        label_name: bool | str = False,
+        textposition: str = "middle right",
+        meta: str = "line",
         alignmentgroup: str | int | None = ...,
         cliponaxis: bool | None = ...,
         connectgaps: bool | None = ...,
-        customdata: Sequence[float] | np.ndarray[tuple[int, ...], np.dtype[np.float64]] | pd.Series[float] | None = ...,
         customdatasrc: str | None = ...,
         dx: float | None = ...,
         dy: float | None = ...,
         error_x: ErrorX | dict[str, Any] | None = ...,
         error_y: ErrorY | dict[str, Any] | None = ...,
-        fill: str | None = ...,
         fillcolor: str | None = ...,
         fillgradient: Fillgradient | dict[str, Any] | None = ...,
         fillpattern: Fillpattern | dict[str, Any] | None = ...,
@@ -56,9 +67,8 @@ class Scatter(go.Scatter):
         legendgrouptitle: Legendgrouptitle | dict[str, Any] | None = ...,
         legendrank: float | None = ...,
         legendwidth: float | None = ...,
-        line: Line | dict[str, str | int | float] | None = ...,
+        line: _Line | dict[str, str | int | float] | None = ...,
         marker: Marker | dict[str, Any] | None = ...,
-        meta: Sequence[Any] | dict[str, Any] | np.ndarray[tuple[int, ...], Any] | None = "scatter",
         metasrc: str | None = ...,
         name: str | int | None = ...,
         offsetgroup: str | int | None = ...,
@@ -72,7 +82,6 @@ class Scatter(go.Scatter):
         stream: Stream | dict[str, int | str] | None = ...,
         text: str | Sequence[str] | None = ...,
         textfont: Textfont | dict[str, Any] | None = ...,
-        textposition: str | Sequence[str] | np.ndarray[tuple[int, ...], np.dtype[np.str_]] | None = ...,
         textpositionsrc: str | None = ...,
         textsrc: str | None = ...,
         texttemplate: str | None = ...,
@@ -81,7 +90,6 @@ class Scatter(go.Scatter):
         uirevision: Hashable | None = ...,
         unselected: Unselected | dict[str, _unselected.Marker | _unselected.Textfont | dict[str, Any]] | None = ...,
         visible: bool | str | None = ...,
-        x: Sequence[Any] | np.ndarray[tuple[int, ...], np.dtype[Any]] | pd.Series[Any] | None = ...,
         x0: float | None = ...,
         xaxis: str | None = ...,
         xcalendar: str | None = ...,
@@ -90,7 +98,6 @@ class Scatter(go.Scatter):
         xperiod0: float | str | None = ...,
         xperiodalignment: str | None = ...,
         xsrc: str | None = ...,
-        y: Sequence[int] | Sequence[float] | np.ndarray[tuple[int, ...], np.dtype[np.float64]] | pd.Series[float] | None = ...,
         y0: float | None = ...,
         yaxis: str | None = ...,
         ycalendar: str | None = ...,

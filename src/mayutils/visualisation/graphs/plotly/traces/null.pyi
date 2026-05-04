@@ -22,10 +22,10 @@ from plotly.graph_objs.scatter import (
     Unselected,
 )
 
-class Scatter(go.Scatter):
+class Null(go.Scatter):
     def __init__(
         self,
-        mode: str | None = "markers",
+        x_datetime: bool = False,
         *,
         alignmentgroup: str | int | None = ...,
         cliponaxis: bool | None = ...,
@@ -58,15 +58,16 @@ class Scatter(go.Scatter):
         legendwidth: float | None = ...,
         line: Line | dict[str, str | int | float] | None = ...,
         marker: Marker | dict[str, Any] | None = ...,
-        meta: Sequence[Any] | dict[str, Any] | np.ndarray[tuple[int, ...], Any] | None = "scatter",
+        meta: Sequence[Any] | dict[str, Any] | np.ndarray[tuple[int, ...], Any] | None = "null",
         metasrc: str | None = ...,
+        mode: str | None = ...,
         name: str | int | None = ...,
         offsetgroup: str | int | None = ...,
         opacity: float | None = ...,
         orientation: str | None = ...,
         selected: Selected | dict[str, _selected.Marker | _selected.Textfont | dict[str, Any]] | None = ...,
         selectedpoints: Sequence[int] | None = ...,
-        showlegend: bool | None = ...,
+        showlegend: bool | None = False,
         stackgaps: str | None = ...,
         stackgroup: str | int | None = ...,
         stream: Stream | dict[str, int | str] | None = ...,
@@ -81,7 +82,6 @@ class Scatter(go.Scatter):
         uirevision: Hashable | None = ...,
         unselected: Unselected | dict[str, _unselected.Marker | _unselected.Textfont | dict[str, Any]] | None = ...,
         visible: bool | str | None = ...,
-        x: Sequence[Any] | np.ndarray[tuple[int, ...], np.dtype[Any]] | pd.Series[Any] | None = ...,
         x0: float | None = ...,
         xaxis: str | None = ...,
         xcalendar: str | None = ...,
@@ -90,7 +90,6 @@ class Scatter(go.Scatter):
         xperiod0: float | str | None = ...,
         xperiodalignment: str | None = ...,
         xsrc: str | None = ...,
-        y: Sequence[int] | Sequence[float] | np.ndarray[tuple[int, ...], np.dtype[np.float64]] | pd.Series[float] | None = ...,
         y0: float | None = ...,
         yaxis: str | None = ...,
         ycalendar: str | None = ...,
