@@ -34,7 +34,7 @@ Examples
 
 from collections.abc import Callable, Hashable, Mapping, Sequence
 from pathlib import Path
-from typing import Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast, get_args
 
 from mayutils.core.extras import may_require_extras
 from mayutils.objects.dataframes.pandas.stylers import Styler
@@ -53,6 +53,9 @@ with may_require_extras():
         to_numeric,
     )
 
+if TYPE_CHECKING:
+    from pandas._typing import DtypeObj
+
 type DatetimeKind = Literal["datetime", "date", "time"]
 """Enumerates the temporal parsing modes accepted by
 :meth:`DataframeUtilsAccessor.map_dtypes`.
@@ -65,7 +68,8 @@ Each literal selects a different parsing pathway:
 - ``"time"`` parses with ``time_format`` and then strips to ``time`` objects.
 """
 
-type DtypeSpec = DatetimeKind | Literal["numeric"] | str | type  # noqa: PYI051
+
+type DtypeSpec = DatetimeKind | Literal["numeric"] | DtypeObj
 """Describes an acceptable target dtype for a single column in
 :meth:`DataframeUtilsAccessor.map_dtypes`.
 
@@ -172,7 +176,7 @@ class DataframeUtilsAccessor:
         self,
         path: Path | str,
         /,
-        **kwargs: object,
+        **kwargs: Any,  # noqa: ANN401
     ) -> Path:
         """
         Serialise the underlying DataFrame to ``path``, dispatching on suffix.
@@ -236,7 +240,7 @@ class DataframeUtilsAccessor:
         path = Path(path)
 
         if path.suffix in [".png", ".jpeg", ".jpg", ".pdf", ".svg", ".eps"]:
-            default_kwargs: dict[str, object] = {}
+            default_kwargs: dict[str, Any] = {}
             joint_kwargs = default_kwargs | kwargs
             return self.styler.save(
                 path,
@@ -244,7 +248,7 @@ class DataframeUtilsAccessor:
             )
 
         if path.suffix == ".parquet":
-            default_kwargs: dict[str, object] = {
+            default_kwargs = {
                 "index": True,
             }
             joint_kwargs = default_kwargs | kwargs
@@ -254,7 +258,7 @@ class DataframeUtilsAccessor:
             )
 
         elif path.suffix == ".feather":
-            default_kwargs: dict[str, object] = {}
+            default_kwargs = {}
             joint_kwargs = default_kwargs | kwargs
             msg = "Feather not implemented"
             raise NotImplementedError(msg)
@@ -264,7 +268,7 @@ class DataframeUtilsAccessor:
             )
 
         elif path.suffix == ".csv":
-            default_kwargs: dict[str, object] = {
+            default_kwargs = {
                 "index": True,
             }
             joint_kwargs = default_kwargs | kwargs
@@ -274,7 +278,7 @@ class DataframeUtilsAccessor:
             )
 
         elif path.suffix == ".xlsx":
-            default_kwargs: dict[str, object] = {
+            default_kwargs = {
                 "index": True,
             }
             joint_kwargs = default_kwargs | kwargs
@@ -293,7 +297,7 @@ class DataframeUtilsAccessor:
         self,
         *,
         caption: str | None = None,
-        **kwargs: object,
+        **kwargs: Any,  # noqa: ANN401
     ) -> None:
         """
         Render the DataFrame interactively through :func:`itables.show`.
@@ -836,15 +840,15 @@ class DataframeUtilsAccessor:
         for col, dtype in mapper.items():
             try:
                 column: Series = self.df[col]
-                if dtype in ("datetime", "date", "time"):
+                if dtype in get_args(tp=DatetimeKind):
                     self.df[col] = convert_datetime(
                         series=column,
-                        datetime_type=cast("DatetimeKind", dtype),  # pyright: ignore[reportUnnecessaryCast]
+                        datetime_type=cast("DatetimeKind", dtype),
                     )
                 elif dtype == "numeric":
                     self.df[col] = to_numeric(column)
                 else:
-                    self.df[col] = column.astype(cast("object", dtype))
+                    self.df[col] = column.astype(cast("DtypeObj", dtype))
 
             except (
                 KeyError,

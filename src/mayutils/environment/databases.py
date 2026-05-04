@@ -30,7 +30,7 @@ True
 """
 
 from collections.abc import Mapping
-from typing import Self, cast
+from typing import Any, Self, cast
 
 from mayutils.core.extras import may_require_extras
 
@@ -266,7 +266,7 @@ class EngineWrapper:
         /,
         *,
         lower_case: bool = True,
-        **kwargs: object,
+        **kwargs: Any,  # noqa: ANN401
     ) -> DataFrame:
         """
         Execute a SQL query and return the result as a pandas DataFrame.

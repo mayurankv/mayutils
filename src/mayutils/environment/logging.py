@@ -35,12 +35,12 @@ True
 import logging
 import time
 from collections.abc import Callable
-from functools import wraps
+from functools import update_wrapper
 from inspect import currentframe, getmodule
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from types import TracebackType
-from typing import Any, Literal, Self
+from typing import Any, Literal, Self, cast
 
 from mayutils.core.extras import may_require_extras
 from mayutils.environment.filesystem import get_root
@@ -55,9 +55,10 @@ FILE_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 root_logger = logging.getLogger()
 
 
-def _attach_handler(
-    *,
+def attach_handler(
     logger: logging.Logger,
+    /,
+    *,
     handler: logging.Handler,
     formatter: logging.Formatter | None,
 ) -> None:
@@ -205,7 +206,7 @@ class Logger(logging.Logger):
             (file_handler, file_formatter),
         ):
             if handler is not None:
-                _attach_handler(logger=self, handler=handler, formatter=formatter)
+                attach_handler(self, handler=handler, formatter=formatter)
 
         self._previous_level: int | None = None
 
@@ -367,8 +368,8 @@ class Logger(logging.Logger):
             file_formatter = logging.Formatter(fmt=FILE_FORMAT)
 
         root_logger.handlers.clear()
-        _attach_handler(logger=root_logger, handler=console_handler, formatter=console_formatter)
-        _attach_handler(logger=root_logger, handler=file_handler, formatter=file_formatter)
+        attach_handler(root_logger, handler=console_handler, formatter=console_formatter)
+        attach_handler(root_logger, handler=file_handler, formatter=file_formatter)
 
         root_logger.setLevel(level=logging.DEBUG)
 
@@ -505,7 +506,7 @@ class Logger(logging.Logger):
             (file_handler, file_formatter),
         ):
             if handler is not None:
-                _attach_handler(logger=result, handler=handler, formatter=formatter)
+                attach_handler(result, handler=handler, formatter=formatter)
 
         return result
 
@@ -621,7 +622,7 @@ class Logger(logging.Logger):
 _logger: Logger | None = None
 
 
-def _get_logger() -> Logger:
+def get_logger() -> Logger:
     """
     Return the module-level logger, creating it lazily on first use.
 
@@ -650,9 +651,10 @@ def _get_logger() -> Logger:
     return _logger
 
 
-def _format_entry(
-    *,
+def format_entry(
     name: str,
+    /,
+    *,
     args: tuple[object, ...],
     kwargs: dict[str, object],
     include_args: bool,
@@ -689,15 +691,18 @@ def _format_entry(
     """
     if not include_args:
         return f"Calling {name}"
+
     args_repr = ", ".join(
-        [repr(a) for a in args] + [f"{k}={v!r}" for k, v in kwargs.items()],
+        [repr(arg) for arg in args] + [f"{key}={value!r}" for key, value in kwargs.items()],
     )
+
     return f"Calling {name}({args_repr})"
 
 
-def _format_outcome(
-    *,
+def format_outcome(
     name: str,
+    /,
+    *,
     outcome: str,
     detail: object,
     elapsed: float,
@@ -741,8 +746,8 @@ def _format_outcome(
     return f"{name} {outcome}: {detail}"
 
 
-def _prepare_handlers(
-    *handler_pairs: tuple[logging.Handler | None, logging.Formatter | None],
+def prepare_handlers(
+    *handler_pairs: tuple[logging.Handler, logging.Formatter | None],
 ) -> list[logging.Handler]:
     """
     Build a list of handlers from (handler, formatter) pairs.
@@ -772,16 +777,51 @@ def _prepare_handlers(
     """
     result: list[logging.Handler] = []
     for handler, formatter in handler_pairs:
-        if handler is not None:
-            if formatter is not None:
-                handler.setFormatter(fmt=formatter)
-            result.append(handler)
+        if formatter is not None:
+            handler.setFormatter(fmt=formatter)
+
+        result.append(handler)
 
     return result
 
 
-def _log(
-    func: Callable[..., object],
+def get_valid_handlers(
+    *handler_pairs: tuple[logging.Handler | None, logging.Formatter | None],
+) -> tuple[tuple[logging.Handler, logging.Formatter | None], ...]:
+    """
+    Filter handler pairs, keeping only those with a non-``None`` handler.
+
+    Iterates over the supplied pairs and discards any whose handler
+    element is ``None``, narrowing the type for downstream consumers.
+
+    Parameters
+    ----------
+    *handler_pairs
+        Pairs of ``(handler, formatter)``.  Pairs whose handler is
+        ``None`` are excluded from the result.
+
+    Returns
+    -------
+        Pairs where the handler is not ``None``.
+
+    See Also
+    --------
+    prepare_handlers : Consumer that applies formatters to the
+        filtered pairs.
+
+    Examples
+    --------
+    >>> import logging
+    >>> from mayutils.environment.logging import get_valid_handlers
+    >>> get_valid_handlers((None, None))
+    ()
+    """
+    return tuple((handler, formatter) for (handler, formatter) in handler_pairs if handler is not None)
+
+
+@flexwrap
+def log_func[Decorating: Callable[..., object]](
+    func: Decorating,
     /,
     *,
     level: Level = logging.INFO,
@@ -794,7 +834,7 @@ def _log(
     console_formatter: logging.Formatter | None = None,
     file_handler: logging.Handler | None = None,
     file_formatter: logging.Formatter | None = None,
-) -> Callable[..., object]:
+) -> Decorating:
     """
     Wrap the callable with entry, exit and exception logging.
 
@@ -849,13 +889,15 @@ def _log(
     >>> double(3)
     6
     """
-    temp_handlers = _prepare_handlers(
-        (console_handler, console_formatter),
-        (file_handler, file_formatter),
+    temp_handlers = prepare_handlers(
+        *get_valid_handlers(
+            (console_handler, console_formatter),
+            (file_handler, file_formatter),
+        )
     )
+
     func_name: str = getattr(func, "__name__", repr(func))
 
-    @wraps(wrapped=func)
     def wrapper(
         *args: object,
         **kwargs: object,
@@ -891,15 +933,20 @@ def _log(
         >>> greet("world")
         'hello world'
         """
-        active_logger = _get_logger()
+        active_logger = get_logger()
 
-        for h in temp_handlers:
-            active_logger.addHandler(h)
+        for handler in temp_handlers:
+            active_logger.addHandler(hdlr=handler)
 
         try:
             if log_entry:
                 active_logger.dispatch(
-                    _format_entry(name=func_name, args=args, kwargs=kwargs, include_args=log_args),
+                    format_entry(
+                        func_name,
+                        args=args,
+                        kwargs=kwargs,
+                        include_args=log_args,
+                    ),
                     level=level,
                 )
 
@@ -909,29 +956,50 @@ def _log(
                 result = func(*args, **kwargs)
             except Exception as exception:
                 elapsed = time.perf_counter() - start
+
                 if log_exception:
                     active_logger.dispatch(
-                        _format_outcome(name=func_name, outcome="raised", detail=exception, elapsed=elapsed, include_timing=log_timing),
+                        format_outcome(
+                            func_name,
+                            outcome="raised",
+                            detail=exception,
+                            elapsed=elapsed,
+                            include_timing=log_timing,
+                        ),
                         level=logging.ERROR,
                         exc_info=True,
                     )
+
                 raise
             else:
                 elapsed = time.perf_counter() - start
                 if log_exit:
                     active_logger.dispatch(
-                        _format_outcome(name=func_name, outcome="returned", detail=result, elapsed=elapsed, include_timing=log_timing),
+                        format_outcome(
+                            func_name,
+                            outcome="returned",
+                            detail=result,
+                            elapsed=elapsed,
+                            include_timing=log_timing,
+                        ),
                         level=level,
                     )
+
                 return result
         finally:
-            for h in temp_handlers:
-                active_logger.removeHandler(hdlr=h)
+            for handler in temp_handlers:
+                active_logger.removeHandler(hdlr=handler)
 
-    return wrapper
+    update_wrapper(
+        wrapper=wrapper,
+        wrapped=func,
+    )
+
+    return cast("Decorating", wrapper)
 
 
-def _log_class(
+@flexwrap
+def log_class(
     cls: type,
     /,
     *,
@@ -1012,8 +1080,7 @@ def _log_class(
             setattr(
                 cls,
                 attr_name,
-                _log(
-                    attr,
+                log_func(
                     level=level,
                     log_entry=log_entry,
                     log_exit=log_exit,
@@ -1024,7 +1091,7 @@ def _log_class(
                     console_formatter=console_formatter,
                     file_handler=file_handler,
                     file_formatter=file_formatter,
-                ),
+                )(attr),
             )
 
     return cls
@@ -1032,7 +1099,8 @@ def _log_class(
 
 @flexwrap
 def log(
-    target: Callable[..., object] | type | None = None,
+    target: Callable[..., object] | type,
+    /,
     *,
     level: Level = logging.INFO,
     log_entry: bool = True,
@@ -1092,13 +1160,6 @@ def log(
         a function, or ``target`` itself with every public callable
         replaced by a logged wrapper when ``target`` is a class.
 
-    Raises
-    ------
-    ValueError
-        If ``target`` is ``None`` at the point of wrapping, which
-        indicates the decorator was applied with no function or
-        class to decorate.
-
     See Also
     --------
     logging.Logger : Logger used by the generated wrappers.
@@ -1117,13 +1178,8 @@ def log(
     5
     >>> _root.handlers = _saved_handlers
     """
-    if target is None:
-        msg = "No target provided"
-        raise ValueError(msg)
-
     if isinstance(target, type):
-        return _log_class(
-            target,
+        return log_class(
             level=level,
             log_entry=log_entry,
             log_exit=log_exit,
@@ -1134,9 +1190,9 @@ def log(
             console_formatter=console_formatter,
             file_handler=file_handler,
             file_formatter=file_formatter,
-        )
-    return _log(
-        target,
+        )(target)
+
+    return log_func(
         level=level,
         log_entry=log_entry,
         log_exit=log_exit,
@@ -1147,4 +1203,4 @@ def log(
         console_formatter=console_formatter,
         file_handler=file_handler,
         file_formatter=file_formatter,
-    )
+    )(target)

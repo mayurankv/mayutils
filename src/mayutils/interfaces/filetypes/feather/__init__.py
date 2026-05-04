@@ -35,15 +35,15 @@ Examples
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Self, cast
 
 from mayutils.core.extras import may_require_extras
 from mayutils.interfaces.filetypes import DataFile
+from mayutils.objects.dataframes.backends import DataFrames
 
 with may_require_extras():
     import pandas as pd
     import polars as pl
-    import pyarrow as pa
     import pyarrow.ipc as pa_ipc
     from pandas import DataFrame
     from pyarrow import feather
@@ -51,10 +51,8 @@ with may_require_extras():
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from mayutils.objects.dataframes import DataframeBackends, DataFrames
 
-
-class Feather(DataFile):
+class Feather[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType]):
     """
     Represent an Arrow IPC (Feather v2) file with pandas/polars dispatch.
 
@@ -100,12 +98,10 @@ class Feather(DataFile):
 
     suffix: ClassVar[str] = ".feather"
 
-    def _read(
+    def read(
         self,
-        *,
-        dataframe_backend: DataframeBackends,
         **kwargs: Any,  # noqa: ANN401
-    ) -> DataFrames:
+    ) -> DataFrameType:
         """
         Materialise the Feather file into a DataFrame.
 
@@ -119,8 +115,6 @@ class Feather(DataFile):
 
         Parameters
         ----------
-        dataframe_backend
-            Resolved DataFrame library to return.
         **kwargs
             Forwarded verbatim to the backend reader (for example
             ``columns=[...]`` or ``memory_map=True``).
@@ -128,7 +122,7 @@ class Feather(DataFile):
         Returns
         -------
             Fully loaded DataFrame whose concrete type matches
-            ``dataframe_backend``.
+            ``self.backend``.
 
         See Also
         --------
@@ -147,29 +141,31 @@ class Feather(DataFile):
         ...     path = Path(tmp) / "demo.feather"
         ...     pd.DataFrame({"id": [1, 2], "value": [3.14, 2.72]}).to_feather(path)
         ...     handle = Feather(path)
-        ...     frame = handle._read(dataframe_backend="pandas")
+        ...     frame = handle._read()
         ...     frame.shape
         (2, 2)
         """
-        if dataframe_backend == "polars":
-            return pl.read_ipc(
-                source=self.path,
-                **kwargs,
+        if self.backend.name == "polars":
+            return self.backend.cast(
+                pl.read_ipc(
+                    source=self.path,
+                    **kwargs,
+                ),
             )
 
-        return pd.read_feather(
-            path=self.path,
-            **kwargs,
+        return self.backend.cast(
+            pd.read_feather(
+                path=self.path,
+                **kwargs,
+            ),
         )
 
-    def _write(
+    def write(
         self,
-        df: DataFrames,
+        df: DataFrameType,
         /,
-        *,
-        dataframe_backend: DataframeBackends,
         **kwargs: Any,  # noqa: ANN401
-    ) -> None:
+    ) -> Self:
         """
         Serialise a DataFrame to the Feather file.
 
@@ -186,19 +182,21 @@ class Feather(DataFile):
         ----------
         df
             DataFrame to persist; its runtime type has already been
-            validated against ``dataframe_backend`` by
+            validated against ``self.backend`` by
             :meth:`DataFile.write`.
-        dataframe_backend
-            Resolved backend that matches ``type(df)``.
         **kwargs
             Forwarded verbatim to the backend writer (for example
             ``compression="zstd"`` or ``chunksize=65_536``).
+
+        Returns
+        -------
+            ``self``, for method chaining.
 
         Raises
         ------
         TypeError
             If ``df`` is not an instance of the class associated with
-            the requested ``dataframe_backend``.
+            the requested ``self.backend``.
 
         See Also
         --------
@@ -217,11 +215,11 @@ class Feather(DataFile):
         ...     path = Path(tmp) / "demo.feather"
         ...     handle = Feather(path)
         ...     frame = pd.DataFrame({"id": [1, 2], "value": [3.14, 2.72]})
-        ...     handle._write(frame, dataframe_backend="pandas")
+        ...     handle._write(frame)
         ...     path.exists()
         True
         """
-        if dataframe_backend == "pandas":
+        if self.backend.name == "pandas":
             if not isinstance(df, DataFrame):
                 msg = f"Expected a pandas DataFrame for writing with backend 'pandas', but got {type(df).__name__!r} instead."
                 raise TypeError(
@@ -233,7 +231,7 @@ class Feather(DataFile):
                 **kwargs,
             )
 
-        elif dataframe_backend == "polars":
+        elif self.backend.name == "polars":
             if not isinstance(df, pl.DataFrame):
                 msg = f"Expected a polars DataFrame for writing with backend 'polars', but got {type(df).__name__!r} instead."
                 raise TypeError(
@@ -244,6 +242,8 @@ class Feather(DataFile):
                 file=self.path,
                 **kwargs,
             )
+
+        return self
 
     def schema(
         self,
@@ -283,9 +283,9 @@ class Feather(DataFile):
         ...     sorted(schema.keys())
         ['id', 'value']
         """
-        arrow_schema = feather.read_table(source=self.path, columns=[]).schema  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
+        arrow_schema = feather.read_table(source=self.path, columns=[]).schema  # pyright: ignore[reportUnknownMemberType]
 
-        return {name: arrow_schema.field(name).type for name in arrow_schema.names}  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
+        return {name: arrow_schema.field(name).type for name in arrow_schema.names}  # pyright: ignore[reportUnknownMemberType]
 
     def row_count(
         self,
@@ -324,17 +324,15 @@ class Feather(DataFile):
         ...     handle.row_count()
         4
         """
-        with pa_ipc.open_file(source=str(self.path)) as reader:  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
-            return sum(reader.get_batch(index).num_rows for index in range(reader.num_record_batches))  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
+        with pa_ipc.open_file(source=str(self.path)) as reader:
+            return sum(reader.get_batch(index).num_rows for index in range(reader.num_record_batches))
 
     def iter_chunks(
         self,
         chunk_size: int,
         /,
-        *,
-        dataframe_backend: DataframeBackends | None = None,
         **kwargs: Any,  # noqa: ANN401
-    ) -> Iterator[DataFrames]:
+    ) -> Iterator[DataFrameType]:
         """
         Stream the Feather file as DataFrame chunks of ``chunk_size`` rows.
 
@@ -353,9 +351,6 @@ class Feather(DataFile):
             Upper bound on the number of rows per yielded chunk. The
             final chunk may be smaller if the total row count is not
             an exact multiple.
-        dataframe_backend
-            DataFrame library to convert each chunk to; defaults to
-            :attr:`backend` when ``None``.
         **kwargs
             Forwarded to :func:`pyarrow.feather.read_table` (for
             example ``columns=[...]`` or ``memory_map=True``).
@@ -382,69 +377,21 @@ class Feather(DataFile):
         ...     path = Path(tmp) / "demo.feather"
         ...     pd.DataFrame({"id": [1, 2, 3, 4, 5]}).to_feather(path)
         ...     handle = Feather(path)
-        ...     chunks = list(handle.iter_chunks(2, dataframe_backend="pandas"))
+        ...     chunks = list(handle.iter_chunks(2))
         ...     [chunk.shape for chunk in chunks]
         [(2, 1), (2, 1), (1, 1)]
         """
-        backend = dataframe_backend if dataframe_backend is not None else self.backend
-        table = feather.read_table(source=self.path, **kwargs)  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
+        table = feather.read_table(source=self.path, **kwargs)  # pyright: ignore[reportUnknownMemberType]
 
-        for start in range(0, table.num_rows, chunk_size):  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
-            yield pyarrow_table_to_backend(
-                table.slice(offset=start, length=chunk_size),  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
-                backend=backend,
-            )
+        for start in range(0, table.num_rows, chunk_size):
+            sliced_table = table.slice(offset=start, length=chunk_size)
 
+            if self.backend.name == "polars":
+                df = self.backend.cast(cast("pl.DataFrame", pl.from_arrow(data=sliced_table)))  # pyright: ignore[reportUnknownMemberType]
 
-def pyarrow_table_to_backend(
-    table: pa.Table,  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType, reportUnknownParameterType]
-    /,
-    *,
-    backend: DataframeBackends,
-) -> DataFrames:
-    """
-    Convert an Arrow table to the requested DataFrame backend.
+            df = self.backend.cast(sliced_table.to_pandas())  # pyright: ignore[reportUnknownMemberType]
 
-    Dispatches on ``backend`` to produce either a pandas or a polars
-    DataFrame from the supplied :class:`pyarrow.Table`. Polars uses
-    :func:`polars.from_arrow`, which is a zero-copy conversion for
-    most Arrow types; pandas uses :meth:`pyarrow.Table.to_pandas`,
-    which materialises a new DataFrame and copies whatever Arrow
-    buffers cannot be backed directly by NumPy. Both paths preserve
-    column ordering.
-
-    Parameters
-    ----------
-    table
-        Arrow table to convert.
-    backend
-        Target DataFrame library.
-
-    Returns
-    -------
-        Materialised DataFrame whose concrete type matches
-        ``backend``.
-
-    See Also
-    --------
-    polars.from_arrow : Polars conversion used for ``"polars"``.
-    pyarrow.Table.to_pandas : Pandas conversion used for ``"pandas"``.
-    pyarrow.feather.read_table : Typical source of the input table.
-    Feather.iter_chunks : Caller that feeds this helper row slices.
-
-    Examples
-    --------
-    >>> import pyarrow as pa
-    >>> from mayutils.interfaces.filetypes.feather import pyarrow_table_to_backend
-    >>> tbl = pa.table({"id": [1, 2], "value": [3.14, 2.72]})
-    >>> frame = pyarrow_table_to_backend(tbl, backend="pandas")
-    >>> frame.shape
-    (2, 2)
-    """
-    if backend == "polars":
-        return cast("pl.DataFrame", pl.from_arrow(data=table))  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
-
-    return table.to_pandas()  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
+            yield df
 
 
 __all__ = [

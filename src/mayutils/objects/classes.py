@@ -35,7 +35,7 @@ from types import FunctionType
 from typing import NoReturn, Protocol
 
 
-class ChainedMethod[T, V](Protocol):
+class ChainedMethod[Object, Value](Protocol):
     """
     Describe the shape of a method extension threading a prior return value.
 
@@ -64,11 +64,11 @@ class ChainedMethod[T, V](Protocol):
 
     def __call__(
         self,
-        self_obj: T,
+        self_obj: Object,
         *args: object,
-        prior_value: V | None,
+        prior_value: Value | None,
         **kwargs: object,
-    ) -> V | None:
+    ) -> Value | None:
         """
         Run the extension against ``self_obj``, optionally replacing ``prior_value``.
 
@@ -118,7 +118,7 @@ class ChainedMethod[T, V](Protocol):
         ...
 
 
-class classonlyproperty[V]:  # noqa: N801
+class classonlyproperty[Value]:  # noqa: N801
     """
     Expose a computed attribute reachable only through the class itself.
 
@@ -155,7 +155,8 @@ class classonlyproperty[V]:  # noqa: N801
 
     def __init__(
         self,
-        func: Callable[..., V],
+        func: Callable[..., Value],
+        /,
     ) -> None:
         """
         Store the class-level getter that backs this descriptor.
@@ -192,7 +193,7 @@ class classonlyproperty[V]:  # noqa: N801
         self,
         instance: object,
         owner: type,
-    ) -> V:
+    ) -> Value:
         """
         Resolve the descriptor to the getter's return, rejecting instance access.
 
@@ -247,7 +248,7 @@ class classonlyproperty[V]:  # noqa: N801
         return self.func(owner)
 
 
-class readonlyclassonlyproperty[V](classonlyproperty[V]):  # noqa: N801
+class readonlyclassonlyproperty[Value](classonlyproperty[Value]):  # noqa: N801
     """
     Forbid assignment on a :class:`classonlyproperty` to enforce read-only semantics.
 
@@ -278,7 +279,7 @@ class readonlyclassonlyproperty[V](classonlyproperty[V]):  # noqa: N801
     def __set__(
         self,
         instance: object,
-        value: object,
+        value: Value,
     ) -> NoReturn:
         """
         Refuse every assignment attempt so the attribute stays read-only.
@@ -351,11 +352,11 @@ class BaseClass:
     """
 
 
-def add_method[T, V](
-    cls: type[T],
-    method: ChainedMethod[T, V],
+def add_method[Class, Value](
+    cls: type[Class],
+    method: ChainedMethod[Class, Value],
     method_name: str,
-) -> type[T]:
+) -> type[Class]:
     """
     Attach a chained method to a class, composing with any existing binding.
 
@@ -408,7 +409,7 @@ def add_method[T, V](
 
     @wraps(wrapped=method)
     def new_method(
-        self: T,
+        self: Class,
         *args: object,
         **kwargs: object,
     ) -> object:
@@ -465,10 +466,10 @@ def add_method[T, V](
     return cls
 
 
-def adopt_super_methods[T](
-    cls: type[T],
+def adopt_super_methods[Class](
+    cls: type[Class],
     /,
-) -> type[T]:
+) -> type[Class]:
     """
     Rewrite inherited methods on ``cls`` so they return ``self`` for fluent chaining.
 
@@ -526,7 +527,7 @@ def adopt_super_methods[T](
         def make_wrapper(
             method_name: str,
             base_method: Callable[..., object],
-        ) -> Callable[..., T]:
+        ) -> Callable[..., Class]:
             """
             Build a wrapper that delegates to a base-class method and returns ``self``.
 
@@ -574,10 +575,10 @@ def adopt_super_methods[T](
 
             @wraps(wrapped=base_method)
             def wrapper(
-                self: T,
+                self: Class,
                 *args: object,
                 **kwargs: object,
-            ) -> T:
+            ) -> Class:
                 """
                 Invoke the base method on ``self`` and return ``self`` for chaining.
 

@@ -35,7 +35,7 @@ import json
 import os
 from collections.abc import Callable
 from pathlib import Path
-from typing import Protocol, cast
+from typing import Any, Protocol, cast
 
 from mayutils.core.extras import may_require_extras
 from mayutils.environment.filesystem import get_root
@@ -410,7 +410,7 @@ class StoreToken(Protocol):
 
     def __call__(
         self,
-        credentials: JsonParsed,
+        credentials: object,
         /,
     ) -> JsonString:
         """
@@ -513,7 +513,7 @@ class ParseToken(Protocol):
 
 
 def default_store_token(
-    credentials: JsonParsed,
+    credentials: object,
     /,
 ) -> JsonString:
     """
@@ -662,8 +662,8 @@ def oauth_wrapper(
         /,
         *,
         username: str = getpass.getuser(),
-        **kwargs: object,
-    ) -> JsonParsed:
+        **kwargs: Any,  # noqa: ANN401
+    ) -> object:
         """
         Execute the wrapped OAuth routine with keyring persistence.
 
@@ -791,10 +791,10 @@ def reset_service_oauth(
     )
 
 
-@oauth_wrapper(store_token=lambda creds: creds.to_json())  # pyright: ignore[reportUnknownLambdaType, reportUntypedFunctionDecorator, reportUnknownMemberType, reportAttributeAccessIssue, reportCallIssue]  # ty:ignore[missing-argument]
+@oauth_wrapper(store_token=lambda creds: creds.to_json())  # pyright: ignore[reportUnknownMemberType, reportUnknownLambdaType, reportAttributeAccessIssue]
 def google_oauth(
     token: JsonParsed | None,
-    **kwargs: object,
+    **kwargs: Any,  # noqa: ANN401
 ) -> tuple[Credentials, bool]:
     """
     Obtain valid Google OAuth credentials, refreshing or re-authenticating as needed.

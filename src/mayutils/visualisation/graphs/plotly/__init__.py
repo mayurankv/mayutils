@@ -1,34 +1,67 @@
-"""
-Expose the Plotly-backed chart helper namespace.
+"""Plotly-based visualisation components for creating charts, traces, and templates."""
 
-Group chart builders, trace helpers, layout utilities, and theme
-templates that produce Plotly figures consistent with the shared visual
-identity used across the library's plotting backends. Sit inside
-:mod:`mayutils.visualisation.graphs` so that chart construction code can
-dispatch between Plotly, Matplotlib, and other backends using a uniform
-namespace structure.
+from mayutils.visualisation.graphs.plotly.charts import (
+    AxisConfig,
+    MainAxisConfig,
+    MainAxisConfigs,
+    Plot,
+    PlotConfig,
+    SubPlot,
+    SubPlotConfig,
+    Titles,
+    TracesConfig,
+)
+from mayutils.visualisation.graphs.plotly.templates import (
+    get_default_template_name,
+    get_template,
+    set_renderer,
+    set_template,
+    use_template,
+)
+from mayutils.visualisation.graphs.plotly.traces import (
+    Bar3d,
+    Cuboid,
+    Ecdf,
+    Icicle,
+    Kde,
+    Line,
+    Null,
+    Scatter,
+    is_trace_3d,
+    merge_cuboids,
+)
+from mayutils.visualisation.graphs.plotly.utilities import (
+    include_plotly_js,
+    map_categorical_array,
+    melt_dataframe,
+)
 
-See Also
---------
-mayutils.visualisation.graphs.plotly.templates : Plotly ``base``,
-    ``slides``, ``save``, and ``business_compliant`` layout templates
-    registered on :mod:`plotly.io.templates` at import time.
-mayutils.visualisation.graphs.plotly.utilities : Helpers for embedding
-    ``plotly.min.js``, encoding categorical arrays, and melting
-    DataFrames for trace constructors.
-mayutils.visualisation.graphs.matplotlib : Sibling Matplotlib backend
-    exposing the equivalent chart helpers for Matplotlib output.
-plotly.graph_objects.Figure : Plotly figure object that the helpers in
-    this package construct and return.
-plotly.io.templates : Plotly template registry that receives the themes
-    declared in :mod:`mayutils.visualisation.graphs.plotly.templates`.
-
-Examples
---------
-Import the Plotly backend to pick up both the chart helpers and the
-registered layout templates used as package-wide defaults.
-
->>> from mayutils.visualisation.graphs import plotly as plotly_charts
->>> plotly_charts.__name__
-'mayutils.visualisation.graphs.plotly'
-"""
+__all__ = [
+    "AxisConfig",
+    "Bar3d",
+    "Cuboid",
+    "Ecdf",
+    "Icicle",
+    "Kde",
+    "Line",
+    "MainAxisConfig",
+    "MainAxisConfigs",
+    "Null",
+    "Plot",
+    "PlotConfig",
+    "Scatter",
+    "SubPlot",
+    "SubPlotConfig",
+    "Titles",
+    "TracesConfig",
+    "get_default_template_name",
+    "get_template",
+    "include_plotly_js",
+    "is_trace_3d",
+    "map_categorical_array",
+    "melt_dataframe",
+    "merge_cuboids",
+    "set_renderer",
+    "set_template",
+    "use_template",
+]

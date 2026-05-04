@@ -38,18 +38,18 @@ True
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Self, cast
 
-from mayutils.objects.dataframes import infer_backend
+import pandas as pd
+import polars as pl
+
+from mayutils.objects.classes import readonlyclassonlyproperty
+from mayutils.objects.dataframes.backends import Backend, DataFrames
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
-
-    import polars as pl
-    from pandas import DataFrame
-
-    from mayutils.objects.dataframes import DataframeBackends, DataFrames
 
 
 PREVIEW_ERRORS: tuple[type[BaseException], ...] = (
@@ -69,7 +69,7 @@ errors, unexpected bugs) propagates so it stays visible.
 """
 
 
-class DataFile(ABC):
+class DataFile[DataFrameType: DataFrames = pd.DataFrame](ABC):
     """
     Represent a tabular file on disk through an instance-based handle.
 
@@ -93,7 +93,7 @@ class DataFile(ABC):
         Default DataFrame library to materialise reads as and to
         dispatch writes through when no explicit backend is supplied at
         call time. Passed through to the read/write implementations as
-        ``dataframe_backend``.
+        :attr:`backend`.
 
     Attributes
     ----------
@@ -132,7 +132,38 @@ class DataFile(ABC):
     """
 
     suffix: ClassVar[str]
-    _registry: ClassVar[dict[str, type[DataFile]]] = {}
+    _registry: ClassVar[dict[str, type[DataFile[Any]]]] = {}
+
+    @readonlyclassonlyproperty
+    def registry(
+        cls,
+    ) -> dict[str, type[DataFile[Any]]]:
+        """
+        Return the suffix-indexed registry of DataFile subclasses.
+
+        Looks up the internal ``_registry`` class variable that maps
+        file-extension strings to their concrete subclass types.
+
+        Returns
+        -------
+            Mapping from file suffix to concrete ``DataFile`` subclass.
+
+        See Also
+        --------
+        DataFile.__init_subclass__ : Populates the registry on import.
+        DataFile.from_path : Consumer of the registry.
+        mayutils.interfaces.filetypes.csv.Csv : Example registrant.
+        pathlib.Path.suffix : Source of the registry key.
+
+        Examples
+        --------
+        >>> from mayutils.environment.memoisation import register_datafile
+        >>> from mayutils.interfaces.filetypes import DataFile
+        >>> register_datafile("csv")
+        >>> ".csv" in DataFile.registry
+        True
+        """
+        return cls._registry
 
     def __init_subclass__(
         cls,
@@ -185,6 +216,7 @@ class DataFile(ABC):
         super().__init_subclass__(**kwargs)
         if not register:
             return
+
         if not hasattr(cls, "suffix"):
             msg = f"{cls.__name__} must declare a `suffix` class attribute to register on DataFile."
             raise TypeError(msg)
@@ -196,29 +228,20 @@ class DataFile(ABC):
         path: Path | str,
         /,
         *,
-        backend: DataframeBackends = "pandas",
+        backend: Backend[DataFrameType] | None = None,
     ) -> None:
         """
         Bind the handle to ``path`` and capture the default backend.
 
-        No I/O happens here: the constructor merely validates that
-        ``path`` has the suffix expected by the subclass and stashes
-        the default backend for later use. Actual reads and writes are
-        deferred until :meth:`read`, :meth:`write`, :meth:`schema`,
-        :meth:`row_count`, or :meth:`iter_chunks` is called, which
-        keeps construction cheap and lets callers build handles for
-        files that do not yet exist.
+        Resolves the supplied path to a :class:`~pathlib.Path`, stores
+        the backend token, and validates the suffix against the class.
 
         Parameters
         ----------
         path
-            Filesystem location of the target file. A string is
-            normalised to :class:`pathlib.Path`. The file is not opened
-            here; I/O happens lazily on :meth:`read`, :meth:`write`,
-            :meth:`schema`, :meth:`row_count`, and :meth:`iter_chunks`.
+            Filesystem location of the target file.
         backend
-            Default DataFrame backend for reads and for dispatching
-            writes when the caller does not override it.
+            Backend token for reads and writes. Defaults to :data:`PANDAS`.
 
         Raises
         ------
@@ -238,11 +261,11 @@ class DataFile(ABC):
         >>> from pathlib import Path
         >>> from mayutils.interfaces.filetypes.csv import Csv
         >>> handle = Csv(Path("events.csv"))
-        >>> handle.backend
-        'pandas'
+        >>> handle.backend is PANDAS
+        True
         """
         self.path = Path(path)
-        self.backend: DataframeBackends = backend
+        self.backend = backend if backend is not None else cast("Backend[DataFrameType]", Backend(pd.DataFrame))
 
         if self.path.suffix.lower() != self.suffix.lower():
             msg = f"{type(self).__name__} expects a '{self.suffix}' file; got '{self.path.suffix}'."
@@ -279,7 +302,7 @@ class DataFile(ABC):
         >>> "demo.csv" in handle._identity()
         True
         """
-        return f"{type(self).__name__}({self.path!s}, backend={self.backend!r})"
+        return f"{type(self).__name__}({self.path!s}, backend={self.backend.name!r})"
 
     def __repr__(
         self,
@@ -363,7 +386,7 @@ class DataFile(ABC):
             return header
         try:
             preview = self.read()
-            html: str = preview._repr_html_()  # pyright: ignore[reportUnknownVariableType, reportPrivateUsage, reportCallIssue]  # ty:ignore[call-non-callable]
+            html: str = preview._repr_html_()  # pyright: ignore[reportUnknownVariableType, reportPrivateUsage, reportCallIssue]
         except PREVIEW_ERRORS:
             return header
         if not html:
@@ -372,54 +395,45 @@ class DataFile(ABC):
         return f"{header}<br/>{html}"
 
     @classmethod
-    def from_path(
+    def from_path[AltDataFrameType: DataFrames = pd.DataFrame](
         cls,
         path: Path | str,
         /,
         *,
-        backend: DataframeBackends = "pandas",
+        backend: Backend[AltDataFrameType] | None = None,
         **kwargs: Any,  # noqa: ANN401
-    ) -> DataFile:
+    ) -> DataFile[AltDataFrameType]:
         """
-        Build the appropriate subclass for ``path`` via suffix dispatch.
+        Dispatch to the registered subclass whose suffix matches ``path``.
 
-        Looks up the lower-cased suffix of ``path`` in the registry
-        populated by :meth:`__init_subclass__` and instantiates the
-        matching subclass. The returned object is an instance of
-        whichever concrete :class:`DataFile` subclass registered itself
-        for the given suffix at import time, making this the preferred
-        entry point when the concrete format is only known at runtime.
+        Looks up the path's suffix in :attr:`registry` and delegates
+        construction to the matching concrete subclass.
 
         Parameters
         ----------
         path
-            Path whose suffix selects the concrete subclass. The
-            resolved suffix is lower-cased before lookup.
+            Filesystem location whose suffix selects the concrete
+            subclass from :attr:`registry`.
         backend
-            Forwarded to the subclass's ``__init__`` as the default
-            DataFrame backend.
+            DataFrame backend token forwarded to the subclass
+            constructor. Defaults to :data:`PANDAS`.
         **kwargs
-            Forwarded verbatim to the subclass's ``__init__``. Use
-            this to pass subclass-specific options such as ``sheet``
-            for :class:`XlsxSheet`.
+            Extra keyword arguments forwarded to the subclass
+            constructor (for example ``sheet`` for XLSX handles).
 
         Returns
         -------
-            A newly constructed instance of the registered subclass
-            bound to ``path``.
+            A concrete :class:`DataFile` instance bound to ``path``.
 
         Raises
         ------
         ValueError
-            If no subclass has been registered for the suffix of
-            ``path``; usually this means the relevant subclass module
-            has not been imported.
+            If no subclass is registered for the suffix of ``path``.
 
         See Also
         --------
         DataFile.__init_subclass__ : Populates the registry.
-        mayutils.interfaces.filetypes.csv.Csv : Concrete subclass.
-        mayutils.interfaces.filetypes.parquet.Parquet : Concrete subclass.
+        DataFile.__init__ : Instance-level constructor.
         pathlib.Path.suffix : Source of the dispatch key.
 
         Examples
@@ -427,10 +441,10 @@ class DataFile(ABC):
         >>> from pathlib import Path
         >>> from mayutils.environment.memoisation import register_datafile
         >>> from mayutils.interfaces.filetypes import DataFile
-        >>> register_datafile("feather")
-        >>> handle = DataFile.from_path(Path("orders.feather"))
-        >>> handle.suffix
-        '.feather'
+        >>> register_datafile("csv")
+        >>> handle = DataFile.from_path(Path("events.csv"))
+        >>> type(handle).__name__
+        'Csv'
         """
         path = Path(path)
         key = path.suffix.lower()
@@ -441,7 +455,7 @@ class DataFile(ABC):
 
         return DataFile._registry[key](
             path,
-            backend=backend,
+            backend=backend if backend is not None else cast("Backend[AltDataFrameType]", Backend(pd.DataFrame)),
             **kwargs,
         )
 
@@ -601,55 +615,46 @@ class DataFile(ABC):
 
     def convert_to(
         self,
-        target_cls: type[DataFile],
+        target_cls: type[DataFile[DataFrameType]],
         /,
-        path: Path | str,
         *,
-        backend: DataframeBackends | None = None,
-        read_kwargs: Mapping[str, object] | None = None,
-        write_kwargs: Mapping[str, object] | None = None,
+        path: Path | str,
+        read_kwargs: Mapping[str, Any] | None = None,
+        write_kwargs: Mapping[str, Any] | None = None,
         **init_kwargs: object,
-    ) -> DataFile:
+    ) -> DataFile[DataFrameType]:
         """
-        Round-trip the file's contents into another registered format.
+        Read this file and write its contents to a new file of a different format.
 
-        Materialises the current file into a DataFrame via
-        :meth:`read`, constructs a ``target_cls`` handle bound to
-        ``path``, and writes the DataFrame through its
-        :meth:`write`. The returned handle is the newly constructed
-        target, so subsequent reads can chain directly off the call.
+        Materialises the current file via :meth:`read`, then persists the
+        resulting DataFrame through the target subclass's :meth:`write`.
 
         Parameters
         ----------
         target_cls
-            Concrete :class:`DataFile` subclass to construct at
-            ``path`` and populate from ``self``.
+            Concrete :class:`DataFile` subclass that handles the
+            destination format.
         path
-            Destination path for the converted file. Passed to
-            ``target_cls(path, ...)``.
-        backend
-            DataFrame backend for both the intermediate read and
-            write. When ``None``, falls back to :attr:`backend`.
+            Filesystem location for the converted output file.
         read_kwargs
             Extra keyword arguments forwarded to :meth:`read`.
         write_kwargs
             Extra keyword arguments forwarded to the target's
             :meth:`write`.
         **init_kwargs
-            Extra keyword arguments forwarded to ``target_cls``'s
-            ``__init__`` (for example ``sheet=...`` when converting to
-            an :class:`XlsxSheet`).
+            Extra keyword arguments forwarded to the ``target_cls``
+            constructor (for example ``sheet`` for XLSX handles).
 
         Returns
         -------
-            Handle to the newly written file in the target format.
+            Handle to the newly written file.
 
         See Also
         --------
-        DataFile.to_parquet : Shortcut for parquet targets.
-        DataFile.to_csv : Shortcut for CSV targets.
-        mayutils.interfaces.filetypes.feather.Feather : Example target.
-        pathlib.Path : Path abstraction used for ``path``.
+        DataFile.to_parquet : Parquet-specific shortcut.
+        DataFile.to_csv : CSV-specific shortcut.
+        DataFile.to_feather : Feather-specific shortcut.
+        DataFile.to_xlsx : XLSX-specific shortcut.
 
         Examples
         --------
@@ -663,37 +668,33 @@ class DataFile(ABC):
         ...     dst = Path(tmp) / "sink.parquet"
         ...     pd.DataFrame({"a": [1, 2]}).to_csv(src, index=False)
         ...     handle = Csv(src)
-        ...     converted = handle.convert_to(Parquet, path=dst)
-        ...     converted.path.exists()
+        ...     out = handle.convert_to(Parquet, path=dst)
+        ...     out.path.exists()
         True
         """
-        effective_backend = backend if backend is not None else self.backend
-        df = self.read(
-            dataframe_backend=effective_backend,
-            **(dict(read_kwargs) if read_kwargs else {}),
-        )
+        df = self.read(**(dict(read_kwargs) if read_kwargs else {}))
+
         target = target_cls(
             path,
-            backend=effective_backend,
+            backend=self.backend,
             **init_kwargs,
         )
+
         target.write(
             df,
-            dataframe_backend=effective_backend,
             **(dict(write_kwargs) if write_kwargs else {}),
         )
 
-        return target
+        return target  # ty:ignore[invalid-return-type]
 
     def to_parquet(
         self,
         path: Path | str,
         /,
         *,
-        backend: DataframeBackends | None = None,
-        read_kwargs: Mapping[str, object] | None = None,
-        write_kwargs: Mapping[str, object] | None = None,
-    ) -> DataFile:
+        read_kwargs: Mapping[str, Any] | None = None,
+        write_kwargs: Mapping[str, Any] | None = None,
+    ) -> DataFile[DataFrameType]:
         """
         Round-trip the file's contents into a new parquet file.
 
@@ -708,9 +709,6 @@ class DataFile(ABC):
         ----------
         path
             Destination parquet path.
-        backend
-            DataFrame backend for the intermediate round-trip;
-            defaults to :attr:`backend`.
         read_kwargs
             Extra keyword arguments forwarded to :meth:`read`.
         write_kwargs
@@ -748,7 +746,6 @@ class DataFile(ABC):
         return self.convert_to(
             Parquet,
             path=path,
-            backend=backend,
             read_kwargs=read_kwargs,
             write_kwargs=write_kwargs,
         )
@@ -758,10 +755,9 @@ class DataFile(ABC):
         path: Path | str,
         /,
         *,
-        backend: DataframeBackends | None = None,
-        read_kwargs: Mapping[str, object] | None = None,
-        write_kwargs: Mapping[str, object] | None = None,
-    ) -> DataFile:
+        read_kwargs: Mapping[str, Any] | None = None,
+        write_kwargs: Mapping[str, Any] | None = None,
+    ) -> DataFile[DataFrameType]:
         """
         Round-trip the file's contents into a new CSV file.
 
@@ -776,9 +772,6 @@ class DataFile(ABC):
         ----------
         path
             Destination CSV path.
-        backend
-            DataFrame backend for the intermediate round-trip;
-            defaults to :attr:`backend`.
         read_kwargs
             Extra keyword arguments forwarded to :meth:`read`.
         write_kwargs
@@ -815,7 +808,6 @@ class DataFile(ABC):
         return self.convert_to(
             Csv,
             path=path,
-            backend=backend,
             read_kwargs=read_kwargs,
             write_kwargs=write_kwargs,
         )
@@ -825,10 +817,9 @@ class DataFile(ABC):
         path: Path | str,
         /,
         *,
-        backend: DataframeBackends | None = None,
-        read_kwargs: Mapping[str, object] | None = None,
-        write_kwargs: Mapping[str, object] | None = None,
-    ) -> DataFile:
+        read_kwargs: Mapping[str, Any] | None = None,
+        write_kwargs: Mapping[str, Any] | None = None,
+    ) -> DataFile[DataFrameType]:
         """
         Round-trip the file's contents into a new Feather file.
 
@@ -843,9 +834,6 @@ class DataFile(ABC):
         ----------
         path
             Destination Feather path.
-        backend
-            DataFrame backend for the intermediate round-trip;
-            defaults to :attr:`backend`.
         read_kwargs
             Extra keyword arguments forwarded to :meth:`read`.
         write_kwargs
@@ -882,7 +870,6 @@ class DataFile(ABC):
         return self.convert_to(
             Feather,
             path=path,
-            backend=backend,
             read_kwargs=read_kwargs,
             write_kwargs=write_kwargs,
         )
@@ -893,30 +880,24 @@ class DataFile(ABC):
         /,
         *,
         sheet: str = "Sheet1",
-        backend: DataframeBackends | None = None,
-        read_kwargs: Mapping[str, object] | None = None,
-        write_kwargs: Mapping[str, object] | None = None,
-    ) -> DataFile:
+        read_kwargs: Mapping[str, Any] | None = None,
+        write_kwargs: Mapping[str, Any] | None = None,
+    ) -> DataFile[DataFrameType]:
         """
-        Round-trip the file's contents into a single sheet of a new XLSX file.
+        Round-trip the file's contents into a new XLSX sheet.
 
         Shortcut for :meth:`convert_to` with the XLSX sheet subclass
         lazily imported so the base module stays importable without
-        the ``openpyxl``/``xlsxwriter`` extras installed. The ``sheet``
-        argument is forwarded to the subclass constructor so callers
-        can control which tab is written; existing sheets at the same
-        path are preserved when the underlying writer supports it.
+        the XLSX extras installed. The ``sheet`` argument names the
+        worksheet inside the workbook; any XLSX-specific options
+        (engine, freeze panes) go through ``write_kwargs``.
 
         Parameters
         ----------
         path
             Destination XLSX path.
         sheet
-            Name of the sheet to create or replace inside the XLSX
-            workbook.
-        backend
-            DataFrame backend for the intermediate round-trip;
-            defaults to :attr:`backend`.
+            Name of the worksheet to write into.
         read_kwargs
             Extra keyword arguments forwarded to :meth:`read`.
         write_kwargs
@@ -924,7 +905,7 @@ class DataFile(ABC):
 
         Returns
         -------
-            Handle to the newly written sheet.
+            Handle to the newly written XLSX file.
 
         See Also
         --------
@@ -944,7 +925,7 @@ class DataFile(ABC):
         ...     dst = Path(tmp) / "sink.xlsx"
         ...     pd.DataFrame({"a": [1, 2]}).to_csv(src, index=False)
         ...     handle = Csv(src)
-        ...     out = handle.to_xlsx(dst, sheet="Customers")
+        ...     out = handle.to_xlsx(dst)
         ...     out.path.exists()
         True
         """
@@ -953,72 +934,37 @@ class DataFile(ABC):
         return self.convert_to(
             XlsxSheet,
             path=path,
-            backend=backend,
             read_kwargs=read_kwargs,
             write_kwargs=write_kwargs,
             sheet=sheet,
         )
 
-    @overload
-    def read(  # numpydoc ignore=GL08
-        self,
-        *,
-        dataframe_backend: Literal["pandas"],
-        **kwargs: object,
-    ) -> DataFrame: ...
-
-    @overload
-    def read(  # numpydoc ignore=GL08
-        self,
-        *,
-        dataframe_backend: Literal["polars"],
-        **kwargs: object,
-    ) -> pl.DataFrame: ...
-
-    @overload
-    def read(  # numpydoc ignore=GL08
-        self,
-        *,
-        dataframe_backend: DataframeBackends | None = None,
-        **kwargs: object,
-    ) -> DataFrames: ...
-
+    @abstractmethod
     def read(
         self,
-        *,
-        dataframe_backend: DataframeBackends | None = None,
-        **kwargs: object,
-    ) -> DataFrames:
+        **kwargs: Any,  # noqa: ANN401
+    ) -> DataFrameType:
         """
-        Materialise the file into a DataFrame.
+        Read the file into a DataFrame.
 
-        Resolves ``dataframe_backend`` against :attr:`backend` when
-        unset and dispatches to the format-specific :meth:`_read`
-        hook; concrete subclasses only implement ``_read``. This keeps
-        the backend-resolution logic in one place so every format
-        inherits the same ``None``-means-default semantics without
-        reimplementing it.
+        Subclasses implement the format-specific deserialization logic
+        and return the contents using the configured backend.
 
         Parameters
         ----------
-        dataframe_backend
-            DataFrame library to return. When ``None``, falls back to
-            :attr:`backend`.
         **kwargs
-            Format-specific options forwarded verbatim to the
-            underlying reader.
+            Format-specific options forwarded to the underlying reader.
 
         Returns
         -------
-            Fully loaded DataFrame whose concrete type matches the
-            resolved ``dataframe_backend``.
+            The file contents as a DataFrame of the configured backend.
 
         See Also
         --------
-        DataFile._read : Format-specific hook dispatched to.
-        DataFile.write : Symmetric writer counterpart.
-        mayutils.interfaces.filetypes.csv.Csv : Example reader target.
-        pathlib.Path : Path abstraction for the on-disk file.
+        DataFile.write : Inverse operation.
+        DataFile.iter_chunks : Streaming alternative.
+        DataFile.to_pandas : Read specifically as pandas.
+        DataFile.to_polars : Read specifically as polars.
 
         Examples
         --------
@@ -1027,101 +973,82 @@ class DataFile(ABC):
         >>> from pathlib import Path
         >>> from mayutils.interfaces.filetypes.csv import Csv
         >>> with tempfile.TemporaryDirectory() as tmp:
-        ...     p = Path(tmp) / "events.csv"
-        ...     pd.DataFrame({"a": [1, 2, 3]}).to_csv(p, index=False)
+        ...     p = Path(tmp) / "demo.csv"
+        ...     pd.DataFrame({"a": [1]}).to_csv(p, index=False)
         ...     handle = Csv(p)
-        ...     df = handle.read(dataframe_backend="pandas")
-        ...     df.shape
-        (3, 1)
+        ...     len(handle.read())
+        1
         """
-        resolved_backend = dataframe_backend if dataframe_backend is not None else self.backend
+        ...
 
-        return self._read(
-            dataframe_backend=resolved_backend,
-            **kwargs,
-        )
-
-    @abstractmethod
-    def _read(
+    def with_backend[AltDataFrameType: DataFrames](
         self,
-        *,
-        dataframe_backend: DataframeBackends,
-        **kwargs: object,
-    ) -> DataFrames:
+        backend: Backend[AltDataFrameType],
+        /,
+    ) -> DataFile[AltDataFrameType]:
         """
-        Dispatch the format-specific read invoked by :meth:`read`.
+        Return a copy of this handle bound to a different backend.
 
-        The backend has already been resolved against :attr:`backend`,
-        so implementations receive a concrete
-        :data:`~mayutils.objects.dataframes.DataframeBackends` literal
-        and must return the matching DataFrame type. Keeping this as
-        an abstract method forces every concrete subclass to make the
-        choice explicit for its format rather than silently falling
-        back to whichever library happens to be installed.
+        Deep-copies the current instance and replaces its backend token
+        so reads and writes dispatch through the alternate library.
 
         Parameters
         ----------
-        dataframe_backend
-            Resolved DataFrame library to return.
-        **kwargs
-            Format-specific options forwarded verbatim from
-            :meth:`read`.
+        backend
+            Backend token to apply to the returned copy.
 
         Returns
         -------
-            Fully loaded DataFrame whose concrete type matches
-            ``dataframe_backend``.
+            A deep copy of this handle with *backend* applied.
 
         See Also
         --------
-        DataFile.read : Public entry point.
-        DataFile._write : Symmetric writer hook.
-        mayutils.interfaces.filetypes.parquet.Parquet : Example implementer.
-        pathlib.Path : Path abstraction for the on-disk file.
+        DataFile.to_pandas : Shortcut that switches to pandas.
+        DataFile.to_polars : Shortcut that switches to polars.
+        mayutils.objects.dataframes.backends.Backend : Backend token class.
+        pathlib.Path : Path abstraction preserved in the copy.
 
         Examples
         --------
-        >>> import tempfile
-        >>> import pandas as pd
         >>> from pathlib import Path
-        >>> from mayutils.interfaces.filetypes.parquet import Parquet
-        >>> with tempfile.TemporaryDirectory() as tmp:
-        ...     p = Path(tmp) / "events.parquet"
-        ...     pd.DataFrame({"a": [1, 2, 3]}).to_parquet(p)
-        ...     handle = Parquet(p)
-        ...     handle._read(dataframe_backend="pandas").shape
-        (3, 1)
+        >>> from mayutils.interfaces.filetypes.csv import Csv
+        >>> from mayutils.objects.dataframes.backends import Backend
+        >>> import polars as pl
+        >>> handle = Csv(Path("demo.csv"))
+        >>> new = handle.with_backend(Backend(pl.DataFrame))
+        >>> new.backend.name
+        'polars'
         """
+        new_instance = deepcopy(self)
+        new_instance.backend = backend
+
+        return cast("DataFile[AltDataFrameType]", new_instance)
 
     def to_pandas(
         self,
-        **read_kwargs: object,
-    ) -> DataFrame:
+        **kwargs: Any,  # noqa: ANN401
+    ) -> pd.DataFrame:
         """
-        Read the file as a :class:`pandas.DataFrame` regardless of backend.
+        Read the file as a pandas DataFrame.
 
-        Convenience shortcut for call sites that always want a
-        :class:`pandas.DataFrame` regardless of the handle's default
-        backend. Because it forwards straight through to :meth:`read`,
-        any format-specific options are still available through
-        ``**read_kwargs`` without having to go through the broader
-        backend-selecting signature.
+        Convenience wrapper that switches the backend to pandas before
+        delegating to :meth:`read`.
 
         Parameters
         ----------
-        **read_kwargs
-            Extra keyword arguments forwarded to :meth:`read`.
+        **kwargs
+            Format-specific options forwarded to the underlying reader.
 
         Returns
         -------
-            Fully loaded DataFrame.
+            The file contents as a :class:`pandas.DataFrame`.
 
         See Also
         --------
-        DataFile.read : Underlying implementation.
         DataFile.to_polars : Polars counterpart.
-        mayutils.interfaces.filetypes.csv.Csv : Example reader target.
-        pathlib.Path : Path abstraction for the on-disk file.
+        DataFile.read : Backend-aware read.
+        DataFile.with_backend : General backend switching.
+        pandas.DataFrame : Returned type.
 
         Examples
         --------
@@ -1130,47 +1057,39 @@ class DataFile(ABC):
         >>> from pathlib import Path
         >>> from mayutils.interfaces.filetypes.csv import Csv
         >>> with tempfile.TemporaryDirectory() as tmp:
-        ...     p = Path(tmp) / "events.csv"
-        ...     pd.DataFrame({"a": [1, 2]}).to_csv(p, index=False)
+        ...     p = Path(tmp) / "demo.csv"
+        ...     pd.DataFrame({"a": [1]}).to_csv(p, index=False)
         ...     handle = Csv(p)
-        ...     df = handle.to_pandas()
-        ...     isinstance(df, pd.DataFrame)
+        ...     isinstance(handle.to_pandas(), pd.DataFrame)
         True
         """
-        return self.read(
-            dataframe_backend="pandas",
-            **read_kwargs,
-        )
+        return self.with_backend(Backend(pd.DataFrame)).read(**kwargs)
 
     def to_polars(
         self,
-        **read_kwargs: object,
+        **kwargs: Any,  # noqa: ANN401
     ) -> pl.DataFrame:
         """
-        Read the file as a :class:`polars.DataFrame` regardless of backend.
+        Read the file as a polars DataFrame.
 
-        Convenience shortcut for call sites that always want a
-        :class:`polars.DataFrame` regardless of the handle's default
-        backend. Because it forwards straight through to :meth:`read`,
-        any format-specific options are still available through
-        ``**read_kwargs`` without having to go through the broader
-        backend-selecting signature.
+        Convenience wrapper that switches the backend to polars before
+        delegating to :meth:`read`.
 
         Parameters
         ----------
-        **read_kwargs
-            Extra keyword arguments forwarded to :meth:`read`.
+        **kwargs
+            Format-specific options forwarded to the underlying reader.
 
         Returns
         -------
-            Fully loaded DataFrame.
+            The file contents as a :class:`polars.DataFrame`.
 
         See Also
         --------
-        DataFile.read : Underlying implementation.
         DataFile.to_pandas : Pandas counterpart.
-        mayutils.interfaces.filetypes.parquet.Parquet : Example reader target.
-        pathlib.Path : Path abstraction for the on-disk file.
+        DataFile.read : Backend-aware read.
+        DataFile.with_backend : General backend switching.
+        polars.DataFrame : Returned type.
 
         Examples
         --------
@@ -1178,148 +1097,46 @@ class DataFile(ABC):
         >>> import pandas as pd
         >>> import polars as pl
         >>> from pathlib import Path
-        >>> from mayutils.interfaces.filetypes.parquet import Parquet
+        >>> from mayutils.interfaces.filetypes.csv import Csv
         >>> with tempfile.TemporaryDirectory() as tmp:
-        ...     p = Path(tmp) / "events.parquet"
-        ...     pd.DataFrame({"a": [1, 2]}).to_parquet(p)
-        ...     handle = Parquet(p)
-        ...     df = handle.to_polars()
-        ...     isinstance(df, pl.DataFrame)
+        ...     p = Path(tmp) / "demo.csv"
+        ...     pd.DataFrame({"a": [1]}).to_csv(p, index=False)
+        ...     handle = Csv(p)
+        ...     isinstance(handle.to_polars(), pl.DataFrame)
         True
         """
-        return self.read(
-            dataframe_backend="polars",
-            **read_kwargs,
-        )
+        return self.with_backend(Backend(pl.DataFrame)).read(**kwargs)
 
-    @staticmethod
-    def resolve_write_backend(
-        df: DataFrames,
-        dataframe_backend: DataframeBackends | None,
-    ) -> DataframeBackends:
-        """
-        Resolve the write backend and validate it matches ``type(df)``.
-
-        Subclasses implementing :meth:`write` must call this at the
-        top of the method so the contract that ``df`` and the resolved
-        backend agree is enforced uniformly across every format rather
-        than reimplemented per subclass. When an explicit backend is
-        supplied that disagrees with the DataFrame's runtime type, the
-        helper raises rather than silently coercing, which matches the
-        guard rails the rest of the I/O layer expects.
-
-        Parameters
-        ----------
-        df
-            DataFrame the caller intends to persist.
-        dataframe_backend
-            Explicit backend override supplied to :meth:`write`. When
-            ``None``, the backend is inferred from ``type(df)``.
-
-        Returns
-        -------
-            The resolved backend, guaranteed to match ``type(df)``.
-
-        Raises
-        ------
-        TypeError
-            If an explicit ``dataframe_backend`` is supplied and does
-            not match ``type(df)``.
-
-        See Also
-        --------
-        DataFile.write : Primary caller of this helper.
-        mayutils.objects.dataframes.infer_backend : Inference helper.
-        mayutils.interfaces.filetypes.parquet.Parquet : Example writer.
-        pathlib.Path : Path abstraction for the on-disk file.
-
-        Examples
-        --------
-        >>> import pandas as pd
-        >>> from mayutils.interfaces.filetypes import DataFile
-        >>> DataFile.resolve_write_backend(pd.DataFrame(), None)
-        'pandas'
-        """
-        inferred = infer_backend(df)
-        if dataframe_backend is None:
-            return inferred
-
-        if inferred != dataframe_backend:
-            msg = f"Expected a {dataframe_backend} DataFrame for backend '{dataframe_backend}', got {type(df).__name__}"
-            raise TypeError(msg)
-
-        return dataframe_backend
-
-    @overload
-    def write(  # numpydoc ignore=GL08
-        self,
-        df: DataFrame,
-        /,
-        *,
-        dataframe_backend: Literal["pandas"] | None = None,
-        **kwargs: object,
-    ) -> Self: ...
-
-    @overload
-    def write(  # numpydoc ignore=GL08
-        self,
-        df: pl.DataFrame,
-        /,
-        *,
-        dataframe_backend: Literal["polars"] | None = None,
-        **kwargs: object,
-    ) -> Self: ...
-
-    @overload
-    def write(  # numpydoc ignore=GL08
-        self,
-        df: DataFrames,
-        /,
-        *,
-        dataframe_backend: DataframeBackends | None = None,
-        **kwargs: object,
-    ) -> Self: ...
-
+    @abstractmethod
     def write(
         self,
-        df: DataFrames,
+        df: DataFrameType,
         /,
-        *,
-        dataframe_backend: DataframeBackends | None = None,
-        **kwargs: object,
+        **kwargs: Any,  # noqa: ANN401
     ) -> Self:
         """
-        Serialise a DataFrame into the file at :attr:`path`.
+        Write *df* to the file.
 
-        Routes through :meth:`resolve_write_backend` before
-        dispatching to the format-specific :meth:`_write` hook, so
-        every subclass inherits the ``df``/backend type-match check
-        without having to reimplement it. Returning ``self`` lets
-        callers chain further operations after the write, for example
-        asserting on :meth:`row_count` without rebinding the handle.
+        Subclasses implement the format-specific serialization logic
+        and persist the DataFrame to :attr:`path`.
 
         Parameters
         ----------
         df
-            DataFrame to persist. The concrete type is authoritative
-            when ``dataframe_backend`` is ``None``.
-        dataframe_backend
-            Explicit backend override for dispatch. When ``None``, the
-            writer inspects ``type(df)``.
+            DataFrame to serialize and write to disk.
         **kwargs
-            Format-specific options forwarded verbatim to the
-            underlying writer.
+            Format-specific options forwarded to the underlying writer.
 
         Returns
         -------
-            The current handle, enabling fluent chaining.
+            ``self``, allowing fluent method chaining.
 
         See Also
         --------
-        DataFile._write : Format-specific hook dispatched to.
-        DataFile.resolve_write_backend : Validation helper.
-        mayutils.interfaces.filetypes.csv.Csv : Example writer target.
-        pathlib.Path : Path abstraction for the on-disk file.
+        DataFile.read : Inverse operation.
+        DataFile.convert_to : Read-then-write across formats.
+        mayutils.interfaces.filetypes.csv.Csv : Concrete implementer.
+        mayutils.interfaces.filetypes.parquet.Parquet : Concrete implementer.
 
         Examples
         --------
@@ -1330,69 +1147,11 @@ class DataFile(ABC):
         >>> with tempfile.TemporaryDirectory() as tmp:
         ...     p = Path(tmp) / "out.csv"
         ...     handle = Csv(p)
-        ...     _ = handle.write(pd.DataFrame({"id": [1]}))
-        ...     p.exists()
+        ...     result = handle.write(pd.DataFrame({"a": [1]}))
+        ...     result.path.exists()
         True
         """
-        resolved_backend = self.resolve_write_backend(df, dataframe_backend)
-
-        self._write(
-            df,
-            dataframe_backend=resolved_backend,
-            **kwargs,
-        )
-
-        return self
-
-    @abstractmethod
-    def _write(
-        self,
-        df: DataFrames,
-        /,
-        *,
-        dataframe_backend: DataframeBackends,
-        **kwargs: object,
-    ) -> None:
-        """
-        Dispatch the format-specific write invoked by :meth:`write`.
-
-        By the time ``_write`` is called, the base class has already
-        verified that ``type(df)`` agrees with ``dataframe_backend``,
-        so implementations can dispatch on ``dataframe_backend``
-        without re-checking the DataFrame's runtime type. This keeps
-        per-format writers short and focused on library-specific
-        serialisation details.
-
-        Parameters
-        ----------
-        df
-            DataFrame to persist.
-        dataframe_backend
-            Resolved backend that matches ``type(df)``.
-        **kwargs
-            Format-specific options forwarded verbatim from
-            :meth:`write`.
-
-        See Also
-        --------
-        DataFile.write : Public entry point.
-        DataFile._read : Symmetric reader hook.
-        mayutils.interfaces.filetypes.parquet.Parquet : Example implementer.
-        pathlib.Path : Path abstraction for the on-disk file.
-
-        Examples
-        --------
-        >>> import tempfile
-        >>> import pandas as pd
-        >>> from pathlib import Path
-        >>> from mayutils.interfaces.filetypes.parquet import Parquet
-        >>> with tempfile.TemporaryDirectory() as tmp:
-        ...     p = Path(tmp) / "out.parquet"
-        ...     handle = Parquet(p)
-        ...     handle._write(pd.DataFrame({"id": [1]}), dataframe_backend="pandas")
-        ...     p.exists()
-        True
-        """
+        ...
 
     @abstractmethod
     def schema(
@@ -1479,10 +1238,8 @@ class DataFile(ABC):
         self,
         chunk_size: int,
         /,
-        *,
-        dataframe_backend: DataframeBackends | None = None,
         **kwargs: object,
-    ) -> Iterator[DataFrames]:
+    ) -> Iterator[DataFrameType]:
         """
         Stream the file as an iterator of DataFrame chunks.
 
@@ -1497,9 +1254,6 @@ class DataFile(ABC):
         chunk_size
             Upper bound on the number of rows per yielded DataFrame.
             Implementations may yield a smaller final chunk.
-        dataframe_backend
-            DataFrame library for each yielded chunk; defaults to
-            :attr:`backend`.
         **kwargs
             Format-specific options forwarded verbatim.
 

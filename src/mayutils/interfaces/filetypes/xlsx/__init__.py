@@ -47,24 +47,23 @@ from typing import TYPE_CHECKING, Any, ClassVar, Self, cast
 
 from mayutils.core.extras import may_require_extras
 from mayutils.interfaces.filetypes import DataFile
+from mayutils.objects.dataframes.backends import Backend, DataFrames
 
 with may_require_extras():
     import openpyxl
     import pandas as pd
     import polars as pl
-    from pandas import DataFrame, ExcelWriter
+    from pandas import ExcelWriter
     from xlsxwriter import Workbook
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from mayutils.objects.dataframes import DataframeBackends, DataFrames
-
 
 DEFAULT_SCHEMA_SAMPLE_ROWS = 1000
 
 
-class Xlsx:
+class Xlsx[DataFrameType: DataFrames = pd.DataFrame]:
     """
     Represent a workbook-level handle over an ``.xlsx`` file.
 
@@ -73,7 +72,7 @@ class Xlsx:
     :class:`XlsxSheet` views, and reading or writing the whole
     workbook as a mapping of sheet name to DataFrame. Intentionally
     not a :class:`DataFile` subclass because its read and write
-    contract returns and accepts a ``dict[str, DataFrames]`` rather
+    contract returns and accepts a ``dict[str, ??]`` rather
     than a single DataFrame, which does not fit the one-file
     one-frame abstraction used elsewhere.
 
@@ -185,7 +184,7 @@ class Xlsx:
         path: Path | str,
         /,
         *,
-        backend: DataframeBackends = "pandas",
+        backend: Backend[DataFrameType] | None = None,
     ) -> None:
         """
         Bind the workbook handle to ``path`` with a default DataFrame backend.
@@ -222,7 +221,7 @@ class Xlsx:
         'polars'
         """
         self.path = Path(path)
-        self.backend: DataframeBackends = backend
+        self.backend = backend if backend is not None else cast("Backend[DataFrameType]", Backend(pd.DataFrame))
 
         if self.path.suffix.lower() != self.suffix:
             msg = f"Xlsx expects a '{self.suffix}' file; got '{self.path.suffix}'."
@@ -255,7 +254,7 @@ class Xlsx:
         >>> Xlsx("report.xlsx")._identity()
         "Xlsx(report.xlsx, backend='pandas')"
         """
-        return f"Xlsx({self.path!s}, backend={self.backend!r})"
+        return f"Xlsx({self.path!s}, backend={self.backend.name!r})"
 
     def __repr__(
         self,
@@ -295,7 +294,7 @@ class Xlsx:
         if not self.exists():
             return header
         try:
-            names = self.sheet_names()
+            names = self.sheet_names
         except Exception:  # noqa: BLE001
             return header
         if not names:
@@ -344,7 +343,7 @@ class Xlsx:
         if not self.exists():
             return header
         try:
-            names = self.sheet_names()
+            names = self.sheet_names
         except Exception:  # noqa: BLE001
             return header
         if not names:
@@ -382,6 +381,7 @@ class Xlsx:
         """
         return self.path.is_file()
 
+    @property
     def sheet_names(
         self,
     ) -> list[str]:
@@ -419,7 +419,11 @@ class Xlsx:
         >>> sorted(names)
         ['Details', 'Summary']
         """
-        workbook = openpyxl.load_workbook(filename=self.path, read_only=True, data_only=True)
+        workbook = openpyxl.load_workbook(
+            filename=self.path,
+            read_only=True,
+            data_only=True,
+        )
 
         try:
             return list(workbook.sheetnames)
@@ -428,9 +432,9 @@ class Xlsx:
 
     def sheet(
         self,
-        name: str,
+        sheet: str,
         /,
-    ) -> XlsxSheet:
+    ) -> XlsxSheet[DataFrameType]:
         """
         Return an :class:`XlsxSheet` view bound to one sheet of the workbook.
 
@@ -443,7 +447,7 @@ class Xlsx:
 
         Parameters
         ----------
-        name
+        sheet
             Sheet name to scope the view to. Must already exist in
             the workbook for read operations; for write operations a
             new sheet with this name will be created or replaced.
@@ -475,14 +479,16 @@ class Xlsx:
         >>> frame.shape
         (2, 1)
         """
-        return XlsxSheet(self.path, sheet=name, backend=self.backend)
+        return XlsxSheet(
+            self.path,
+            sheet=sheet,
+            backend=self.backend,
+        )
 
     def read(
         self,
-        *,
-        dataframe_backend: DataframeBackends | None = None,
         **kwargs: Any,  # noqa: ANN401
-    ) -> dict[str, DataFrames]:
+    ) -> dict[str, DataFrameType]:
         """
         Read every sheet in the workbook into a DataFrame mapping.
 
@@ -496,9 +502,6 @@ class Xlsx:
 
         Parameters
         ----------
-        dataframe_backend
-            DataFrame library for every sheet; defaults to
-            :attr:`backend`.
         **kwargs
             Forwarded to :func:`pandas.read_excel` for the underlying
             read. The ``sheet_name=None`` option is set by this
@@ -534,21 +537,20 @@ class Xlsx:
         >>> frames["Summary"].columns.tolist()
         ['a']
         """
-        backend = dataframe_backend if dataframe_backend is not None else self.backend
-
-        if backend == "polars":
+        if self.backend.name == "polars":
             return pl.read_excel(  # pyright: ignore[reportUnknownVariableType]
                 source=self.path,
                 sheet_id=0,
                 **kwargs,
             )
 
-        return dict(
+        return cast(
+            "dict[str, DataFrameType]",
             pd.read_excel(  # pyright: ignore[reportUnknownMemberType]
                 io=self.path,
                 sheet_name=None,
                 **kwargs,
-            )
+            ),
         )
 
     def write(
@@ -631,7 +633,12 @@ class Xlsx:
         index_kwarg = kwargs.pop("index", False)
         with ExcelWriter(path=self.path, engine="openpyxl") as writer:
             for sheet_name, frame in frames.items():
-                df_as_pandas(frame).to_excel(  # pyright: ignore[reportUnknownMemberType]
+                if isinstance(frame, pl.DataFrame):  # noqa: SIM108
+                    pandas_frame = frame.to_pandas()
+                else:
+                    pandas_frame = frame
+
+                pandas_frame.to_excel(  # pyright: ignore[reportUnknownMemberType]
                     excel_writer=writer,
                     sheet_name=sheet_name,
                     index=index_kwarg,
@@ -641,7 +648,7 @@ class Xlsx:
         return self
 
 
-class XlsxSheet(DataFile):
+class XlsxSheet[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType]):
     """
     Handle a single sheet within an ``.xlsx`` workbook as a :class:`DataFile`.
 
@@ -696,7 +703,7 @@ class XlsxSheet(DataFile):
         /,
         *,
         sheet: str,
-        backend: DataframeBackends = "pandas",
+        backend: Backend[DataFrameType] | None = None,
     ) -> None:
         """
         Bind the handle to a ``(path, sheet)`` pair with a DataFrame backend.
@@ -762,19 +769,17 @@ class XlsxSheet(DataFile):
         >>> XlsxSheet("report.xlsx", sheet="Summary")._identity()
         "XlsxSheet(report.xlsx, sheet='Summary', backend='pandas')"
         """
-        return f"XlsxSheet({self.path!s}, sheet={self.sheet!r}, backend={self.backend!r})"
+        return f"XlsxSheet({self.path!s}, sheet={self.sheet!r}, backend={self.backend.name!r})"
 
-    def _read(
+    def read(
         self,
-        *,
-        dataframe_backend: DataframeBackends,
         **kwargs: Any,  # noqa: ANN401
-    ) -> DataFrames:
+    ) -> DataFrameType:
         """
         Read the scoped sheet into a DataFrame of the requested backend.
 
         Dispatches to :func:`polars.read_excel` when
-        ``dataframe_backend`` is ``"polars"`` so polars callers get a
+        :attr:`backend` is ``"polars"`` so polars callers get a
         native DataFrame without a pandas intermediate, and falls back
         to :func:`pandas.read_excel` otherwise. Both branches pin
         ``sheet_name`` to :attr:`sheet` so callers cannot accidentally
@@ -782,8 +787,6 @@ class XlsxSheet(DataFile):
 
         Parameters
         ----------
-        dataframe_backend
-            Resolved DataFrame library to return.
         **kwargs
             Forwarded to the backend-specific reader. The sheet name
             is fixed to :attr:`sheet` by this method.
@@ -791,7 +794,7 @@ class XlsxSheet(DataFile):
         Returns
         -------
             Fully loaded DataFrame whose concrete type matches
-            ``dataframe_backend``.
+            :attr:`backend`.
 
         See Also
         --------
@@ -810,33 +813,35 @@ class XlsxSheet(DataFile):
         ...     path = Path(tmp) / "report.xlsx"
         ...     pd.DataFrame({"a": [1, 2]}).to_excel(path, sheet_name="Summary", index=False)
         ...     sheet = XlsxSheet(path, sheet="Summary")
-        ...     frame = sheet._read(dataframe_backend="pandas")
+        ...     frame = sheet._read()
         >>> frame.shape
         (2, 1)
         >>> frame.columns.tolist()
         ['a']
         """
-        if dataframe_backend == "polars":
-            return pl.read_excel(
-                source=self.path,
+        if self.backend.name == "polars":
+            return self.backend.cast(
+                pl.read_excel(
+                    source=self.path,
+                    sheet_name=self.sheet,
+                    **kwargs,
+                )
+            )
+
+        return self.backend.cast(
+            pd.read_excel(  # pyright: ignore[reportUnknownMemberType]
+                io=self.path,
                 sheet_name=self.sheet,
                 **kwargs,
             )
-
-        return pd.read_excel(  # pyright: ignore[reportUnknownMemberType]
-            io=self.path,
-            sheet_name=self.sheet,
-            **kwargs,
         )
 
-    def _write(
+    def write(
         self,
-        df: DataFrames,
+        df: DataFrameType,
         /,
-        *,
-        dataframe_backend: DataframeBackends,
         **kwargs: Any,  # noqa: ANN401
-    ) -> None:
+    ) -> Self:
         """
         Serialise a DataFrame to the scoped sheet, merging into existing files.
 
@@ -856,17 +861,17 @@ class XlsxSheet(DataFile):
         ----------
         df
             DataFrame to persist; its runtime type has already been
-            validated against ``dataframe_backend`` by
+            validated against :attr:`backend` by
             :meth:`DataFile.write`.
-        dataframe_backend
-            Resolved backend that matches ``type(df)``; selects the
-            polars-native fast path when the workbook does not yet
-            exist.
         **kwargs
             Forwarded to the underlying writer —
             :meth:`polars.DataFrame.write_excel` on the polars fast
             path, :meth:`pandas.DataFrame.to_excel` otherwise (for
             example ``index=False``).
+
+        Returns
+        -------
+            ``self``, for method chaining.
 
         See Also
         --------
@@ -885,7 +890,7 @@ class XlsxSheet(DataFile):
         >>> with tempfile.TemporaryDirectory() as tmp:
         ...     path = Path(tmp) / "out.xlsx"
         ...     sheet = XlsxSheet(path, sheet="Summary")
-        ...     sheet._write(pd.DataFrame({"a": [1]}), dataframe_backend="pandas")
+        ...     sheet._write(pd.DataFrame({"a": [1]}))
         ...     existed = path.is_file()
         ...     readback = sheet.read()
         >>> existed
@@ -893,22 +898,28 @@ class XlsxSheet(DataFile):
         >>> readback.shape
         (1, 1)
         """
-        if dataframe_backend == "polars" and not self.path.is_file():
-            cast("pl.DataFrame", df).write_excel(
-                workbook=self.path,
-                worksheet=self.sheet,
-                **kwargs,
-            )
+        if not self.path.is_file():  # noqa: SIM102
+            if self.backend.name == "polars":
+                df.write_excel(  # pyright: ignore[reportCallIssue]
+                    workbook=self.path,
+                    worksheet=self.sheet,
+                    **kwargs,
+                )
 
-            return
+                return self
 
-        pandas_frame = df_as_pandas(df)
+        if isinstance(df, pl.DataFrame):  # noqa: SIM108
+            pandas_frame = df.to_pandas()
+        else:
+            pandas_frame = df
+
         mode = "a" if self.path.is_file() else "w"
         writer_kwargs: dict[str, Any] = {"engine": "openpyxl", "mode": mode}
         if mode == "a":
             writer_kwargs["if_sheet_exists"] = "replace"
 
         index_kwarg = kwargs.pop("index", False)
+
         with ExcelWriter(path=self.path, **writer_kwargs) as writer:  # pyright: ignore[reportUnknownVariableType]
             pandas_frame.to_excel(  # pyright: ignore[reportUnknownMemberType]
                 excel_writer=writer,
@@ -916,6 +927,8 @@ class XlsxSheet(DataFile):
                 index=index_kwarg,
                 **kwargs,
             )
+
+        return self
 
     def excel_range(
         self,
@@ -1090,10 +1103,8 @@ class XlsxSheet(DataFile):
         self,
         chunk_size: int,
         /,
-        *,
-        dataframe_backend: DataframeBackends | None = None,
         **kwargs: Any,  # noqa: ANN401
-    ) -> Iterator[DataFrames]:
+    ) -> Iterator[DataFrameType]:
         """
         Stream the sheet as DataFrame chunks of ``chunk_size`` rows.
 
@@ -1108,9 +1119,6 @@ class XlsxSheet(DataFile):
         ----------
         chunk_size
             Upper bound on the number of rows per yielded chunk.
-        dataframe_backend
-            DataFrame library for each chunk; defaults to
-            :attr:`backend`.
         **kwargs
             Forwarded to :func:`pandas.read_excel`.
 
@@ -1143,7 +1151,7 @@ class XlsxSheet(DataFile):
         >>> shapes
         [(2, 1), (2, 1), (1, 1)]
         """
-        backend = dataframe_backend if dataframe_backend is not None else self.backend
+        backend = self.backend.name
 
         if backend == "polars":
             frame = pl.read_excel(
@@ -1153,7 +1161,7 @@ class XlsxSheet(DataFile):
             )
 
             for start in range(0, frame.height, chunk_size):
-                yield frame.slice(offset=start, length=chunk_size)
+                yield self.backend.cast(frame.slice(offset=start, length=chunk_size))
 
             return
 
@@ -1164,49 +1172,7 @@ class XlsxSheet(DataFile):
         )
 
         for start in range(0, len(pandas_frame), chunk_size):
-            yield pandas_frame.iloc[start : start + chunk_size]
-
-
-def df_as_pandas(
-    df: DataFrames,
-    /,
-) -> DataFrame:
-    """
-    Coerce a DataFrame of any supported backend into a pandas DataFrame.
-
-    Used by the workbook and sheet write paths that must hand data to
-    :class:`pandas.ExcelWriter`, since that writer does not accept
-    polars DataFrames directly. The helper is a no-op when ``df`` is
-    already pandas, avoiding an unnecessary copy, and delegates to
-    :meth:`polars.DataFrame.to_pandas` otherwise.
-
-    Parameters
-    ----------
-    df
-        DataFrame to coerce.
-
-    Returns
-    -------
-        Either ``df`` itself (when already pandas) or the result of
-        :meth:`polars.DataFrame.to_pandas`.
-
-    See Also
-    --------
-    polars.DataFrame.to_pandas : Backing conversion for the polars
-        branch.
-    Xlsx.write : Primary caller for the workbook-level write path.
-    XlsxSheet._write : Primary caller for the sheet-level write path.
-
-    Examples
-    --------
-    >>> import pandas as pd
-    >>> isinstance(df_as_pandas(pd.DataFrame({"a": [1]})), pd.DataFrame)
-    True
-    """
-    if isinstance(df, DataFrame):
-        return df
-
-    return df.to_pandas()
+            yield self.backend.cast(pandas_frame.iloc[start : start + chunk_size])
 
 
 __all__ = [

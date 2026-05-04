@@ -23,7 +23,7 @@ Examples
 {'x': 1}
 """
 
-from typing import Protocol
+from typing import Any, Protocol
 
 
 class SupportsSetItem(Protocol):
@@ -58,8 +58,8 @@ class SupportsSetItem(Protocol):
 
     def __setitem__(
         self,
-        key: object,
-        value: object,
+        key: Any,  # noqa: ANN401
+        value: Any,  # noqa: ANN401
         /,
     ) -> None:
         """
@@ -140,12 +140,12 @@ def null(
     return
 
 
-def set_inline[T: SupportsSetItem](
+def set_inline[Object: SupportsSetItem](
     *,
-    parent_object: T,
+    parent_object: Object,
     property_name: str | int,
     value: object,
-) -> T:
+) -> Object:
     """
     Perform an in-place item assignment and return the container.
 

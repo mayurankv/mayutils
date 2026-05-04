@@ -131,3 +131,26 @@ class TestToSentence:
     def test_to_sentence(self, raw: str, expected: str) -> None:
         """Inputs in various styles all normalise to Sentence case."""
         assert String.to_sentence(raw) == expected
+
+
+class TestToSlug:
+    """Tests for :meth:`String.to_slug`."""
+
+    @pytest.mark.parametrize(
+        ("raw", "expected"),
+        [
+            ("SELECT * FROM loans", "select_from_loans"),
+            ("  --hello--  ", "hello"),
+            ("a///b///c", "a_b_c"),
+            ("Hello World", "hello_world"),
+            ("", ""),
+        ],
+    )
+    def test_to_slug(self, raw: str, expected: str) -> None:
+        """Inputs in various styles all normalise to a filesystem-safe slug."""
+        assert String.to_slug(raw) == expected
+
+    def test_max_length(self) -> None:
+        """Output is truncated to max_length without trailing underscores."""
+        result = String.to_slug("a_b_c_d_e_f", max_length=5)
+        assert len(result) <= 5  # noqa: PLR2004

@@ -33,7 +33,7 @@ Examples
 
 import time
 from collections.abc import Callable
-from functools import wraps
+from functools import update_wrapper
 from typing import cast
 
 from mayutils.environment.logging import Logger
@@ -43,9 +43,10 @@ logger = Logger.spawn()
 
 
 @flexwrap
-def timing[D: Callable[..., object]](
-    func: D | None = None,
-) -> D:
+def timing[Decorating: Callable[..., object]](
+    func: Decorating,
+    /,
+) -> Decorating:
     """
     Measure and log the wall-clock runtime of a decorated callable.
 
@@ -77,13 +78,6 @@ def timing[D: Callable[..., object]](
         value while emitting a ``"<name> took X.XXXX seconds"`` entry
         through the module logger after each call completes.
 
-    Raises
-    ------
-    ValueError
-        Raised when the decorator is executed without a resolved target
-        callable, which indicates it was invoked in an unsupported way
-        (for example ``timing(func=None)``).
-
     See Also
     --------
     timeit.timeit : Repeat a snippet and report aggregate runtime statistics.
@@ -106,11 +100,7 @@ def timing[D: Callable[..., object]](
     >>> greet("world")
     'hello world'
     """
-    if func is None:
-        msg = "No function provided"
-        raise ValueError(msg)
 
-    @wraps(wrapped=func)
     def wrapper(
         *args: object,
         **kwargs: object,
@@ -179,4 +169,9 @@ def timing[D: Callable[..., object]](
 
         return result
 
-    return cast("D", wrapper)
+    update_wrapper(
+        wrapper=wrapper,
+        wrapped=func,
+    )
+
+    return cast("Decorating", wrapper)

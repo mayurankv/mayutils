@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 
 from mayutils.objects.classes import (
@@ -21,7 +23,7 @@ class TestClassOnlyProperty:
 
         class Foo:
             @classonlyproperty
-            def name(cls: type) -> str:  # noqa: N805 # pyright: ignore[reportGeneralTypeIssues]
+            def name(cls: Any) -> str:
                 return cls.__name__
 
         assert Foo.name == "Foo"
@@ -31,7 +33,7 @@ class TestClassOnlyProperty:
 
         class Foo:
             @classonlyproperty
-            def name(cls: type) -> str:  # noqa: N805 # pyright: ignore[reportGeneralTypeIssues]
+            def name(cls: Any) -> str:
                 return cls.__name__
 
         with pytest.raises(expected_exception=AttributeError, match="class, not instances"):
@@ -46,7 +48,7 @@ class TestReadOnlyClassOnlyProperty:
 
         class Foo:
             @readonlyclassonlyproperty
-            def version(cls: type) -> int:  # noqa: N805 # pyright: ignore[reportGeneralTypeIssues]
+            def version(cls) -> int:
                 return 1
 
         assert Foo.version == 1
@@ -56,7 +58,7 @@ class TestReadOnlyClassOnlyProperty:
 
         class Foo:
             @readonlyclassonlyproperty
-            def version(cls: type) -> int:  # noqa: N805 # pyright: ignore[reportGeneralTypeIssues]
+            def version(cls) -> int:
                 return 1
 
         with pytest.raises(expected_exception=AttributeError, match="read-only"):

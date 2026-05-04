@@ -27,13 +27,14 @@ Examples
 from __future__ import annotations
 
 import webbrowser
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING, Any, Self, cast
 
 from mayutils.core.extras import may_require_extras
 from mayutils.interfaces.cloud.google import Drive
 from mayutils.interfaces.filetypes.xlsx import Xlsx
 
 with may_require_extras():
+    import numpy as np
     from googleapiclient.discovery import build  # pyright: ignore[reportUnknownVariableType]
     from pandas import DataFrame
 
@@ -51,6 +52,7 @@ if TYPE_CHECKING:
         SheetProperties,
         Spreadsheet,
     )
+    from numpy.typing import ArrayLike
 
 
 class Sheet:
@@ -864,7 +866,7 @@ class Sheet:
 
     def update_values(
         self,
-        values: list[list[object]],
+        values: ArrayLike,
         /,
         *,
         sheet_range: str,
@@ -882,8 +884,10 @@ class Sheet:
         Parameters
         ----------
         values
-            Row-major 2D list of values to write. Inner lists
-            correspond to spreadsheet rows.
+            Row-major 2D values to write. Accepts a nested Python list
+            or any :class:`~numpy.typing.ArrayLike`; non-list inputs
+            are coerced via :func:`numpy.asarray` and
+            :meth:`~numpy.ndarray.tolist`.
         sheet_range
             Fully qualified A1-style range including the sheet prefix
             (for example ``"Sheet1!A1:C3"``).
@@ -941,7 +945,7 @@ class Sheet:
 
     def insert(
         self,
-        values: list[list[object]],
+        values: ArrayLike,
         /,
         *,
         sheet_range: str | None,
@@ -959,7 +963,10 @@ class Sheet:
         Parameters
         ----------
         values
-            Row-major 2D list of values to write.
+            Row-major 2D values to write. Accepts a nested Python list
+            or any :class:`~numpy.typing.ArrayLike`; non-list inputs
+            are coerced via :func:`numpy.asarray` and
+            :meth:`~numpy.ndarray.tolist`.
         sheet_range
             A1-style range without the sheet prefix indicating the
             top-left anchor of the write (for example ``"B2"``). When
@@ -1830,7 +1837,7 @@ class Sheets:
 
     def update_values(
         self,
-        values: list[list[object]],
+        values: ArrayLike,
         /,
         *,
         sheet_range: str,
@@ -1840,15 +1847,20 @@ class Sheets:
         Write ``values`` to ``sheet_range`` on the spreadsheet.
 
         Call ``spreadsheets.values.update`` with the supplied row-major
-        2D list and A1 range, then refresh local metadata so
+        2D values and A1 range, then refresh local metadata so
         :attr:`internal` reflects the post-update state. The
         ``as_user`` flag selects between the API's ``USER_ENTERED``
-        and ``RAW`` value input options.
+        and ``RAW`` value input options. Non-list inputs are coerced
+        to nested lists via :func:`numpy.asarray` and
+        :meth:`~numpy.ndarray.tolist`.
 
         Parameters
         ----------
         values
-            Row-major 2D list of values to write.
+            Row-major 2D values to write. Accepts a nested Python list
+            or any :class:`~numpy.typing.ArrayLike`; non-list inputs
+            are coerced via :func:`numpy.asarray` and
+            :meth:`~numpy.ndarray.tolist`.
         sheet_range
             Fully qualified A1-style range including the sheet prefix
             (for example ``"Sheet1!A1:C3"``).
@@ -1862,6 +1874,12 @@ class Sheets:
         -------
             The same instance, refreshed so that ``self.internal``
             reflects the updated spreadsheet state.
+
+        Raises
+        ------
+        ValueError
+            If a non-list ``values`` input resolves to an array whose
+            dimensionality is not exactly 2.
 
         See Also
         --------
@@ -1883,12 +1901,21 @@ class Sheets:
         >>> service.spreadsheets().values().update.called
         True
         """
+        if isinstance(values, list):
+            rows = cast("list[list[Any]]", values)
+        else:
+            arr = np.asarray(values)
+            if arr.ndim != 2:  # noqa: PLR2004
+                msg = f"values must be 2-dimensional, got {arr.ndim}-dimensional array"
+                raise ValueError(msg)
+            rows: list[list[Any]] = arr.tolist()
+
         self.service.spreadsheets().values().update(
             spreadsheetId=self.id,
             range=sheet_range,
             valueInputOption="RAW" if not as_user else "USER_ENTERED",
             body={
-                "values": values,
+                "values": rows,
             },
         ).execute()
 
@@ -2903,7 +2930,7 @@ class Sheets:
         new_title: str | None = None,
         to_position: int | None = None,
         as_user: bool = False,
-        **kwargs: object,
+        **kwargs: Any,  # noqa: ANN401
     ) -> Self:
         """
         Create a new tab and populate it from a pandas DataFrame.

@@ -2,7 +2,7 @@
 Provide the :class:`Csv` handle for CSV-backed dataframe I/O.
 
 Dispatches reads and writes between :mod:`pandas` and :mod:`polars`
-through the standard ``DataframeBackends`` literal used elsewhere in
+through the standard ``??`` literal used elsewhere in
 ``mayutils``. Schema inspection is heuristic because CSVs carry no
 header metadata beyond the column names: dtypes are inferred from a
 small sample, and row counts are obtained by streaming the file
@@ -34,26 +34,24 @@ Examples
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Self, cast
 
 from mayutils.core.extras import may_require_extras
 from mayutils.interfaces.filetypes import DataFile
+from mayutils.objects.dataframes.backends import DataFrames
 
 with may_require_extras():
     import pandas as pd
     import polars as pl
-    from pandas import DataFrame
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
-
-    from mayutils.objects.dataframes import DataframeBackends, DataFrames
 
 
 DEFAULT_SCHEMA_SAMPLE_ROWS = 1000
 
 
-class Csv(DataFile):
+class Csv[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType]):
     """
     Represent a CSV file with pandas/polars dispatch.
 
@@ -89,19 +87,17 @@ class Csv(DataFile):
     ...     p = Path(tmp) / "sales.csv"
     ...     pd.DataFrame({"id": [1, 2, 3], "value": [10, 20, 30]}).to_csv(p, index=False)
     ...     csv_file = Csv(p)
-    ...     frame = csv_file.read(dataframe_backend="pandas")
+    ...     frame = csv_file.read()
     ...     (frame.shape, csv_file.row_count())
     ((3, 2), 3)
     """
 
     suffix: ClassVar[str] = ".csv"
 
-    def _read(
+    def read(
         self,
-        *,
-        dataframe_backend: DataframeBackends,
         **kwargs: Any,  # noqa: ANN401
-    ) -> DataFrames:
+    ) -> DataFrameType:
         """
         Materialise the CSV file into a DataFrame.
 
@@ -115,8 +111,6 @@ class Csv(DataFile):
 
         Parameters
         ----------
-        dataframe_backend
-            Resolved DataFrame library to return.
         **kwargs
             Forwarded verbatim to the backend reader, covering
             dialect, dtype, encoding, and NA-handling options.
@@ -124,7 +118,7 @@ class Csv(DataFile):
         Returns
         -------
             Fully loaded DataFrame whose concrete type matches
-            ``dataframe_backend``.
+            ``self.backend``.
 
         See Also
         --------
@@ -143,7 +137,7 @@ class Csv(DataFile):
         ...     p = Path(tmp) / "demo.csv"
         ...     pd.DataFrame({"id": [1, 2], "value": [3.14, 2.72]}).to_csv(p, index=False)
         ...     csv_file = Csv(p)
-        ...     pandas_frame = csv_file._read(dataframe_backend="pandas")
+        ...     pandas_frame = csv_file._read()
         ...     pandas_frame.shape
         (2, 2)
         >>> import tempfile
@@ -154,32 +148,34 @@ class Csv(DataFile):
         ...     p = Path(tmp) / "demo.csv"
         ...     pd.DataFrame({"id": [1, 2], "value": [3.14, 2.72]}).to_csv(p, index=False, sep=";")
         ...     csv_file = Csv(p)
-        ...     polars_frame = csv_file._read(dataframe_backend="polars", separator=";")
+        ...     polars_frame = csv_file._read(separator=";")
         ...     polars_frame.shape
         (2, 2)
         """
-        if dataframe_backend == "polars":
-            return pl.read_csv(
-                source=self.path,
-                **kwargs,
+        if self.backend.name == "polars":
+            return self.backend.cast(
+                pl.read_csv(
+                    source=self.path,
+                    **kwargs,
+                ),
             )
 
-        return cast(
-            "DataFrame",
-            pd.read_csv(
-                filepath_or_buffer=self.path,
-                **kwargs,
+        return self.backend.cast(
+            cast(
+                "pd.DataFrame",
+                pd.read_csv(
+                    filepath_or_buffer=self.path,
+                    **kwargs,
+                ),
             ),
         )
 
-    def _write(
+    def write(
         self,
-        df: DataFrames,
+        df: DataFrameType,
         /,
-        *,
-        dataframe_backend: DataframeBackends,
         **kwargs: Any,  # noqa: ANN401
-    ) -> None:
+    ) -> Self:
         """
         Serialise a DataFrame to the CSV file.
 
@@ -195,20 +191,22 @@ class Csv(DataFile):
         ----------
         df
             DataFrame to persist; its runtime type has already been
-            validated against ``dataframe_backend`` by
+            validated against ``self.backend`` by
             :meth:`DataFile.write`.
-        dataframe_backend
-            Resolved backend that matches ``type(df)``.
         **kwargs
             Forwarded verbatim to the backend writer. For pandas,
             ``index`` defaults to ``False`` so round-tripping does
             not accidentally add an unnamed index column.
 
+        Returns
+        -------
+            ``self``, for method chaining.
+
         Raises
         ------
         TypeError
             If ``df`` is not an instance of the class associated
-            with the requested ``dataframe_backend``.
+            with the requested ``self.backend``.
 
         See Also
         --------
@@ -227,7 +225,7 @@ class Csv(DataFile):
         ...     p = Path(tmp) / "out.csv"
         ...     csv_file = Csv(p)
         ...     frame = pd.DataFrame({"id": [1, 2], "value": [3.14, 2.72]})
-        ...     csv_file._write(frame, dataframe_backend="pandas")
+        ...     csv_file._write(frame)
         ...     p.is_file()
         True
         >>> import tempfile
@@ -238,12 +236,12 @@ class Csv(DataFile):
         ...     p = Path(tmp) / "out.csv"
         ...     csv_file = Csv(p)
         ...     frame = pl.DataFrame({"id": [1, 2], "value": [3.14, 2.72]})
-        ...     csv_file._write(frame, dataframe_backend="polars", separator=";")
+        ...     csv_file._write(frame, separator=";")
         ...     p.is_file()
         True
         """
-        if dataframe_backend == "pandas":
-            if not isinstance(df, DataFrame):
+        if self.backend.name == "pandas":
+            if not isinstance(df, pd.DataFrame):
                 msg = f"Expected a pandas DataFrame for writing with backend 'pandas', but got {type(df).__name__!r} instead."
                 raise TypeError(
                     msg,
@@ -254,7 +252,8 @@ class Csv(DataFile):
                 index=kwargs.pop("index", False),
                 **kwargs,
             )
-        elif dataframe_backend == "polars":
+
+        elif self.backend.name == "polars":
             if not isinstance(df, pl.DataFrame):
                 msg = f"Expected a polars DataFrame for writing with backend 'polars', but got {type(df).__name__!r} instead."
                 raise TypeError(
@@ -265,6 +264,8 @@ class Csv(DataFile):
                 file=self.path,
                 **kwargs,
             )
+
+        return self
 
     def schema(
         self,
@@ -373,10 +374,8 @@ class Csv(DataFile):
         self,
         chunk_size: int,
         /,
-        *,
-        dataframe_backend: DataframeBackends | None = None,
         **kwargs: Any,  # noqa: ANN401
-    ) -> Iterator[DataFrames]:
+    ) -> Iterator[DataFrameType]:
         """
         Stream the CSV file as DataFrame chunks.
 
@@ -395,9 +394,6 @@ class Csv(DataFile):
         ----------
         chunk_size
             Upper bound on the number of rows per yielded chunk.
-        dataframe_backend
-            DataFrame library for each chunk; defaults to
-            :attr:`backend` when ``None``.
         **kwargs
             Forwarded to the backend reader. For pandas, the
             ``chunksize`` kwarg is set by this method and should not
@@ -427,7 +423,7 @@ class Csv(DataFile):
         ...     p = Path(tmp) / "demo.csv"
         ...     pd.DataFrame({"id": list(range(2500))}).to_csv(p, index=False)
         ...     csv_file = Csv(p)
-        ...     pandas_sizes = [len(chunk) for chunk in csv_file.iter_chunks(1000, dataframe_backend="pandas")]
+        ...     pandas_sizes = [len(chunk) for chunk in csv_file.iter_chunks(1000)]
         ...     pandas_sizes
         [1000, 1000, 500]
         >>> import tempfile
@@ -438,13 +434,11 @@ class Csv(DataFile):
         ...     p = Path(tmp) / "demo.csv"
         ...     pd.DataFrame({"id": list(range(1100))}).to_csv(p, index=False)
         ...     csv_file = Csv(p)
-        ...     polars_sizes = [len(chunk) for chunk in csv_file.iter_chunks(500, dataframe_backend="polars")]
+        ...     polars_sizes = [len(chunk) for chunk in csv_file.iter_chunks(500)]
         ...     polars_sizes
         [500, 500, 100]
         """
-        backend = dataframe_backend if dataframe_backend is not None else self.backend
-
-        if backend == "pandas":
+        if self.backend.name == "pandas":
             with pd.read_csv(filepath_or_buffer=self.path, chunksize=chunk_size, **kwargs) as reader:
                 yield from reader
 
@@ -453,7 +447,7 @@ class Csv(DataFile):
         frame = pl.read_csv(source=self.path, **kwargs)
 
         for start in range(0, frame.height, chunk_size):
-            yield frame.slice(offset=start, length=chunk_size)
+            yield self.backend.cast(frame.slice(offset=start, length=chunk_size))
 
 
 __all__ = [

@@ -176,7 +176,7 @@ class Colour:
 
     @readonlyclassonlyproperty
     def css_map(
-        self,
+        cls,
     ) -> dict[str, str]:
         """
         Expose the hex-to-CSS-name lookup used for named-colour serialisation.

@@ -26,7 +26,7 @@ class TestFlexwrap:
         """
 
         @flexwrap
-        def shout(func: Callable[..., str], prefix: str = "!") -> Callable[..., str]:
+        def shout(func: Callable[..., str], /, *, prefix: str = "!") -> Callable[..., str]:
             def wrapper(*args: object, **kwargs: object) -> str:
                 return prefix + func(*args, **kwargs).upper()
 

@@ -51,7 +51,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
 
 
-class Interval[T: (Date, DateTime)](PendulumInterval[T]):
+class Interval[IntervalType: (Date, DateTime)](PendulumInterval[IntervalType]):
     """
     Represent an interval between two :class:`Date` or :class:`DateTime` endpoints.
 
@@ -102,8 +102,8 @@ class Interval[T: (Date, DateTime)](PendulumInterval[T]):
     def __new__(
         cls,
         *,
-        start: T,
-        end: T,
+        start: IntervalType,
+        end: IntervalType,
         absolute: bool = False,
     ) -> Self:
         """
@@ -153,8 +153,8 @@ class Interval[T: (Date, DateTime)](PendulumInterval[T]):
     def __init__(
         self,
         *,
-        start: T,
-        end: T,
+        start: IntervalType,
+        end: IntervalType,
         absolute: bool = False,
     ) -> None:
         """
@@ -314,7 +314,7 @@ class Interval[T: (Date, DateTime)](PendulumInterval[T]):
     def promote_pendulum(
         instance: PendulumDate | PendulumDateTime | Date | DateTime,
         /,
-    ) -> T:
+    ) -> IntervalType:
         """
         Promote a pendulum or wrapper instance to the project's wrapper type.
 
@@ -353,18 +353,18 @@ class Interval[T: (Date, DateTime)](PendulumInterval[T]):
         True
         """
         if isinstance(instance, DateTime):
-            return cast("T", instance)
+            return cast("IntervalType", instance)
         if isinstance(instance, PendulumDateTime):
-            return cast("T", DateTime.from_pendulum(instance))
+            return cast("IntervalType", DateTime.from_pendulum(instance))
         if isinstance(instance, Date):
-            return cast("T", instance)
+            return cast("IntervalType", instance)
 
-        return cast("T", Date.from_pendulum(instance))
+        return cast("IntervalType", Date.from_pendulum(instance))
 
     @classmethod
     def from_pendulum(
         cls,
-        base: PendulumInterval[T],
+        base: PendulumInterval[IntervalType],
         /,
     ) -> Self:
         """
@@ -415,7 +415,7 @@ class Interval[T: (Date, DateTime)](PendulumInterval[T]):
     @property
     def start(
         self,
-    ) -> T:
+    ) -> IntervalType:
         """
         Return the start endpoint using the project's wrapper types.
 
@@ -448,7 +448,7 @@ class Interval[T: (Date, DateTime)](PendulumInterval[T]):
     @property
     def end(
         self,
-    ) -> T:
+    ) -> IntervalType:
         """
         Return the end endpoint using the project's wrapper types.
 
@@ -894,7 +894,7 @@ class Interval[T: (Date, DateTime)](PendulumInterval[T]):
         return f"{self.start} to {self.end}"
 
 
-class Intervals[T: (Date, DateTime)]:
+class Intervals[IntervalType: (Date, DateTime)]:
     """
     Store an ordered collection of :class:`Interval` values sharing an endpoint type.
 
@@ -929,7 +929,7 @@ class Intervals[T: (Date, DateTime)]:
 
     def __init__(
         self,
-        *intervals: Interval[T],
+        *intervals: Interval[IntervalType],
     ) -> None:
         """
         Initialise the collection with a variadic tuple of intervals.
@@ -1043,7 +1043,7 @@ class Intervals[T: (Date, DateTime)]:
 
     def __iter__(
         self,
-    ) -> Iterator[Interval[T]]:
+    ) -> Iterator[Interval[IntervalType]]:
         """
         Iterate over the contained intervals in stored (sorted) order.
 
@@ -1054,7 +1054,7 @@ class Intervals[T: (Date, DateTime)]:
 
         Returns
         -------
-        Iterator[Interval[T]]
+        Iterator[Interval[IntervalType]]
             Fresh iterator yielding each :class:`Interval` in ``(start, end)``
             order as previously canonicalised by :meth:`sort`.
 
@@ -1106,18 +1106,18 @@ class Intervals[T: (Date, DateTime)]:
     def __getitem__(  # numpydoc ignore=GL08
         self,
         key: int,
-    ) -> Interval[T]: ...
+    ) -> Interval[IntervalType]: ...
 
     @overload
     def __getitem__(  # numpydoc ignore=GL08
         self,
         key: slice,
-    ) -> Intervals[T]: ...
+    ) -> Intervals[IntervalType]: ...
 
     def __getitem__(
         self,
         key: int | slice,
-    ) -> Intervals[T] | Interval[T]:
+    ) -> Intervals[IntervalType] | Interval[IntervalType]:
         """
         Index into the sorted collection by integer position or slice.
 
@@ -1135,7 +1135,7 @@ class Intervals[T: (Date, DateTime)]:
 
         Returns
         -------
-        Interval[T] or Intervals[T]
+        Interval[IntervalType] or Intervals[IntervalType]
             The single :class:`Interval` at ``key`` for integer indexing, or a
             new :class:`Intervals` instance holding the sliced subset when
             ``key`` is a :class:`slice`.

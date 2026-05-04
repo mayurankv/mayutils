@@ -23,12 +23,16 @@ Examples
 from __future__ import annotations
 
 from collections.abc import Hashable, Mapping
+from typing import TYPE_CHECKING, cast
+
+if TYPE_CHECKING:
+    from mayutils.objects.types import RecursiveMapping, SupportsStr
 
 
-def invert_dict[K: Hashable, V: Hashable](
-    mapping: Mapping[K, V],
+def invert_dict[Key: Hashable, Value: Hashable](
+    mapping: Mapping[Key, Value],
     /,
-) -> dict[V, K]:
+) -> dict[Value, Key]:
     """
     Swap the keys and values of a mapping to produce a reversed dictionary.
 
@@ -68,3 +72,54 @@ def invert_dict[K: Hashable, V: Hashable](
     {1: 'b'}
     """
     return {value: key for key, value in mapping.items()}
+
+
+def flatten_dict(
+    mapping: RecursiveMapping[str, SupportsStr],
+    /,
+    *,
+    prefix: str = "",
+    separator: str = "_",
+) -> list[str]:
+    """
+    Recursively flatten a nested mapping into ``key{sep}value`` strings.
+
+    Walks the mapping depth-first and joins each path of keys with the
+    separator, appending the leaf value at the end.
+
+    Parameters
+    ----------
+    mapping
+        Input mapping, possibly containing nested dicts.
+    prefix
+        Key prefix prepended to each output token.
+    separator
+        Separator between key segments and between key and value.
+
+    Returns
+    -------
+    list[str]
+        Flat list of ``key_value`` strings.
+
+    See Also
+    --------
+    invert_dict : Swap keys and values of a flat mapping.
+
+    Examples
+    --------
+    >>> flatten_dict({"a": 1, "b": {"c": 2}})
+    ['a_1', 'b_c_2']
+    >>> flatten_dict({"x": "y"}, prefix="p")
+    ['p_x_y']
+    """
+    parts: list[str] = []
+
+    for key, value in mapping.items():
+        full_key = f"{prefix}{separator}{key}" if prefix else key
+
+        if isinstance(value, Mapping):
+            parts.extend(flatten_dict(cast("RecursiveMapping[str, SupportsStr]", value), prefix=full_key, separator=separator))
+        else:
+            parts.append(f"{full_key}{separator}{value}")
+
+    return parts

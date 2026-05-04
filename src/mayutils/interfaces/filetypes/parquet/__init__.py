@@ -30,18 +30,14 @@ Examples
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Self, cast
 
 from mayutils.core.extras import may_require_extras
 from mayutils.interfaces.filetypes import DataFile
-from mayutils.objects.dataframes import (
-    DataframeBackends,
-    DataFrames,
-    read_parquet,
-    to_parquet,
-)
+from mayutils.objects.dataframes.backends import DataFrames
 
 with may_require_extras():
+    import pandas as pd
     import polars as pl
     import pyarrow as pa
     import pyarrow.parquet as pq
@@ -50,7 +46,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
 
-class Parquet(DataFile):
+class Parquet[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType]):
     """
     Handle a parquet file with metadata-cheap introspection and streaming.
 
@@ -81,18 +77,16 @@ class Parquet(DataFile):
 
     suffix: ClassVar[str] = ".parquet"
 
-    def _read(
+    def read(
         self,
-        *,
-        dataframe_backend: DataframeBackends,
-        **kwargs: object,
-    ) -> DataFrames:
+        **kwargs: Any,  # noqa: ANN401
+    ) -> DataFrameType:
         """
         Materialise the parquet file into a DataFrame.
 
         Dispatches to :func:`mayutils.objects.dataframes.read_parquet`,
         which selects between pandas and polars readers based on
-        ``dataframe_backend``. The helper transparently handles both
+        :attr:`backend`. The helper transparently handles both
         single-file and directory-style partitioned parquet datasets,
         with pyarrow doing the heavy lifting of combining row groups
         and applying any column projection supplied through
@@ -100,11 +94,6 @@ class Parquet(DataFile):
 
         Parameters
         ----------
-        dataframe_backend
-            Resolved DataFrame library to return. The value has
-            already been resolved against :attr:`backend` by
-            :meth:`DataFile.read` so implementations do not need to
-            treat ``None`` as a default.
         **kwargs
             Forwarded to :func:`mayutils.objects.dataframes.read_parquet`
             (for example ``columns=[...]`` to project a subset of
@@ -113,7 +102,7 @@ class Parquet(DataFile):
         Returns
         -------
             Fully loaded DataFrame whose concrete type matches
-            ``dataframe_backend``.
+            :attr:`backend`.
 
         See Also
         --------
@@ -134,32 +123,38 @@ class Parquet(DataFile):
         ...     path = Path(tmp) / "demo.parquet"
         ...     pd.DataFrame({"id": [1, 2, 3], "ts": [10, 20, 30]}).to_parquet(path)
         ...     df = Parquet(path)._read(
-        ...         dataframe_backend="pandas",
         ...         columns=["id"],
         ...     )
         ...     df.shape
         (3, 1)
         """
-        return read_parquet(
-            self.path,
-            dataframe_backend=dataframe_backend,
-            **kwargs,
+        if self.backend.name == "pandas":
+            return self.backend.cast(
+                pd.read_parquet(
+                    path=self.path,
+                    **kwargs,
+                ),
+            )
+
+        return self.backend.cast(
+            pl.read_parquet(
+                source=self.path,
+                **kwargs,
+            ),
         )
 
-    def _write(
+    def write(
         self,
-        df: DataFrames,
+        df: DataFrameType,
         /,
-        *,
-        dataframe_backend: DataframeBackends,
-        **kwargs: object,
-    ) -> None:
+        **kwargs: Any,  # noqa: ANN401
+    ) -> Self:
         """
         Persist a DataFrame to the parquet file.
 
         Delegates to
         :func:`mayutils.objects.dataframes.to_parquet`, which picks
-        the pandas or polars writer matching ``dataframe_backend``.
+        the pandas or polars writer matching :attr:`backend`.
         Format-specific controls such as compression codec
         (``snappy``, ``zstd``, ``gzip``), partition layout
         (``partition_cols``), and row-group sizing are forwarded
@@ -170,15 +165,23 @@ class Parquet(DataFile):
         ----------
         df
             DataFrame to persist; its runtime type has already been
-            validated against ``dataframe_backend`` by
+            validated against :attr:`backend` by
             :meth:`DataFile.write`.
-        dataframe_backend
-            Resolved backend that matches ``type(df)``.
         **kwargs
             Forwarded to the underlying writer (for example
             ``compression="zstd"`` for a denser codec or
             ``partition_cols=[...]`` on pandas for Hive-style
             partitioning).
+
+        Returns
+        -------
+            ``self``, for method chaining.
+
+        Raises
+        ------
+        TypeError
+            If *df* is not an instance of the class associated with
+            :attr:`backend`.
 
         See Also
         --------
@@ -198,18 +201,33 @@ class Parquet(DataFile):
         ...     path = Path(tmp) / "demo.parquet"
         ...     Parquet(path)._write(
         ...         pd.DataFrame({"id": [1, 2, 3]}),
-        ...         dataframe_backend="pandas",
         ...         compression="zstd",
         ...     )
         ...     path.exists()
         True
         """
-        to_parquet(
-            df=df,
-            path=self.path,
-            dataframe_backend=dataframe_backend,
-            **kwargs,
-        )
+        if self.backend.name == "pandas":
+            if not isinstance(df, pd.DataFrame):
+                msg = f"Expected pandas DataFrame, got {type(df)}"
+                raise TypeError(msg)
+
+            df.to_parquet(
+                path=self.path,
+                index=kwargs.pop("index", True),
+                **kwargs,
+            )
+
+        else:
+            if not isinstance(df, pl.DataFrame):
+                msg = f"Expected polars DataFrame, got {type(df)}"
+                raise TypeError(msg)
+
+            df.write_parquet(
+                file=self.path,
+                **kwargs,
+            )
+
+        return self
 
     def schema(
         self,
@@ -249,9 +267,9 @@ class Parquet(DataFile):
         ...     list(Parquet(path).schema())
         ['id', 'ts']
         """
-        arrow_schema = pq.ParquetFile(source=self.path).schema_arrow  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
+        arrow_schema = pq.ParquetFile(source=self.path).schema_arrow
 
-        return {name: arrow_schema.field(name).type for name in arrow_schema.names}  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
+        return {name: arrow_schema.field(name).type for name in arrow_schema.names}  # pyright: ignore[reportUnknownMemberType]
 
     def row_count(
         self,
@@ -291,16 +309,14 @@ class Parquet(DataFile):
         ...     Parquet(path).row_count()
         7
         """
-        return pq.ParquetFile(source=self.path).metadata.num_rows  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
+        return pq.ParquetFile(source=self.path).metadata.num_rows
 
     def iter_chunks(
         self,
         chunk_size: int,
         /,
-        *,
-        dataframe_backend: DataframeBackends | None = None,
         **kwargs: Any,  # noqa: ANN401
-    ) -> Iterator[DataFrames]:
+    ) -> Iterator[DataFrameType]:
         """
         Stream the parquet file as DataFrame chunks converted from Arrow batches.
 
@@ -321,9 +337,6 @@ class Parquet(DataFile):
             :meth:`pyarrow.parquet.ParquetFile.iter_batches`. The
             final chunk may be smaller when the total row count is
             not an exact multiple of ``chunk_size``.
-        dataframe_backend
-            DataFrame library to convert each chunk to; defaults to
-            :attr:`backend` when ``None``.
         **kwargs
             Forwarded to :meth:`pyarrow.parquet.ParquetFile.iter_batches`
             (for example ``columns=[...]`` to restrict the projection
@@ -356,68 +369,18 @@ class Parquet(DataFile):
         ...     sum(sizes)
         5
         """
-        backend = dataframe_backend if dataframe_backend is not None else self.backend
         parquet_file = pq.ParquetFile(source=self.path)
 
-        for batch in parquet_file.iter_batches(  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType]
+        for batch in parquet_file.iter_batches(  # pyright: ignore[reportUnknownMemberType]
             batch_size=chunk_size,
             **kwargs,
         ):
-            table = pa.Table.from_batches([batch])  # pyright: ignore[reportUnknownMemberType, reportUnknownVariableType, reportAttributeAccessIssue]
+            table = pa.Table.from_batches(batches=[batch])
 
-            yield pyarrow_table_to_backend(table, backend=backend)  # pyright: ignore[reportUnknownArgumentType]
+            if self.backend.name == "polars":
+                yield self.backend.cast(cast("pl.DataFrame", pl.from_arrow(data=table)))  # pyright: ignore[reportUnknownMemberType]
 
-
-def pyarrow_table_to_backend(
-    table: pa.Table,  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType, reportUnknownParameterType]
-    /,
-    *,
-    backend: DataframeBackends,
-) -> DataFrames:
-    """
-    Convert an Arrow table to the requested DataFrame backend.
-
-    Exists so both :meth:`Parquet.iter_chunks` and any future Arrow
-    producers in this module can share a single conversion path. The
-    helper prefers zero-copy conversions where the underlying
-    library supports them: ``polars.from_arrow`` returns a polars
-    DataFrame that shares Arrow buffers, and ``pyarrow.Table.to_pandas``
-    picks the appropriate pandas representation for each column type.
-
-    Parameters
-    ----------
-    table
-        Arrow table to convert. May be a single-batch or multi-batch
-        table; the function does not re-chunk it.
-    backend
-        Target DataFrame library.
-
-    Returns
-    -------
-        Materialised DataFrame whose concrete type matches
-        ``backend``.
-
-    See Also
-    --------
-    Parquet.iter_chunks : Primary caller of this helper.
-    pyarrow.Table.to_pandas : Backend-specific conversion for pandas.
-    polars.from_arrow : Backend-specific conversion for polars.
-    pandas.DataFrame : Concrete return type for the pandas backend.
-    polars.DataFrame : Concrete return type for the polars backend.
-
-    Examples
-    --------
-    >>> import pyarrow as pa
-    >>> from mayutils.interfaces.filetypes.parquet import pyarrow_table_to_backend
-    >>> table = pa.table({"id": [1, 2, 3]})
-    >>> df = pyarrow_table_to_backend(table, backend="pandas")
-    >>> list(df.columns)
-    ['id']
-    """
-    if backend == "polars":
-        return cast("pl.DataFrame", pl.from_arrow(data=table))  # pyright: ignore[reportUnknownMemberType, reportUnknownArgumentType]
-
-    return table.to_pandas()  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType]
+            yield self.backend.cast(table.to_pandas())  # pyright: ignore[reportUnknownMemberType]
 
 
 __all__ = [

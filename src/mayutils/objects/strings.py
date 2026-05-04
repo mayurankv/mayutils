@@ -480,6 +480,53 @@ class String:
         return " ".join([parts[0].capitalize(), *parts[1:]])
 
     @staticmethod
+    def to_slug(
+        string: str,
+        /,
+        *,
+        max_length: int | None = None,
+    ) -> str:
+        """
+        Convert an arbitrary input string to a filesystem-safe slug.
+
+        Replaces every non-alphanumeric character with an underscore,
+        collapses runs of underscores, strips leading and trailing
+        underscores, and truncates to *max_length* without leaving a
+        trailing underscore.
+
+        Parameters
+        ----------
+        string
+            Source text in any format.
+        max_length
+            Maximum character count for the returned slug.
+
+        Returns
+        -------
+            Lowercased string containing only ``[a-z0-9_]``.
+
+        See Also
+        --------
+        String.to_snake : Sibling converter that infers word boundaries
+            from case transitions rather than replacing all non-alphanum.
+
+        Examples
+        --------
+        >>> String.to_slug("SELECT * FROM loans")
+        'select_from_loans'
+        >>> String.to_slug("a///b///c")
+        'a_b_c'
+        >>> String.to_slug("  --hello--  ")
+        'hello'
+        """
+        slug = sub(r"[^a-z0-9]+", "_", string.lower()).strip("_")
+        slug = sub(r"_+", "_", slug)
+        if max_length is not None:
+            slug = slug[:max_length]
+
+        return slug.rstrip("_")
+
+    @staticmethod
     def to_none(
         string: str | None,
         /,
