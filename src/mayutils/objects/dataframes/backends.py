@@ -179,9 +179,22 @@ def default_backend() -> Backend[pd.DataFrame]:
     """
     Return the default pandas backend token.
 
+    Convenience constructor that avoids repeating ``Backend(pd.DataFrame)``
+    at every call site that needs a fallback backend.
+
     Returns
     -------
         A ``Backend`` wrapping ``pd.DataFrame``.
+
+    See Also
+    --------
+    Backend : Generic backend token type.
+
+    Examples
+    --------
+    >>> from mayutils.objects.dataframes.backends import default_backend
+    >>> default_backend().name
+    'pandas'
     """
     return Backend(pd.DataFrame)
 
