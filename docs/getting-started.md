@@ -41,7 +41,7 @@ make init
 source .venv/bin/activate
 ```
 
-`make init` creates a virtual environment, installs the dev + docs + testing groups, and installs pre-commit hooks (including the commit-msg hook for commitizen).
+`make init` creates a virtual environment, installs the dev + docs + testing groups, and installs [prek](https://prek.j178.dev) git hooks (pre-commit, commit-msg, and pre-push).
 
 ## Quick Usage
 

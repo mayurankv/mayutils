@@ -6,8 +6,7 @@ VERSION := $(shell uv version --short)
 init:
 	uv venv
 	uv sync --all-extras
-	uv run pre-commit install
-	uv run pre-commit install --hook-type commit-msg
+	uv run prek install -t pre-commit -t commit-msg -t pre-push
 
 .PHONY: env
 env:
@@ -30,7 +29,7 @@ lint:
 
 .PHONY: lint-docs
 lint-docs:
-	uv run pre-commit run numpydoc-validation --all-files
+	uv run prek run numpydoc-validation --all-files
 
 .PHONY: format
 format:
