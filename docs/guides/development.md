@@ -49,7 +49,7 @@ All hooks are declared in `prek.toml` and managed by [prek](https://prek.j178.de
 | `numpydoc-validation`       | pre-push   | Validates docstrings                     |
 | `sqlfluff-lint`             | pre-push   | Lints Snowflake SQL                      |
 | `renovate-config-validator` | pre-push   | Validates `renovate.json`                |
-| `pre-commit-update`         | pre-push   | Auto-updates hook revisions              |
+| `prek-auto-update`          | pre-push   | Auto-updates hook revisions              |
 
 Run the whole suite manually:
 
