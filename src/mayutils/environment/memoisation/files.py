@@ -34,7 +34,7 @@ from mayutils.environment.filesystem import is_file_stale
 from mayutils.environment.memoisation.types import MISSING, CacheObjects, Missing
 from mayutils.environment.memoisation.utilities import format_ttl
 from mayutils.interfaces.filetypes import DataFile
-from mayutils.objects.dataframes.backends import Backend, DataFrames
+from mayutils.objects.dataframes.backends import Backend, DataFrames, default_backend
 from mayutils.objects.dictionaries import flatten_dict
 from mayutils.objects.strings import String
 
@@ -185,7 +185,7 @@ class DataFileSerialiser[DataFrameType: DataFrames = pd.DataFrame]:
         >>> DataFileSerialiser().backend is not None
         True
         """
-        self.backend = backend if backend is not None else cast("Backend[DataFrameType]", Backend(pd.DataFrame))
+        self.backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
 
     def get_datafile(
         self,
@@ -643,7 +643,7 @@ def get_serialiser[DataFrameType: DataFrames = pd.DataFrame](
 
     register_datafile(normalised)
 
-    backend = backend if backend is not None else cast("Backend[DataFrameType]", Backend(pd.DataFrame))
+    backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
 
     return DataFileSerialiser(backend=backend)
 

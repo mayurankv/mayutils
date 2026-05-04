@@ -2,30 +2,10 @@
 - Templates
 - temp/temp.ipy
 - src/mayutils/data/live
-- src/mayutils/data/read
-- src/mayutils/environment/memoisation
-	- Clean up of cache on call
-	- Add refresh daily to caching
-		- Better caching for query pulls
 - src/mayutils/visualisation/graphs/plotly/
-- src/mayutils/__init__
 - misc:
 	- CHANGELOG
 	- .todo
-
-Any -> object
-Fix the ty issues
-
-Turn traces into a folder with sub files for each trace type
-
-Flexwrap returns the wrong types??
-
-```read
-LRU cache?
-Clean up of cache on call?
-Refresh daily to caching?
-Fix cleaning of caches
-```
 
 
 ```repo
@@ -50,8 +30,6 @@ Add tests for all functions and methods, ensuring that they cover a wide range o
 ```
 
 ```documentation
-Make sure all docstrings are proper numpydoc style docstrings
-Make sure all docstrings have proper examples
 Make sure all docstrings are properly tested with doctest where possible
 Check all docstrings make sense
 Remove all type hints from docstrings
@@ -63,9 +41,3 @@ Add tests for all functions and methods, ensuring that they cover a wide range o
 Use pytest for testing and ensure that all tests pass successfully.
 Make sure all docstrings have proper examples which are tested with pytest where possible and skipped only where necessary
 ```
-
-Make sheets work with 2d numpy arrays
-
-Replace Backend(pd.DataFrame) with
-def default_backend() -> Backend[pd.DataFrame]:
-    return Backend(pd.DataFrame)

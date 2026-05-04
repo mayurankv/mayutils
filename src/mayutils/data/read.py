@@ -49,7 +49,7 @@ from mayutils.core.extras import may_require_extras
 from mayutils.data import CACHE_FOLDER
 from mayutils.data.queries import QUERIES_FOLDERS, format_query
 from mayutils.environment.memoisation import cache, make_cache_stem
-from mayutils.objects.dataframes.backends import Backend, DataFrames
+from mayutils.objects.dataframes.backends import Backend, DataFrames, default_backend
 
 with may_require_extras():
     import pandas as pd
@@ -271,7 +271,7 @@ def as_query_reader[DataFrameType: DataFrames = pd.DataFrame](
     >>> df.shape  # doctest: +SKIP
     (1, 1)
     """
-    required_backend = required_backend if required_backend is not None else cast("Backend[DataFrameType]", Backend(pd.DataFrame))
+    required_backend = required_backend if required_backend is not None else cast("Backend[DataFrameType]", default_backend())
 
     def reader(
         query: str,
@@ -323,7 +323,7 @@ def as_query_reader[DataFrameType: DataFrames = pd.DataFrame](
         >>> df.shape  # doctest: +SKIP
         (1, 1)
         """
-        backend = backend if backend is not None else cast("Backend[DataFrameType]", Backend(pd.DataFrame))
+        backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
         if required_backend.name != backend.name:
             msg = f"Reader supports '{backend}' only; got '{required_backend}'"
             raise NotImplementedError(msg)
@@ -634,7 +634,7 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
     >>> df.shape  # doctest: +SKIP
     (1, 1)
     """
-    backend = backend if backend is not None else cast("Backend[DataFrameType]", Backend(pd.DataFrame))
+    backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
 
     rendered_query = render_query(
         query,

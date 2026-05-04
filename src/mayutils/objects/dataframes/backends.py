@@ -175,6 +175,18 @@ class Backend[DataFrameType: DataFrames = pd.DataFrame]:
         return cast("DataFrameType", df)
 
 
+def default_backend() -> Backend[pd.DataFrame]:
+    """
+    Return the default pandas backend token.
+
+    Returns
+    -------
+        A ``Backend`` wrapping ``pd.DataFrame``.
+    """
+    return Backend(pd.DataFrame)
+
+
 __all__ = [
     "Backend",
+    "default_backend",
 ]

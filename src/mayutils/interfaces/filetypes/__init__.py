@@ -46,7 +46,7 @@ import pandas as pd
 import polars as pl
 
 from mayutils.objects.classes import readonlyclassonlyproperty
-from mayutils.objects.dataframes.backends import Backend, DataFrames
+from mayutils.objects.dataframes.backends import Backend, DataFrames, default_backend
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
@@ -265,7 +265,7 @@ class DataFile[DataFrameType: DataFrames = pd.DataFrame](ABC):
         True
         """
         self.path = Path(path)
-        self.backend = backend if backend is not None else cast("Backend[DataFrameType]", Backend(pd.DataFrame))
+        self.backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
 
         if self.path.suffix.lower() != self.suffix.lower():
             msg = f"{type(self).__name__} expects a '{self.suffix}' file; got '{self.path.suffix}'."
@@ -455,7 +455,7 @@ class DataFile[DataFrameType: DataFrames = pd.DataFrame](ABC):
 
         return DataFile._registry[key](
             path,
-            backend=backend if backend is not None else cast("Backend[AltDataFrameType]", Backend(pd.DataFrame)),
+            backend=backend if backend is not None else cast("Backend[AltDataFrameType]", default_backend()),
             **kwargs,
         )
 
@@ -1063,7 +1063,7 @@ class DataFile[DataFrameType: DataFrames = pd.DataFrame](ABC):
         ...     isinstance(handle.to_pandas(), pd.DataFrame)
         True
         """
-        return self.with_backend(Backend(pd.DataFrame)).read(**kwargs)
+        return self.with_backend(default_backend()).read(**kwargs)
 
     def to_polars(
         self,

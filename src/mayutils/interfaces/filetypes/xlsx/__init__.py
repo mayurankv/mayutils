@@ -47,7 +47,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Self, cast
 
 from mayutils.core.extras import may_require_extras
 from mayutils.interfaces.filetypes import DataFile
-from mayutils.objects.dataframes.backends import Backend, DataFrames
+from mayutils.objects.dataframes.backends import Backend, DataFrames, default_backend
 
 with may_require_extras():
     import openpyxl
@@ -221,7 +221,7 @@ class Xlsx[DataFrameType: DataFrames = pd.DataFrame]:
         'polars'
         """
         self.path = Path(path)
-        self.backend = backend if backend is not None else cast("Backend[DataFrameType]", Backend(pd.DataFrame))
+        self.backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
 
         if self.path.suffix.lower() != self.suffix:
             msg = f"Xlsx expects a '{self.suffix}' file; got '{self.path.suffix}'."
