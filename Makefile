@@ -2,20 +2,20 @@ ROOT := $(shell git rev-parse --show-toplevel)
 PACKAGE_NAME := $(shell uv version | awk '{print $$1}' | sed 's/-/_/g')
 VERSION := $(shell uv version --short)
 
-.PHONY: init
-init:
-	uv venv
-	uv sync --all-extras
-	uv run prek install -t pre-commit -t commit-msg -t pre-push
-
 .PHONY: env
 env:
 	uv sync --all-extras --all-groups
 
+.PHONY: init
+init:
+	uv venv
+	$(MAKE) env
+	uv run prek install -t pre-commit -t commit-msg -t pre-push
+
 .PHONY: update
 update:
 	uv lock --upgrade --prerelease=allow
-	uv sync
+	$(MAKE) env
 
 .PHONY: uncache
 uncache:

@@ -125,7 +125,7 @@ hooks = [
   {
     id = "uv-sync",
     name = "UV Sync Dependencies",
-    entry = "uv sync --locked",
+    entry = "uv sync --all-extras --all-groups --locked",
     language = "system",
     pass_filenames = false,
     stages = ["pre-push"]

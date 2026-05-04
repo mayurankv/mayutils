@@ -15,9 +15,10 @@ Where are the noqas?
 Where are the doctest skips?
 Any unnecessary ty skips or pyright ignores?
 Could any of the Any type hints be switched to object or more specific types?
-Check all __slots__ can be removed
 Test out fail imports
 ```
+
+------------------------------------------------------------
 
 ```plotly
 Combine plotly imports in the init
@@ -25,7 +26,6 @@ Combine plotly imports in the init
 Fix the following issues:
 - Subplots don't have save_axis_dict applied properly under the slides template - why?
 
-Write numpy style docstrings for all functions and methods, ensuring that they include proper examples and are tested with doctest where possible. Use doctest skip only where necessary.
 Add tests for all functions and methods, ensuring that they cover a wide range of cases and edge cases. Use pytest for testing and ensure that all tests pass successfully. Make sure all docstrings have proper examples which are tested with pytest where possible and skipped only where necessary.
 ```
 
@@ -39,5 +39,5 @@ Ensure doctest skip is only used where necessary and not overused
 ```tests
 Add tests for all functions and methods, ensuring that they cover a wide range of cases and edge cases.
 Use pytest for testing and ensure that all tests pass successfully.
-Make sure all docstrings have proper examples which are tested with pytest where possible and skipped only where necessary
+Make sure all docstrings have proper examples which are tested with pytest where possible and doctest skipped only where necessary
 ```
