@@ -69,7 +69,7 @@ repos:
         language: system
         types: [python, jupyter]
 -   repo: https://github.com/sqlfluff/sqlfluff
-    rev: 4.1.0
+    rev: 4.2.1
     hooks:
     -   id: sqlfluff-lint
         args: [--dialect, snowflake] #[--exclude-rules, L014,L016]
