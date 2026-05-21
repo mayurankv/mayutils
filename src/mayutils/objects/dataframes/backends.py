@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, cast
 
 from mayutils.core.extras import may_require_extras
 
@@ -199,7 +199,86 @@ def default_backend() -> Backend[pd.DataFrame]:
     return Backend(pd.DataFrame)
 
 
+class BackendOperations:
+    @staticmethod
+    def concat[DataFrameType: DataFrames](
+        *frames: DataFrameType,
+        backend: Backend[DataFrameType],
+    ) -> DataFrameType:
+        if backend.name == "pandas":
+            return cast("DataFrameType", pd.concat(cast("list[pd.DataFrame]", frames), ignore_index=True))
+        if backend.name == "polars":
+            return cast("DataFrameType", pl.concat(items=cast("list[pl.DataFrame]", frames)))
+
+        msg = f"Unsupported backend: {backend.name}"
+        raise ValueError(msg)
+
+    @staticmethod
+    def filter_ge[DataFrameType: DataFrames](
+        frame: DataFrameType,
+        column: str,
+        value: Any,  # noqa: ANN401
+        /,
+        *,
+        backend: Backend[DataFrameType],
+    ) -> DataFrameType:
+        if backend.name == "pandas":
+            return cast("DataFrameType", cast("pd.DataFrame", frame).loc[frame[column] >= value])
+        if backend.name == "polars":
+            return cast("DataFrameType", frame.filter(pl.col(name=column) >= value))
+
+        msg = f"Unsupported backend: {backend.name}"
+        raise ValueError(msg)
+
+    @staticmethod
+    def max[DataFrameType: DataFrames](
+        frame: DataFrameType,
+        column: str,
+        /,
+        *,
+        backend: Backend[DataFrameType],
+    ) -> Any:  # noqa: ANN401
+        if backend.name == "pandas":
+            return cast("Any", frame[column].max())
+        if backend.name == "polars":
+            return cast("pl.DataFrame", frame).select(pl.col(name=column).max()).item()
+
+        msg = f"Unsupported backend: {backend.name}"
+        raise ValueError(msg)
+
+    @staticmethod
+    def tail[DataFrameType: DataFrames](
+        frame: DataFrameType,
+        n: int,
+        /,
+        *,
+        backend: Backend[DataFrameType],
+    ) -> DataFrameType:
+        if backend.name in ["pandas", "polars"]:
+            return cast("DataFrameType", frame.tail(n))
+
+        msg = f"Unsupported backend: {backend.name}"
+        raise ValueError(msg)
+
+    @staticmethod
+    def deduplicate[DataFrameType: DataFrames](
+        frame: DataFrameType,
+        column: str,
+        /,
+        *,
+        backend: Backend[DataFrameType],
+    ) -> DataFrameType:
+        if backend.name == "pandas":
+            return cast("DataFrameType", cast("pd.DataFrame", frame).drop_duplicates(subset=column, keep="last"))
+        if backend.name == "polars":
+            return cast("DataFrameType", cast("pl.DataFrame", frame).unique(subset=column, keep="last"))
+
+        msg = f"Unsupported backend: {backend.name}"
+        raise ValueError(msg)
+
+
 __all__ = [
     "Backend",
+    "BackendOperations",
     "default_backend",
 ]
