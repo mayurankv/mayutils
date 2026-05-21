@@ -200,11 +200,58 @@ def default_backend() -> Backend[pd.DataFrame]:
 
 
 class BackendOperations:
+    """
+    Backend-dispatched DataFrame operations.
+
+    Provides static helpers that delegate to the correct library
+    (pandas or polars) based on the supplied :class:`Backend` token.
+
+    See Also
+    --------
+    Backend : Token that selects the concrete DataFrame library.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> from mayutils.objects.dataframes.backends import BackendOperations, Backend
+    >>> b = Backend(pd.DataFrame)  # doctest: +SKIP
+    """
+
     @staticmethod
     def concat[DataFrameType: DataFrames](
         *frames: DataFrameType,
         backend: Backend[DataFrameType],
     ) -> DataFrameType:
+        """
+        Concatenate DataFrames using the appropriate backend library.
+
+        Delegates to ``pd.concat`` or ``pl.concat`` depending on the
+        *backend* token.
+
+        Parameters
+        ----------
+        *frames
+            DataFrames to concatenate.
+        backend
+            Backend token selecting the concat implementation.
+
+        Returns
+        -------
+            Single concatenated DataFrame.
+
+        Raises
+        ------
+        ValueError
+            If *backend* is not supported.
+
+        See Also
+        --------
+        BackendOperations.tail : Keep only the last *n* rows.
+
+        Examples
+        --------
+        >>> BackendOperations.concat(df1, df2, backend=b)  # doctest: +SKIP
+        """
         if backend.name == "pandas":
             return cast("DataFrameType", pd.concat(cast("list[pd.DataFrame]", frames), ignore_index=True))
         if backend.name == "polars":
@@ -222,6 +269,40 @@ class BackendOperations:
         *,
         backend: Backend[DataFrameType],
     ) -> DataFrameType:
+        """
+        Keep rows where *column* >= *value*.
+
+        Applies a greater-than-or-equal filter using the pandas or polars
+        API according to the *backend* token.
+
+        Parameters
+        ----------
+        frame
+            Source DataFrame.
+        column
+            Column name to compare.
+        value
+            Inclusive lower bound.
+        backend
+            Backend token selecting the filter implementation.
+
+        Returns
+        -------
+            Filtered DataFrame.
+
+        Raises
+        ------
+        ValueError
+            If *backend* is not supported.
+
+        See Also
+        --------
+        BackendOperations.max : Compute the column maximum.
+
+        Examples
+        --------
+        >>> BackendOperations.filter_ge(df, "ts", "2024-01-01", backend=b)  # doctest: +SKIP
+        """
         if backend.name == "pandas":
             return cast("DataFrameType", cast("pd.DataFrame", frame).loc[frame[column] >= value])
         if backend.name == "polars":
@@ -238,6 +319,38 @@ class BackendOperations:
         *,
         backend: Backend[DataFrameType],
     ) -> Any:  # noqa: ANN401
+        """
+        Return the maximum value in *column*.
+
+        Extracts the scalar maximum using the pandas or polars API
+        according to the *backend* token.
+
+        Parameters
+        ----------
+        frame
+            Source DataFrame.
+        column
+            Column whose maximum is computed.
+        backend
+            Backend token selecting the aggregation implementation.
+
+        Returns
+        -------
+            Scalar maximum value.
+
+        Raises
+        ------
+        ValueError
+            If *backend* is not supported.
+
+        See Also
+        --------
+        BackendOperations.filter_ge : Filter rows by column threshold.
+
+        Examples
+        --------
+        >>> BackendOperations.max(df, "id", backend=b)  # doctest: +SKIP
+        """
         if backend.name == "pandas":
             return cast("Any", frame[column].max())
         if backend.name == "polars":
@@ -254,6 +367,38 @@ class BackendOperations:
         *,
         backend: Backend[DataFrameType],
     ) -> DataFrameType:
+        """
+        Return the last *n* rows.
+
+        Delegates to the ``tail`` method of the underlying pandas or polars
+        DataFrame.
+
+        Parameters
+        ----------
+        frame
+            Source DataFrame.
+        n
+            Number of trailing rows to keep.
+        backend
+            Backend token selecting the tail implementation.
+
+        Returns
+        -------
+            DataFrame containing the last *n* rows.
+
+        Raises
+        ------
+        ValueError
+            If *backend* is not supported.
+
+        See Also
+        --------
+        BackendOperations.concat : Concatenate DataFrames.
+
+        Examples
+        --------
+        >>> BackendOperations.tail(df, 100, backend=b)  # doctest: +SKIP
+        """
         if backend.name in ["pandas", "polars"]:
             return cast("DataFrameType", frame.tail(n))
 
@@ -268,6 +413,38 @@ class BackendOperations:
         *,
         backend: Backend[DataFrameType],
     ) -> DataFrameType:
+        """
+        Remove duplicate rows based on *column*, keeping the last occurrence.
+
+        Uses ``drop_duplicates`` (pandas) or ``unique`` (polars) to retain
+        only the last row for each distinct value in *column*.
+
+        Parameters
+        ----------
+        frame
+            Source DataFrame.
+        column
+            Column used to identify duplicates.
+        backend
+            Backend token selecting the dedup implementation.
+
+        Returns
+        -------
+            Deduplicated DataFrame.
+
+        Raises
+        ------
+        ValueError
+            If *backend* is not supported.
+
+        See Also
+        --------
+        BackendOperations.concat : Concatenate DataFrames.
+
+        Examples
+        --------
+        >>> BackendOperations.deduplicate(df, "id", backend=b)  # doctest: +SKIP
+        """
         if backend.name == "pandas":
             return cast("DataFrameType", cast("pd.DataFrame", frame).drop_duplicates(subset=column, keep="last"))
         if backend.name == "polars":

@@ -26,11 +26,46 @@ logger = Logger.spawn()
 
 
 class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
-    """Incrementally pull rows by tracking ``max(cursor_column)``.
+    """
+    Incrementally pull rows by tracking ``max(cursor_column)``.
 
     The query template must contain a ``{cursor}`` placeholder. On each
     update the cursor is formatted into the template and only rows past
     the previous cursor are fetched.
+
+    Parameters
+    ----------
+    query
+        SQL string or path to a ``.sql`` template containing ``{cursor}``.
+    cursor_column
+        Column whose maximum is tracked as the cursor.
+    initial_cursor
+        Starting cursor value used for the first fetch.
+    reader
+        Callable that executes a rendered SQL query and returns a DataFrame.
+    backend
+        Backend token; defaults to pandas when ``None``.
+    max_rows
+        Maximum rows to retain after each update.
+    max_age
+        Maximum age of rows to retain after each update.
+    update_frequency
+        Minimum interval between consecutive fetches.
+    time_format
+        :meth:`~datetime.datetime.strftime` format for datetime cursors.
+    queries_folders
+        Directories searched when *query* is a filename.
+    **fixed_format_kwargs
+        Extra keyword arguments substituted into the query template on
+        every call.
+
+    See Also
+    --------
+    WindowedQuery : Time-windowed alternative using start/end timestamps.
+
+    Examples
+    --------
+    >>> from mayutils.data.live import StreamingQuery  # doctest: +SKIP
     """
 
     def __init__(
@@ -49,6 +84,55 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
         **fixed_format_kwargs: SupportsStr,
     ) -> None:
+        """
+        Initialise the streaming query and perform the first fetch.
+
+        Validates retention settings, executes the first query against
+        *initial_cursor*, and stores the result as the initial data.
+
+        Parameters
+        ----------
+        query
+            SQL string or path to a ``.sql`` template containing
+            ``{cursor}``.
+        cursor_column
+            Column whose maximum is tracked as the cursor.
+        initial_cursor
+            Starting cursor value used for the first fetch.
+        reader
+            Callable that executes a rendered SQL query and returns a
+            DataFrame.
+        backend
+            Backend token; defaults to pandas when ``None``.
+        max_rows
+            Maximum rows to retain after each update.
+        max_age
+            Maximum age of rows to retain after each update.
+        update_frequency
+            Minimum interval between consecutive fetches.
+        time_format
+            :meth:`~datetime.datetime.strftime` format for datetime
+            cursors.
+        queries_folders
+            Directories searched when *query* is a filename.
+        **fixed_format_kwargs
+            Extra keyword arguments substituted into the query template
+            on every call.
+
+        See Also
+        --------
+        StreamingQuery.fetch : Execute the query and advance the cursor.
+
+        Examples
+        --------
+        >>> from mayutils.data.live import StreamingQuery  # doctest: +SKIP
+        >>> sq = StreamingQuery(  # doctest: +SKIP
+        ...     "SELECT * FROM t WHERE id > {cursor}",
+        ...     cursor_column="id",
+        ...     initial_cursor=0,
+        ...     reader=my_reader,
+        ... )
+        """
         self.query = query
         self.reader = reader
         self.backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
@@ -72,6 +156,24 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
     def data(
         self,
     ) -> DataFrameType:
+        """
+        Return the current accumulated DataFrame.
+
+        Provides read-only access to the internal data buffer that grows
+        with each :meth:`update` call.
+
+        Returns
+        -------
+            The accumulated rows.
+
+        See Also
+        --------
+        StreamingQuery.update : Append new rows.
+
+        Examples
+        --------
+        >>> sq.data  # doctest: +SKIP
+        """
         return self._data
 
     def update(
@@ -79,6 +181,30 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         *,
         force: bool = False,
     ) -> Self:
+        """
+        Fetch new rows since the last cursor and append them.
+
+        Skips the fetch when *update_frequency* has not elapsed unless
+        *force* is ``True``.  On failure the previous data is preserved.
+
+        Parameters
+        ----------
+        force
+            When ``True``, bypass the *update_frequency* throttle.
+
+        Returns
+        -------
+        Self
+            The query instance for fluent chaining.
+
+        See Also
+        --------
+        StreamingQuery.fetch : Low-level fetch and cursor advance.
+
+        Examples
+        --------
+        >>> sq.update(force=True)  # doctest: +SKIP
+        """
         if not self.should_update(force=force):
             return self
 
@@ -103,6 +229,25 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
     def reset(
         self,
     ) -> Self:
+        """
+        Drop all data and re-fetch from the current cursor.
+
+        Replaces the internal buffer with a fresh query result starting
+        from the current cursor position.
+
+        Returns
+        -------
+        Self
+            The query instance for fluent chaining.
+
+        See Also
+        --------
+        StreamingQuery.fetch : Execute the query and advance the cursor.
+
+        Examples
+        --------
+        >>> sq.reset()  # doctest: +SKIP
+        """
         self._data = self.fetch()
         self.last_updated = DateTime.now()
 
@@ -111,6 +256,24 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
     def fetch(
         self,
     ) -> DataFrameType:
+        """
+        Execute the query at the current cursor and advance it.
+
+        Renders the SQL template with the current cursor, runs the query,
+        and updates the cursor to the maximum of *cursor_column*.
+
+        Returns
+        -------
+            The rows returned by the query.
+
+        See Also
+        --------
+        StreamingQuery.read_query : Render and execute the SQL template.
+
+        Examples
+        --------
+        >>> delta = sq.fetch()  # doctest: +SKIP
+        """
         data = self.read_query(cursor=self.cursor)
 
         if len(data) != 0:
@@ -122,6 +285,25 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
     def cursor(
         self,
     ) -> str:
+        """
+        Return the current cursor value formatted as a string.
+
+        Datetime cursors are formatted via *time_format*; all other types
+        are cast with ``str()``.
+
+        Returns
+        -------
+            The formatted cursor string.
+
+        See Also
+        --------
+        StreamingQuery.fetch : Uses the cursor to parameterise the query.
+
+        Examples
+        --------
+        >>> sq.cursor  # doctest: +SKIP
+        '2024-01-01 00:00:00'
+        """
         if self.cursor_is_datetime and hasattr(self.cursor_value, "strftime"):
             return self.cursor_value.strftime(self.time_format)
 
@@ -133,6 +315,32 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         default_suffix: str = "sql",
         **extra_kwargs: SupportsStr,
     ) -> DataFrameType:
+        """
+        Render and execute the SQL query template.
+
+        Combines *fixed_format_kwargs* with any additional keyword
+        arguments, renders the template, and passes it to *reader*.
+
+        Parameters
+        ----------
+        default_suffix
+            File extension appended when *query* is a filename without
+            one.
+        **extra_kwargs
+            Additional format arguments merged into the template.
+
+        Returns
+        -------
+            The DataFrame returned by the reader.
+
+        See Also
+        --------
+        StreamingQuery.fetch : High-level fetch that calls this method.
+
+        Examples
+        --------
+        >>> df = sq.read_query(cursor="0")  # doctest: +SKIP
+        """
         rendered = render_query(
             self.query,
             queries_folders=self.queries_folders,
@@ -151,6 +359,31 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         *,
         force: bool,
     ) -> bool:
+        """
+        Return whether enough time has elapsed since the last update.
+
+        Compares the elapsed time since *last_updated* against
+        *update_frequency*.
+
+        Parameters
+        ----------
+        force
+            When ``True``, always return ``True`` regardless of elapsed
+            time.
+
+        Returns
+        -------
+            ``True`` if a new fetch should proceed.
+
+        See Also
+        --------
+        StreamingQuery.update : Calls this before fetching.
+
+        Examples
+        --------
+        >>> sq.should_update(force=False)  # doctest: +SKIP
+        True
+        """
         if force or self.update_frequency is None:
             return True
 
@@ -159,6 +392,20 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
     def apply_retention(
         self,
     ) -> None:
+        """
+        Trim data to satisfy *max_age* and *max_rows* constraints.
+
+        Removes rows older than *max_age* first, then truncates to
+        *max_rows* from the tail.
+
+        See Also
+        --------
+        StreamingQuery.validate_retention : Guard against invalid limits.
+
+        Examples
+        --------
+        >>> sq.apply_retention()  # doctest: +SKIP
+        """
         if self.max_age is not None and len(self.data) > 0:
             newest = BackendOperations.max(self.data, self.cursor_column, backend=self.backend)
             if hasattr(newest, "strftime"):
@@ -185,6 +432,25 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
     def validate_retention(
         self,
     ) -> None:
+        """
+        Raise if *max_rows* or *max_age* are non-positive.
+
+        Called during ``__init__`` to fail fast on invalid retention
+        settings.
+
+        Raises
+        ------
+        ValueError
+            If *max_rows* <= 0 or *max_age* total seconds <= 0.
+
+        See Also
+        --------
+        StreamingQuery.apply_retention : Enforces the validated limits.
+
+        Examples
+        --------
+        >>> sq.validate_retention()  # doctest: +SKIP
+        """
         if self.max_rows is not None and self.max_rows <= 0:
             msg = f"max_rows must be positive, got {self.max_rows}"
             raise ValueError(msg)
@@ -195,7 +461,8 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
 
 
 class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
-    """Manage a sliding or expanding time window over a SQL query.
+    """
+    Manage a sliding or expanding time window over a SQL query.
 
     The query template must contain ``{start_timestamp}`` and
     ``{end_timestamp}`` placeholders. On each update, only the delta
@@ -204,6 +471,45 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
     When *deduplicate* is ``True``, rows are deduped on *index_column*
     after each concat (keeps last), which handles re-fetched open
     buckets in time-bucketed aggregate queries.
+
+    Parameters
+    ----------
+    query
+        SQL string or path to a ``.sql`` template containing
+        ``{start_timestamp}`` and ``{end_timestamp}``.
+    index_column
+        Column used for deduplication and rolling-window filtering.
+    start_timestamp
+        Left edge of the initial query window.
+    reader
+        Callable that executes a rendered SQL query and returns a DataFrame.
+    backend
+        Backend token; defaults to pandas when ``None``.
+    rolling
+        If ``True`` the window slides forward; otherwise it expands.
+    deduplicate
+        If ``True``, deduplicate on *index_column* after each concat.
+    max_rows
+        Maximum rows to retain after each update.
+    max_age
+        Maximum age of rows to retain after each update.
+    update_frequency
+        Minimum interval between consecutive fetches.
+    time_format
+        :meth:`~datetime.datetime.strftime` format for window boundaries.
+    queries_folders
+        Directories searched when *query* is a filename.
+    **fixed_format_kwargs
+        Extra keyword arguments substituted into the query template on
+        every call.
+
+    See Also
+    --------
+    StreamingQuery : Cursor-based alternative using ``max(column)``.
+
+    Examples
+    --------
+    >>> from mayutils.data.live import WindowedQuery  # doctest: +SKIP
     """
 
     def __init__(
@@ -224,6 +530,59 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
         **fixed_format_kwargs: SupportsStr,
     ) -> None:
+        """
+        Initialise the windowed query and perform the first fetch.
+
+        Validates retention settings, builds the initial time interval
+        from *start_timestamp* to now, and fetches the first batch.
+
+        Parameters
+        ----------
+        query
+            SQL string or path to a ``.sql`` template containing
+            ``{start_timestamp}`` and ``{end_timestamp}``.
+        index_column
+            Column used for deduplication and rolling-window filtering.
+        start_timestamp
+            Left edge of the initial query window.
+        reader
+            Callable that executes a rendered SQL query and returns a
+            DataFrame.
+        backend
+            Backend token; defaults to pandas when ``None``.
+        rolling
+            If ``True`` the window slides forward; otherwise it expands.
+        deduplicate
+            If ``True``, deduplicate on *index_column* after each concat.
+        max_rows
+            Maximum rows to retain after each update.
+        max_age
+            Maximum age of rows to retain after each update.
+        update_frequency
+            Minimum interval between consecutive fetches.
+        time_format
+            :meth:`~datetime.datetime.strftime` format for window
+            boundaries.
+        queries_folders
+            Directories searched when *query* is a filename.
+        **fixed_format_kwargs
+            Extra keyword arguments substituted into the query template
+            on every call.
+
+        See Also
+        --------
+        WindowedQuery.fetch : Execute the query for a time window.
+
+        Examples
+        --------
+        >>> from mayutils.data.live import WindowedQuery  # doctest: +SKIP
+        >>> wq = WindowedQuery(  # doctest: +SKIP
+        ...     "SELECT * FROM t WHERE ts BETWEEN '{start_timestamp}' AND '{end_timestamp}'",
+        ...     index_column="ts",
+        ...     start_timestamp=DateTime.now(),
+        ...     reader=my_reader,
+        ... )
+        """
         self.query = query
         self.reader = reader
         self.backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
@@ -252,24 +611,98 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
     def data(
         self,
     ) -> DataFrameType:
+        """
+        Return the current accumulated DataFrame.
+
+        Provides read-only access to the internal data buffer that grows
+        with each :meth:`update` call.
+
+        Returns
+        -------
+            The accumulated rows.
+
+        See Also
+        --------
+        WindowedQuery.update : Append new rows.
+
+        Examples
+        --------
+        >>> wq.data  # doctest: +SKIP
+        """
         return self._data
 
     @property
     def interval(
         self,
     ) -> Interval[DateTime]:
+        """
+        Return the current query time interval.
+
+        The interval shifts on each :meth:`fetch` call when the window
+        is rolling.
+
+        Returns
+        -------
+            The current start/end interval.
+
+        See Also
+        --------
+        WindowedQuery.fetch : Updates the interval on each call.
+
+        Examples
+        --------
+        >>> wq.interval  # doctest: +SKIP
+        """
         return self._interval
 
     @property
     def rolling(
         self,
     ) -> bool:
+        """
+        Return whether the window slides forward on each update.
+
+        When ``True``, older data outside the window width is dropped
+        during :meth:`fetch`.
+
+        Returns
+        -------
+            ``True`` if the window slides; ``False`` if it expands.
+
+        See Also
+        --------
+        WindowedQuery.fetch : Applies the rolling behaviour.
+
+        Examples
+        --------
+        >>> wq.rolling  # doctest: +SKIP
+        True
+        """
         return self._rolling
 
     @property
     def deduplicate(
         self,
     ) -> bool:
+        """
+        Return whether rows are deduplicated after each concat.
+
+        When ``True``, duplicate rows on *index_column* are removed
+        (keeping last) after each :meth:`update`.
+
+        Returns
+        -------
+            ``True`` if deduplication is enabled.
+
+        See Also
+        --------
+        WindowedQuery.update : Performs the deduplication step.
+
+        Examples
+        --------
+        >>> wq.deduplicate  # doctest: +SKIP
+        False
+        """
         return self._deduplicate
 
     def update(
@@ -277,6 +710,31 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         *,
         force: bool = False,
     ) -> Self:
+        """
+        Fetch the delta since the last window end and append it.
+
+        Skips the fetch when *update_frequency* has not elapsed unless
+        *force* is ``True``.  On failure the previous data and interval
+        are preserved.
+
+        Parameters
+        ----------
+        force
+            When ``True``, bypass the *update_frequency* throttle.
+
+        Returns
+        -------
+        Self
+            The query instance for fluent chaining.
+
+        See Also
+        --------
+        WindowedQuery.fetch : Low-level fetch for the next window.
+
+        Examples
+        --------
+        >>> wq.update(force=True)  # doctest: +SKIP
+        """
         if not self.should_update(force=force):
             return self
 
@@ -311,6 +769,31 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         *,
         start_timestamp: DateTime | None = None,
     ) -> Self:
+        """
+        Re-initialise the window and re-fetch all data from scratch.
+
+        Optionally moves the window start before rebuilding the interval
+        and fetching.
+
+        Parameters
+        ----------
+        start_timestamp
+            New left edge for the window.  When ``None``, the existing
+            *start_timestamp* is reused.
+
+        Returns
+        -------
+        Self
+            The query instance for fluent chaining.
+
+        See Also
+        --------
+        WindowedQuery.fetch : Execute the query for a time window.
+
+        Examples
+        --------
+        >>> wq.reset()  # doctest: +SKIP
+        """
         if start_timestamp is not None:
             self.start_timestamp = start_timestamp
 
@@ -330,6 +813,31 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         *,
         initial: bool = False,
     ) -> DataFrameType:
+        """
+        Execute the query for the current or next time window.
+
+        When *initial* is ``True``, queries the full stored interval.
+        Otherwise queries the delta since the last window end, applies
+        rolling trim, and advances the interval.
+
+        Parameters
+        ----------
+        initial
+            When ``True``, use the stored interval as-is instead of
+            computing a delta.
+
+        Returns
+        -------
+            The rows returned by the query.
+
+        See Also
+        --------
+        WindowedQuery.read_query : Render and execute the SQL template.
+
+        Examples
+        --------
+        >>> delta = wq.fetch()  # doctest: +SKIP
+        """
         if initial:
             return self.read_query(
                 start_timestamp=self._interval.start.strftime(format=self.time_format),
@@ -365,6 +873,35 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         default_suffix: str = "sql",
         **extra_kwargs: SupportsStr,
     ) -> DataFrameType:
+        """
+        Render and execute the SQL query template.
+
+        Combines *fixed_format_kwargs* with any additional keyword
+        arguments, renders the template, and passes it to *reader*.
+
+        Parameters
+        ----------
+        default_suffix
+            File extension appended when *query* is a filename without
+            one.
+        **extra_kwargs
+            Additional format arguments merged into the template.
+
+        Returns
+        -------
+            The DataFrame returned by the reader.
+
+        See Also
+        --------
+        WindowedQuery.fetch : High-level fetch that calls this method.
+
+        Examples
+        --------
+        >>> df = wq.read_query(  # doctest: +SKIP
+        ...     start_timestamp="2024-01-01",
+        ...     end_timestamp="2024-01-02",
+        ... )
+        """
         rendered = render_query(
             self.query,
             queries_folders=self.queries_folders,
@@ -383,6 +920,31 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         *,
         force: bool,
     ) -> bool:
+        """
+        Return whether enough time has elapsed since the last update.
+
+        Compares the elapsed time since *last_updated* against
+        *update_frequency*.
+
+        Parameters
+        ----------
+        force
+            When ``True``, always return ``True`` regardless of elapsed
+            time.
+
+        Returns
+        -------
+            ``True`` if a new fetch should proceed.
+
+        See Also
+        --------
+        WindowedQuery.update : Calls this before fetching.
+
+        Examples
+        --------
+        >>> wq.should_update(force=False)  # doctest: +SKIP
+        True
+        """
         if force or self.update_frequency is None:
             return True
 
@@ -391,6 +953,20 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
     def apply_retention(
         self,
     ) -> None:
+        """
+        Trim data to satisfy *max_age* and *max_rows* constraints.
+
+        Removes rows older than *max_age* first, then truncates to
+        *max_rows* from the tail.
+
+        See Also
+        --------
+        WindowedQuery.validate_retention : Guard against invalid limits.
+
+        Examples
+        --------
+        >>> wq.apply_retention()  # doctest: +SKIP
+        """
         if self.max_age is not None and len(self.data) > 0:
             newest = BackendOperations.max(self.data, self.index_column, backend=self.backend)
             if hasattr(newest, "strftime"):
@@ -415,6 +991,25 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
             )
 
     def validate_retention(self) -> None:
+        """
+        Raise if *max_rows* or *max_age* are non-positive.
+
+        Called during ``__init__`` to fail fast on invalid retention
+        settings.
+
+        Raises
+        ------
+        ValueError
+            If *max_rows* <= 0 or *max_age* total seconds <= 0.
+
+        See Also
+        --------
+        WindowedQuery.apply_retention : Enforces the validated limits.
+
+        Examples
+        --------
+        >>> wq.validate_retention()  # doctest: +SKIP
+        """
         if self.max_rows is not None and self.max_rows <= 0:
             msg = f"max_rows must be positive, got {self.max_rows}"
             raise ValueError(msg)

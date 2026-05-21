@@ -41,7 +41,7 @@ from importlib import metadata
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Generator
 
 DISTRIBUTION_NAME = "mayutils"
 
@@ -438,7 +438,7 @@ def format_missing_extra_hint(
 @contextlib.contextmanager
 def requires_extras(
     *extras: str,
-) -> Iterator[None]:
+) -> Generator[None]:
     """
     Re-raise any :class:`ImportError` with an explicit install hint.
 
@@ -516,7 +516,7 @@ def requires_extras(
 
 
 @contextlib.contextmanager
-def may_require_extras() -> Iterator[None]:
+def may_require_extras() -> Generator[None]:
     """
     Re-raise any :class:`ImportError` with an auto-resolved install hint.
 

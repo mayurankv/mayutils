@@ -1,5 +1,5 @@
 from collections.abc import Mapping
-from typing import Any, Self
+from typing import Any, Self, cast
 
 from mayutils.core.extras import may_require_extras
 from mayutils.objects.types import RecursiveMapping
@@ -27,7 +27,7 @@ def build_icicle(
         for key, value in d.items():
             new_path = f"{path}/{key}" if path else key
             if isinstance(value, Mapping):
-                node_value = calculate_values(value, path=new_path)
+                node_value = calculate_values(cast("RecursiveMapping[str, float]", value), path=new_path)
                 total += node_value
 
             else:
