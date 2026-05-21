@@ -6,15 +6,17 @@ Thin wrapper around :class:`plotly.graph_objects.Scatter` that defaults to
 identification.
 """
 
-from typing import Any
+from typing import Any, ClassVar
 
 from mayutils.core.extras import may_require_extras
+from mayutils.visualisation.graphs.plotly.traces.types import TraceType
 
 with may_require_extras():
     import plotly.graph_objects as go
 
 
 class Scatter(go.Scatter):
+    trace_type: ClassVar[TraceType] = TraceType.SCATTER
     """
     Scatter trace defaulting to marker mode.
 
@@ -81,6 +83,6 @@ class Scatter(go.Scatter):
 
         super().__init__(
             mode=mode,
-            meta="scatter",
+            meta=self.trace_type,
             **kwargs,
         )

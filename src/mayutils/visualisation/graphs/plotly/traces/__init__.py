@@ -7,6 +7,7 @@ from mayutils.visualisation.graphs.plotly.traces.line import Line
 from mayutils.visualisation.graphs.plotly.traces.mesh3d import Bar3d, Cuboid, merge_cuboids
 from mayutils.visualisation.graphs.plotly.traces.null import Null
 from mayutils.visualisation.graphs.plotly.traces.scatter import Scatter
+from mayutils.visualisation.graphs.plotly.traces.types import TraceType
 from mayutils.visualisation.graphs.plotly.traces.utilities import is_trace_3d
 
 __all__ = [
@@ -18,6 +19,7 @@ __all__ = [
     "Line",
     "Null",
     "Scatter",
+    "TraceType",
     "is_trace_3d",
     "merge_cuboids",
 ]

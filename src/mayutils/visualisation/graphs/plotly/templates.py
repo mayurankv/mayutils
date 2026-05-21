@@ -667,4 +667,44 @@ def register_templates() -> None:
     set_template()
 
 
+def setup_plot_export(
+    *,
+    light: bool = True,
+) -> None:
+    """
+    Configure Plotly for notebook export with a print-friendly template.
+
+    Sets the renderer to ``plotly_mimetype+notebook`` and applies a light
+    template suitable for static export.
+
+    Parameters
+    ----------
+    light
+        Whether to use the light-mode template. Defaults to ``True``.
+        Dark mode is not yet supported.
+
+    Raises
+    ------
+    NotImplementedError
+        If ``light`` is ``False``.
+
+    See Also
+    --------
+    set_template : Change the active default template.
+    set_renderer : Change the active Plotly renderer.
+
+    Examples
+    --------
+    >>> from mayutils.visualisation.graphs.plotly.templates import setup_plot_export
+    >>> setup_plot_export()  # doctest: +SKIP
+    """
+    set_renderer(renderer="plotly_mimetype+notebook")
+
+    if light:
+        set_template(template="base+plotly_white+save")
+    else:
+        msg = "Dark mode plot export not implemented yet."
+        raise NotImplementedError(msg)
+
+
 register_templates()

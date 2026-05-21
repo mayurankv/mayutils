@@ -27,6 +27,7 @@ from mayutils.visualisation.graphs.plotly.traces import (
     Line,
     Null,
     Scatter,
+    TraceType,
     is_trace_3d,
     merge_cuboids,
 )
@@ -51,6 +52,7 @@ __all__ = [
     "PlotConfig",
     "Scatter",
     "SubPlot",
+    "TraceType",
     "SubPlotConfig",
     "Titles",
     "TracesConfig",

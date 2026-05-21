@@ -1,8 +1,9 @@
 """3-D mesh traces for cuboids and bar charts."""
 
-from typing import Any, Self
+from typing import Any, ClassVar, Self
 
 from mayutils.core.extras import may_require_extras
+from mayutils.visualisation.graphs.plotly.traces.types import TraceType
 from mayutils.visualisation.graphs.plotly.utilities import (
     map_categorical_array,
     melt_dataframe,
@@ -128,6 +129,8 @@ class Cuboid(go.Mesh3d):
 
 
 class Bar3d(go.Mesh3d):
+    trace_type: ClassVar[TraceType] = TraceType.BAR3D
+
     """
     3-D bar chart rendered as a :class:`go.Mesh3d`.
 
@@ -258,6 +261,10 @@ class Bar3d(go.Mesh3d):
         --------
         >>> Bar3d(x=[0], y=[0], z=[5])  # doctest: +SKIP
         """
+        if "meta" in kwargs:
+            msg = "The 'meta' argument is reserved for internal use and cannot be set by the user."
+            raise ValueError(msg)
+
         x_arr = np.asarray(x)
         y_arr = np.asarray(y)
         z_arr = np.asarray(z, dtype=np.float64)
@@ -338,7 +345,7 @@ class Bar3d(go.Mesh3d):
                 ],
                 axis=1,
             ),
-            meta="bar3d",
+            meta=self.trace_type,
             **kwargs,
         )
 

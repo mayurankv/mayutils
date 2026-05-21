@@ -1,9 +1,10 @@
 """Empirical cumulative distribution function trace."""
 
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 
 from mayutils.core.extras import may_require_extras
 from mayutils.visualisation.graphs.plotly.traces.line import Line
+from mayutils.visualisation.graphs.plotly.traces.types import TraceType
 
 with may_require_extras():
     import numpy as np
@@ -11,6 +12,7 @@ with may_require_extras():
 
 
 class Ecdf(Line):
+    trace_type: ClassVar[TraceType] = TraceType.ECDF
     """
     Empirical cumulative distribution function trace.
 
@@ -137,7 +139,6 @@ class Ecdf(Line):
 
         kwargs["line_shape"] = "hv" if ((mode != "reversed") ^ (not left_inclusive)) else "vh"
         kwargs["fill"] = fill
-        kwargs["meta"] = kwargs.pop("meta", "ecdf")
 
         if fill == "toself":
             x_arr = np.insert(x_arr, 0, x_arr[-1])

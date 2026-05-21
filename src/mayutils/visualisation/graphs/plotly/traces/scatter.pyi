@@ -58,7 +58,7 @@ class Scatter(go.Scatter):
         legendwidth: float | None = ...,
         line: Line | dict[str, str | int | float] | None = ...,
         marker: Marker | dict[str, Any] | None = ...,
-        meta: Sequence[Any] | dict[str, Any] | np.ndarray[tuple[int, ...], Any] | None = "scatter",
+        meta: Sequence[Any] | dict[str, Any] | np.ndarray[tuple[int, ...], Any] | None = ...,
         metasrc: str | None = ...,
         name: str | int | None = ...,
         offsetgroup: str | int | None = ...,

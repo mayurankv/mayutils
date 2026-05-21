@@ -1,9 +1,10 @@
 """Provide an invisible scatter trace for initialising empty axes."""
 
-from typing import Any
+from typing import Any, ClassVar
 
 from mayutils.core.extras import may_require_extras
 from mayutils.objects.datetime import DateTime
+from mayutils.visualisation.graphs.plotly.traces.types import TraceType
 
 with may_require_extras():
     import pandas as pd
@@ -11,6 +12,7 @@ with may_require_extras():
 
 
 class Null(go.Scatter):
+    trace_type: ClassVar[TraceType] = TraceType.NULL
     """
     Invisible scatter trace used to initialise an axis without visible data.
 
@@ -70,10 +72,14 @@ class Null(go.Scatter):
         >>> trace.meta  # doctest: +SKIP
         'null'
         """
+        if "meta" in kwargs:
+            msg = "The 'meta' argument is reserved for internal use and cannot be set by the user."
+            raise ValueError(msg)
+
         super().__init__(  # pyright: ignore[reportUnknownMemberType]
             x=[] if not x_datetime else pd.to_datetime([DateTime.today()]).to_numpy(),
             y=[],
             showlegend=False,
-            meta="null",
+            meta=self.trace_type,
             **kwargs,
         )

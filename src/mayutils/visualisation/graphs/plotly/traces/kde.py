@@ -1,9 +1,10 @@
 """Kernel density estimate trace."""
 
-from typing import Any, cast
+from typing import Any, ClassVar, cast
 
 from mayutils.core.extras import may_require_extras
 from mayutils.visualisation.graphs.plotly.traces.line import Line
+from mayutils.visualisation.graphs.plotly.traces.types import TraceType
 
 with may_require_extras():
     import numpy as np
@@ -12,6 +13,7 @@ with may_require_extras():
 
 
 class Kde(Line):
+    trace_type: ClassVar[TraceType] = TraceType.KDE
     """
     Kernel density estimate rendered as a filled line trace.
 
@@ -75,8 +77,6 @@ class Kde(Line):
 
         x_grid = cast("NDArray[np.float64]", np.linspace(start=np.min(a=x_arr), stop=np.max(a=x_arr), num=1000))
         y_arr = kde(points=x_grid)
-
-        kwargs["meta"] = kwargs.pop("meta", "kde")
 
         super().__init__(
             x=x_grid,

@@ -58,7 +58,7 @@ class Null(go.Scatter):
         legendwidth: float | None = ...,
         line: Line | dict[str, str | int | float] | None = ...,
         marker: Marker | dict[str, Any] | None = ...,
-        meta: Sequence[Any] | dict[str, Any] | np.ndarray[tuple[int, ...], Any] | None = "null",
+        meta: Sequence[Any] | dict[str, Any] | np.ndarray[tuple[int, ...], Any] | None = ...,
         metasrc: str | None = ...,
         mode: str | None = ...,
         name: str | int | None = ...,

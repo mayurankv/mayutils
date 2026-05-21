@@ -1,8 +1,7 @@
-- Notebooks/examples/charts.ipynb
-- Templates
-- temp/temp.ipy
-- src/mayutils/data/live
 - src/mayutils/visualisation/graphs/plotly/
+- Notebooks/examples/charts.ipynb
+- temp/temp.ipy
+- Templates
 - misc:
 	- CHANGELOG
 	- .todo
@@ -22,11 +21,7 @@ Test out fail imports
 
 ```plotly
 Combine plotly imports in the init
-
-Fix the following issues:
-- Subplots don't have save_axis_dict applied properly under the slides template - why?
-
-Add tests for all functions and methods, ensuring that they cover a wide range of cases and edge cases. Use pytest for testing and ensure that all tests pass successfully. Make sure all docstrings have proper examples which are tested with pytest where possible and skipped only where necessary.
+line.py, plot.py, subplot.py, stub generation
 ```
 
 ```documentation
