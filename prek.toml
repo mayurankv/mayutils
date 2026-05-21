@@ -4,7 +4,7 @@
 
 [[repos]]
 repo = "https://github.com/astral-sh/ruff-pre-commit"
-rev = "v0.15.12"
+rev = "v0.15.13"
 hooks = [
   {
     id = "ruff-format",
@@ -14,7 +14,7 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/astral-sh/uv-pre-commit"
-rev = "0.11.8"
+rev = "0.11.15"
 hooks = [
   { id = "uv-lock" }
 ]
@@ -77,7 +77,7 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/commitizen-tools/commitizen"
-rev = "v4.15.0"
+rev = "v4.16.2"
 hooks = [
   {
     id = "commitizen",
@@ -87,7 +87,7 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/astral-sh/ruff-pre-commit"
-rev = "v0.15.12"
+rev = "v0.15.13"
 hooks = [
   {
     id = "ruff-check",
@@ -154,7 +154,7 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/sqlfluff/sqlfluff"
-rev = "4.1.0"
+rev = "4.2.1"
 hooks = [
   {
     id = "sqlfluff-lint",
