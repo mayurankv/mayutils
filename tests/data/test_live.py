@@ -36,7 +36,13 @@ class SequentialReader:
         *,
         backend: Backend[Any] | None = None,  # noqa: ARG002
     ) -> Any:  # noqa: ANN401
-        """Return the next frame and increment the call counter."""
+        """
+        Return the next frame and increment the call counter.
+
+        Returns
+        -------
+            The next pre-loaded DataFrame in round-robin order.
+        """
         frame = self._frames[self._calls % len(self._frames)]
         self._calls += 1
         return frame
@@ -70,7 +76,13 @@ class FailingReader:
         *,
         backend: Backend[Any] | None = None,  # noqa: ARG002
     ) -> Any:  # noqa: ANN401
-        """Return the fallback frame or raise after *succeed_first* calls."""
+        """
+        Return the fallback frame or raise after *succeed_first* calls.
+
+        Returns
+        -------
+            The fallback DataFrame if within the success window.
+        """
         self._calls += 1
         if self._calls <= self._succeed_first:
             return self._fallback_frame
