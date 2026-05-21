@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 
 for dir in [".secrets"]:
@@ -10,3 +11,6 @@ for paths in [".env", ".streamlit/secrets.toml"]:
         mode="a",
     ) as env_file:
         pass
+
+for template_file in Path(".").rglob("*.template"):
+    template_file.rename(template_file.with_suffix(""))
