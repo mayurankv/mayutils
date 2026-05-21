@@ -100,7 +100,7 @@ class TestStreamingInitialFetch:
     def test_populates_data(self) -> None:
         df = pd.DataFrame({"id": [1, 2, 3], "value": [10, 20, 30]})
         view = _make_streaming(df)
-        assert len(view._data) == 3  # noqa: PLR2004
+        assert len(view.data) == 3  # noqa: PLR2004
 
     def test_infers_numeric_dtype(self) -> None:
         df = pd.DataFrame({"id": [1, 2, 3]})
@@ -124,7 +124,7 @@ class TestStreamingInitialFetch:
     def test_empty_initial_fetch(self) -> None:
         df = pd.DataFrame({"id": pd.Series([], dtype=int)})
         view = _make_streaming(df)
-        assert view._data.empty
+        assert view.data.empty
 
 
 class TestStreamingUpdate:
@@ -133,7 +133,7 @@ class TestStreamingUpdate:
         delta = pd.DataFrame({"id": [4, 5], "v": [40, 50]})
         view = _make_streaming(initial, delta)
         view.update(force=True)
-        assert len(view._data) == 5  # noqa: PLR2004
+        assert len(view.data) == 5  # noqa: PLR2004
 
     def test_cursor_advances(self) -> None:
         initial = pd.DataFrame({"id": [1, 2, 3]})
@@ -148,7 +148,7 @@ class TestStreamingUpdate:
         empty = pd.DataFrame({"id": pd.Series([], dtype=int)})
         view = _make_streaming(initial, empty)
         view.update(force=True)
-        assert len(view._data) == 3  # noqa: PLR2004
+        assert len(view.data) == 3  # noqa: PLR2004
 
 
 class TestStreamingRetention:
@@ -157,8 +157,8 @@ class TestStreamingRetention:
         delta = pd.DataFrame({"id": [4, 5, 6]})
         view = _make_streaming(initial, delta, max_rows=4)
         view.update(force=True)
-        assert len(view._data) == 4  # noqa: PLR2004
-        np.testing.assert_array_equal(view._data["id"].values, [3, 4, 5, 6])
+        assert len(view.data) == 4  # noqa: PLR2004
+        np.testing.assert_array_equal(view.data["id"].values, [3, 4, 5, 6])
 
     def test_max_age(self) -> None:
         initial = pd.DataFrame(
@@ -173,14 +173,14 @@ class TestStreamingRetention:
             max_age=Duration(days=10),
         )
         view.update(force=True)
-        assert all(view._data["ts"] >= pd.Timestamp("2026-01-15"))
+        assert all(view.data["ts"] >= pd.Timestamp("2026-01-15"))
 
     def test_max_age_ignored_for_numeric(self) -> None:
         initial = pd.DataFrame({"id": [1, 2, 3]})
         delta = pd.DataFrame({"id": [4, 5]})
         view = _make_streaming(initial, delta, max_age=Duration(hours=1))
         view.update(force=True)
-        assert len(view._data) == 5  # noqa: PLR2004
+        assert len(view.data) == 5  # noqa: PLR2004
 
     def test_invalid_max_rows(self) -> None:
         with pytest.raises(ValueError, match="max_rows must be positive"):
@@ -202,7 +202,7 @@ class TestStreamingErrorHandling:
             reader=reader,
         )
         view.update(force=True)
-        assert len(view._data) == 3  # noqa: PLR2004
+        assert len(view.data) == 3  # noqa: PLR2004
 
 
 class TestStreamingRateLimiting:
@@ -241,9 +241,9 @@ class TestStreamingReset:
         delta = pd.DataFrame({"id": [4, 5]})
         view = _make_streaming(initial, delta, initial)
         view.update(force=True)
-        assert len(view._data) == 5  # noqa: PLR2004
+        assert len(view.data) == 5  # noqa: PLR2004
         view.reset()
-        assert len(view._data) == 3  # noqa: PLR2004
+        assert len(view.data) == 3  # noqa: PLR2004
 
 
 class TestStreamingPolars:
@@ -257,10 +257,10 @@ class TestStreamingPolars:
             reader=SequentialReader(initial, delta),
             backend=Backend(pl.DataFrame),
         )
-        assert view._data.height == 3  # noqa: PLR2004
+        assert view.data.height == 3  # noqa: PLR2004
         assert view.cursor_value == 3  # noqa: PLR2004
         view.update(force=True)
-        assert view._data.height == 5  # noqa: PLR2004
+        assert view.data.height == 5  # noqa: PLR2004
         assert view.cursor_value == 5  # noqa: PLR2004
 
 
@@ -293,7 +293,7 @@ class TestWindowedInitialFetch:
     def test_populates_data(self) -> None:
         df = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01", "2026-01-02"]), "count": [100, 200]})
         view = _make_windowed(df)
-        assert len(view._data) == 2  # noqa: PLR2004
+        assert len(view.data) == 2  # noqa: PLR2004
 
     def test_interval_set(self) -> None:
         df = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01"]), "count": [100]})
@@ -305,7 +305,7 @@ class TestWindowedInitialFetch:
             {"ts": pd.Series([], dtype="datetime64[ns]"), "count": pd.Series([], dtype=int)},
         )
         view = _make_windowed(df)
-        assert view._data.empty
+        assert view.data.empty
 
 
 class TestWindowedExpandingUpdate:
@@ -314,7 +314,7 @@ class TestWindowedExpandingUpdate:
         delta = pd.DataFrame({"ts": pd.to_datetime(["2026-01-03"]), "count": [150]})
         view = _make_windowed(initial, delta, rolling=False)
         view.update(force=True)
-        assert len(view._data) == 3  # noqa: PLR2004
+        assert len(view.data) == 3  # noqa: PLR2004
 
     def test_window_start_unchanged(self) -> None:
         initial = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01"]), "c": [1]})
@@ -351,15 +351,15 @@ class TestWindowedDeduplication:
         delta = pd.DataFrame({"ts": pd.to_datetime(["2026-01-02"]), "total": [250]})
         view = _make_windowed(initial, delta, rolling=False, deduplicate=True)
         view.update(force=True)
-        assert len(view._data) == 2  # noqa: PLR2004
-        assert view._data.loc[view._data["ts"] == pd.Timestamp("2026-01-02"), "total"].iloc[0] == 250  # noqa: PLR2004
+        assert len(view.data) == 2  # noqa: PLR2004
+        assert view.data.loc[view.data["ts"] == pd.Timestamp("2026-01-02"), "total"].iloc[0] == 250  # noqa: PLR2004
 
     def test_no_dedup_by_default(self) -> None:
         initial = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01"]), "total": [100]})
         delta = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01"]), "total": [150]})
         view = _make_windowed(initial, delta, rolling=False)
         view.update(force=True)
-        assert len(view._data) == 2  # noqa: PLR2004
+        assert len(view.data) == 2  # noqa: PLR2004
 
 
 class TestWindowedRetention:
@@ -370,7 +370,7 @@ class TestWindowedRetention:
         delta = pd.DataFrame({"ts": pd.to_datetime(["2026-01-04", "2026-01-05"]), "c": [4, 5]})
         view = _make_windowed(initial, delta, max_rows=3)
         view.update(force=True)
-        assert len(view._data) == 3  # noqa: PLR2004
+        assert len(view.data) == 3  # noqa: PLR2004
 
     def test_max_age(self) -> None:
         initial = pd.DataFrame(
@@ -379,7 +379,7 @@ class TestWindowedRetention:
         delta = pd.DataFrame({"ts": pd.to_datetime(["2026-01-25"]), "c": [4]})
         view = _make_windowed(initial, delta, max_age=Duration(days=10))
         view.update(force=True)
-        assert all(view._data["ts"] >= pd.Timestamp("2026-01-15"))
+        assert all(view.data["ts"] >= pd.Timestamp("2026-01-15"))
 
 
 class TestWindowedErrorHandling:
@@ -393,7 +393,7 @@ class TestWindowedErrorHandling:
             reader=reader,
         )
         view.update(force=True)
-        assert len(view._data) == 1
+        assert len(view.data) == 1
 
 
 class TestWindowedReset:
@@ -402,9 +402,9 @@ class TestWindowedReset:
         delta = pd.DataFrame({"ts": pd.to_datetime(["2026-01-02"]), "c": [2]})
         view = _make_windowed(initial, delta, initial)
         view.update(force=True)
-        assert len(view._data) == 2  # noqa: PLR2004
+        assert len(view.data) == 2  # noqa: PLR2004
         view.reset()
-        assert len(view._data) == 1
+        assert len(view.data) == 1
 
     def test_reset_with_new_start(self) -> None:
         initial = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01"]), "c": [1]})
@@ -491,6 +491,6 @@ class TestWindowedPolars:
             backend=Backend(pl.DataFrame),
             rolling=False,
         )
-        assert view._data.height == 2  # noqa: PLR2004
+        assert view.data.height == 2  # noqa: PLR2004
         view.update(force=True)
-        assert view._data.height == 3  # noqa: PLR2004
+        assert view.data.height == 3  # noqa: PLR2004
