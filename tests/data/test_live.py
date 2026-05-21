@@ -22,7 +22,10 @@ from mayutils.objects.types import SQL
 
 
 class SequentialReader:
+    """Return pre-loaded DataFrames in round-robin order."""
+
     def __init__(self, *frames: Any) -> None:  # noqa: ANN401
+        """Store *frames* for sequential retrieval."""
         self._frames = list(frames)
         self._calls = 0
 
@@ -33,16 +36,20 @@ class SequentialReader:
         *,
         backend: Backend[Any] | None = None,  # noqa: ARG002
     ) -> Any:  # noqa: ANN401
+        """Return the next frame and increment the call counter."""
         frame = self._frames[self._calls % len(self._frames)]
         self._calls += 1
         return frame
 
     @property
     def call_count(self) -> int:
+        """Return the number of times the reader was invoked."""
         return self._calls
 
 
 class FailingReader:
+    """Reader that succeeds a configurable number of times then raises."""
+
     def __init__(
         self,
         *,
@@ -50,6 +57,7 @@ class FailingReader:
         succeed_first: int = 0,
         fallback_frame: Any = None,  # noqa: ANN401
     ) -> None:
+        """Configure the failure behaviour."""
         self._error = error or RuntimeError("reader failure")
         self._succeed_first = succeed_first
         self._fallback_frame = fallback_frame
@@ -62,6 +70,7 @@ class FailingReader:
         *,
         backend: Backend[Any] | None = None,  # noqa: ARG002
     ) -> Any:  # noqa: ANN401
+        """Return the fallback frame or raise after *succeed_first* calls."""
         self._calls += 1
         if self._calls <= self._succeed_first:
             return self._fallback_frame
@@ -69,6 +78,7 @@ class FailingReader:
 
     @property
     def call_count(self) -> int:
+        """Return the number of times the reader was invoked."""
         return self._calls
 
 
@@ -97,17 +107,22 @@ def _make_streaming(
 
 
 class TestStreamingInitialFetch:
+    """Verify first fetch populates data and sets cursor state."""
+
     def test_populates_data(self) -> None:
+        """Initial fetch stores all returned rows."""
         df = pd.DataFrame({"id": [1, 2, 3], "value": [10, 20, 30]})
         view = _make_streaming(df)
         assert len(view.data) == 3  # noqa: PLR2004
 
     def test_infers_numeric_dtype(self) -> None:
+        """Numeric cursor column is not flagged as datetime."""
         df = pd.DataFrame({"id": [1, 2, 3]})
         view = _make_streaming(df)
         assert view.cursor_is_datetime is False
 
     def test_infers_datetime_dtype(self) -> None:
+        """Datetime initial cursor is detected automatically."""
         df = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01", "2026-01-02"])})
         view = _make_streaming(
             df,
@@ -117,18 +132,23 @@ class TestStreamingInitialFetch:
         assert view.cursor_is_datetime is True
 
     def test_cursor_set_to_max(self) -> None:
+        """Cursor advances to the maximum value in the cursor column."""
         df = pd.DataFrame({"id": [1, 5, 3]})
         view = _make_streaming(df)
         assert view.cursor_value == 5  # noqa: PLR2004
 
     def test_empty_initial_fetch(self) -> None:
+        """Empty result leaves data empty and cursor unchanged."""
         df = pd.DataFrame({"id": pd.Series([], dtype=int)})
         view = _make_streaming(df)
         assert view.data.empty
 
 
 class TestStreamingUpdate:
+    """Verify incremental updates append rows and advance the cursor."""
+
     def test_appends_rows(self) -> None:
+        """Delta rows are concatenated to existing data."""
         initial = pd.DataFrame({"id": [1, 2, 3], "v": [10, 20, 30]})
         delta = pd.DataFrame({"id": [4, 5], "v": [40, 50]})
         view = _make_streaming(initial, delta)
@@ -136,6 +156,7 @@ class TestStreamingUpdate:
         assert len(view.data) == 5  # noqa: PLR2004
 
     def test_cursor_advances(self) -> None:
+        """Cursor moves to the max of the newly fetched rows."""
         initial = pd.DataFrame({"id": [1, 2, 3]})
         delta = pd.DataFrame({"id": [4, 5]})
         view = _make_streaming(initial, delta)
@@ -144,6 +165,7 @@ class TestStreamingUpdate:
         assert view.cursor_value == 5  # noqa: PLR2004
 
     def test_empty_delta_unchanged(self) -> None:
+        """Empty delta leaves data and cursor unchanged."""
         initial = pd.DataFrame({"id": [1, 2, 3]})
         empty = pd.DataFrame({"id": pd.Series([], dtype=int)})
         view = _make_streaming(initial, empty)
@@ -152,7 +174,10 @@ class TestStreamingUpdate:
 
 
 class TestStreamingRetention:
+    """Verify max_rows and max_age retention policies."""
+
     def test_max_rows(self) -> None:
+        """Excess rows are trimmed from the head after update."""
         initial = pd.DataFrame({"id": [1, 2, 3]})
         delta = pd.DataFrame({"id": [4, 5, 6]})
         view = _make_streaming(initial, delta, max_rows=4)
@@ -161,6 +186,7 @@ class TestStreamingRetention:
         np.testing.assert_array_equal(view.data["id"].values, [3, 4, 5, 6])
 
     def test_max_age(self) -> None:
+        """Rows older than max_age are dropped after update."""
         initial = pd.DataFrame(
             {"ts": pd.to_datetime(["2026-01-01", "2026-01-10", "2026-01-20"]), "v": [1, 2, 3]},
         )
@@ -176,6 +202,7 @@ class TestStreamingRetention:
         assert all(view.data["ts"] >= pd.Timestamp("2026-01-15"))
 
     def test_max_age_ignored_for_numeric(self) -> None:
+        """Numeric cursors without strftime skip age-based retention."""
         initial = pd.DataFrame({"id": [1, 2, 3]})
         delta = pd.DataFrame({"id": [4, 5]})
         view = _make_streaming(initial, delta, max_age=Duration(hours=1))
@@ -183,16 +210,21 @@ class TestStreamingRetention:
         assert len(view.data) == 5  # noqa: PLR2004
 
     def test_invalid_max_rows(self) -> None:
+        """Zero max_rows raises ValueError at init."""
         with pytest.raises(ValueError, match="max_rows must be positive"):
             _make_streaming(pd.DataFrame({"id": [1]}), max_rows=0)
 
     def test_invalid_max_age(self) -> None:
+        """Negative max_age raises ValueError at init."""
         with pytest.raises(ValueError, match="max_age must be positive"):
             _make_streaming(pd.DataFrame({"id": [1]}), max_age=Duration(hours=-1))
 
 
 class TestStreamingErrorHandling:
+    """Verify data is preserved when the reader raises."""
+
     def test_logs_and_skips(self) -> None:
+        """Failed fetch restores previous data snapshot."""
         initial = pd.DataFrame({"id": [1, 2, 3]})
         reader = FailingReader(succeed_first=1, fallback_frame=initial)
         view = StreamingQuery(
@@ -206,7 +238,10 @@ class TestStreamingErrorHandling:
 
 
 class TestStreamingRateLimiting:
+    """Verify update_frequency throttling."""
+
     def test_skips_when_too_frequent(self) -> None:
+        """Update is skipped when called before update_frequency elapses."""
         initial = pd.DataFrame({"id": [1, 2]})
         delta = pd.DataFrame({"id": [3]})
         reader = SequentialReader(initial, delta)
@@ -221,6 +256,7 @@ class TestStreamingRateLimiting:
         assert reader.call_count == 1
 
     def test_force_overrides(self) -> None:
+        """Force bypasses the update_frequency throttle."""
         initial = pd.DataFrame({"id": [1, 2]})
         delta = pd.DataFrame({"id": [3]})
         reader = SequentialReader(initial, delta)
@@ -236,7 +272,10 @@ class TestStreamingRateLimiting:
 
 
 class TestStreamingReset:
+    """Verify reset replaces data with a fresh fetch."""
+
     def test_resets_data(self) -> None:
+        """Reset discards appended rows and re-fetches."""
         initial = pd.DataFrame({"id": [1, 2, 3]})
         delta = pd.DataFrame({"id": [4, 5]})
         view = _make_streaming(initial, delta, initial)
@@ -247,7 +286,10 @@ class TestStreamingReset:
 
 
 class TestStreamingPolars:
+    """Verify StreamingQuery works with the polars backend."""
+
     def test_full_lifecycle(self) -> None:
+        """Init, update, and cursor advance work end-to-end with polars."""
         initial = pl.DataFrame({"id": [1, 2, 3], "v": [10, 20, 30]})
         delta = pl.DataFrame({"id": [4, 5], "v": [40, 50]})
         view = StreamingQuery(
@@ -290,17 +332,22 @@ def _make_windowed(
 
 
 class TestWindowedInitialFetch:
+    """Verify first fetch populates data and sets interval."""
+
     def test_populates_data(self) -> None:
+        """Initial fetch stores all returned rows."""
         df = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01", "2026-01-02"]), "count": [100, 200]})
         view = _make_windowed(df)
         assert len(view.data) == 2  # noqa: PLR2004
 
     def test_interval_set(self) -> None:
+        """Interval start matches the configured start_timestamp."""
         df = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01"]), "count": [100]})
         view = _make_windowed(df)
         assert view.interval.start == DateTime(2026, 1, 1, tzinfo=UTC)
 
     def test_empty_initial(self) -> None:
+        """Empty result leaves data empty."""
         df = pd.DataFrame(
             {"ts": pd.Series([], dtype="datetime64[ns]"), "count": pd.Series([], dtype=int)},
         )
@@ -309,7 +356,10 @@ class TestWindowedInitialFetch:
 
 
 class TestWindowedExpandingUpdate:
+    """Verify non-rolling (expanding) window updates."""
+
     def test_appends_delta(self) -> None:
+        """Delta rows are concatenated to existing data."""
         initial = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01", "2026-01-02"]), "count": [100, 200]})
         delta = pd.DataFrame({"ts": pd.to_datetime(["2026-01-03"]), "count": [150]})
         view = _make_windowed(initial, delta, rolling=False)
@@ -317,6 +367,7 @@ class TestWindowedExpandingUpdate:
         assert len(view.data) == 3  # noqa: PLR2004
 
     def test_window_start_unchanged(self) -> None:
+        """Expanding window keeps the original start timestamp."""
         initial = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01"]), "c": [1]})
         delta = pd.DataFrame({"ts": pd.to_datetime(["2026-01-02"]), "c": [2]})
         start = DateTime(2026, 1, 1, tzinfo=UTC)
@@ -326,7 +377,10 @@ class TestWindowedExpandingUpdate:
 
 
 class TestWindowedRollingUpdate:
+    """Verify rolling window slides forward on update."""
+
     def test_slides_window(self) -> None:
+        """Rolling update advances the window start."""
         initial = pd.DataFrame(
             {"ts": pd.to_datetime(["2026-01-01", "2026-01-02", "2026-01-03"]), "count": [1, 2, 3]},
         )
@@ -337,6 +391,7 @@ class TestWindowedRollingUpdate:
         assert view.interval.start > original_start
 
     def test_empty_delta_still_updates_interval(self) -> None:
+        """Interval advances even when the delta is empty."""
         initial = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01"]), "c": [1]})
         empty = pd.DataFrame({"ts": pd.Series([], dtype="datetime64[ns]"), "c": pd.Series([], dtype=int)})
         view = _make_windowed(initial, empty, rolling=True)
@@ -346,7 +401,10 @@ class TestWindowedRollingUpdate:
 
 
 class TestWindowedDeduplication:
+    """Verify deduplication on index_column after concat."""
+
     def test_deduplicate_removes_stale_buckets(self) -> None:
+        """Duplicate index values keep only the last occurrence."""
         initial = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01", "2026-01-02"]), "total": [100, 200]})
         delta = pd.DataFrame({"ts": pd.to_datetime(["2026-01-02"]), "total": [250]})
         view = _make_windowed(initial, delta, rolling=False, deduplicate=True)
@@ -355,6 +413,7 @@ class TestWindowedDeduplication:
         assert view.data.loc[view.data["ts"] == pd.Timestamp("2026-01-02"), "total"].iloc[0] == 250  # noqa: PLR2004
 
     def test_no_dedup_by_default(self) -> None:
+        """Without deduplicate, duplicate index values are preserved."""
         initial = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01"]), "total": [100]})
         delta = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01"]), "total": [150]})
         view = _make_windowed(initial, delta, rolling=False)
@@ -363,7 +422,10 @@ class TestWindowedDeduplication:
 
 
 class TestWindowedRetention:
+    """Verify max_rows and max_age retention policies."""
+
     def test_max_rows(self) -> None:
+        """Excess rows are trimmed from the head after update."""
         initial = pd.DataFrame(
             {"ts": pd.to_datetime(["2026-01-01", "2026-01-02", "2026-01-03"]), "c": [1, 2, 3]},
         )
@@ -373,6 +435,7 @@ class TestWindowedRetention:
         assert len(view.data) == 3  # noqa: PLR2004
 
     def test_max_age(self) -> None:
+        """Rows older than max_age are dropped after update."""
         initial = pd.DataFrame(
             {"ts": pd.to_datetime(["2026-01-01", "2026-01-10", "2026-01-20"]), "c": [1, 2, 3]},
         )
@@ -383,7 +446,10 @@ class TestWindowedRetention:
 
 
 class TestWindowedErrorHandling:
+    """Verify data is preserved when the reader raises."""
+
     def test_logs_and_skips(self) -> None:
+        """Failed fetch restores previous data and interval."""
         initial = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01"]), "c": [1]})
         reader = FailingReader(succeed_first=1, fallback_frame=initial)
         view = WindowedQuery(
@@ -397,7 +463,10 @@ class TestWindowedErrorHandling:
 
 
 class TestWindowedReset:
+    """Verify reset re-initialises the window and data."""
+
     def test_reseeds(self) -> None:
+        """Reset discards appended rows and re-fetches."""
         initial = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01"]), "c": [1]})
         delta = pd.DataFrame({"ts": pd.to_datetime(["2026-01-02"]), "c": [2]})
         view = _make_windowed(initial, delta, initial)
@@ -407,6 +476,7 @@ class TestWindowedReset:
         assert len(view.data) == 1
 
     def test_reset_with_new_start(self) -> None:
+        """Reset with a new start_timestamp shifts the window."""
         initial = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01"]), "c": [1]})
         new_start = DateTime(2026, 2, 1, tzinfo=UTC)
         view = _make_windowed(initial, initial)
@@ -415,7 +485,10 @@ class TestWindowedReset:
 
 
 class TestWindowedRateLimiting:
+    """Verify update_frequency throttling."""
+
     def test_skips_when_too_frequent(self) -> None:
+        """Update is skipped when called before update_frequency elapses."""
         initial = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01"]), "c": [1]})
         delta = pd.DataFrame({"ts": pd.to_datetime(["2026-01-02"]), "c": [2]})
         reader = SequentialReader(initial, delta)
@@ -430,6 +503,7 @@ class TestWindowedRateLimiting:
         assert reader.call_count == 1
 
     def test_force_overrides(self) -> None:
+        """Force bypasses the update_frequency throttle."""
         initial = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01"]), "c": [1]})
         delta = pd.DataFrame({"ts": pd.to_datetime(["2026-01-02"]), "c": [2]})
         reader = SequentialReader(initial, delta)
@@ -445,7 +519,10 @@ class TestWindowedRateLimiting:
 
 
 class TestWindowedTimeFormat:
+    """Verify custom time_format is applied to query rendering."""
+
     def test_format_applied(self) -> None:
+        """Timestamps in the rendered query use the configured format."""
         df = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01"]), "c": [1]})
         queries: list[str] = []
         original_reader = SequentialReader(df, df)
@@ -470,7 +547,10 @@ class TestWindowedTimeFormat:
 
 
 class TestWindowedPolars:
+    """Verify WindowedQuery works with the polars backend."""
+
     def test_full_lifecycle(self) -> None:
+        """Init and update work end-to-end with polars DataFrames."""
         initial = pl.DataFrame(
             {
                 "ts": [datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC), datetime.datetime(2026, 1, 2, tzinfo=datetime.UTC)],
