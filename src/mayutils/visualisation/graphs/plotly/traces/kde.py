@@ -1,3 +1,5 @@
+"""Kernel density estimate trace."""
+
 from typing import Any, cast
 
 from mayutils.core.extras import may_require_extras
@@ -10,6 +12,33 @@ with may_require_extras():
 
 
 class Kde(Line):
+    """
+    Kernel density estimate rendered as a filled line trace.
+
+    Computes a Gaussian KDE over *x* using :func:`scipy.stats.gaussian_kde`
+    and plots the resulting density curve as a :class:`Line`.
+
+    Parameters
+    ----------
+    x
+        Raw observation values.
+    bandwidth
+        Bandwidth (smoothing parameter) passed to
+        :func:`~scipy.stats.gaussian_kde`; ``None`` uses Scott's rule.
+    **kwargs
+        Forwarded to :class:`Line`.
+
+    See Also
+    --------
+    mayutils.visualisation.graphs.plotly.traces.ecdf.Ecdf :
+        Empirical CDF trace.
+
+    Examples
+    --------
+    >>> from mayutils.visualisation.graphs.plotly.traces.kde import Kde
+    >>> Kde(x=[1, 2, 2, 3, 3, 3])  # doctest: +SKIP
+    """
+
     def __init__(
         self,
         *,
@@ -17,6 +46,30 @@ class Kde(Line):
         bandwidth: float | None = None,
         **kwargs: Any,  # noqa: ANN401
     ) -> None:
+        """
+        Compute the KDE and initialise the trace.
+
+        Evaluates the density over a 1 000-point grid spanning the range
+        of *x* and delegates to :class:`Line`.
+
+        Parameters
+        ----------
+        x
+            Raw observation values.
+        bandwidth
+            Bandwidth passed to :func:`~scipy.stats.gaussian_kde`;
+            ``None`` uses Scott's rule.
+        **kwargs
+            Forwarded to :class:`Line`.
+
+        See Also
+        --------
+        Line : Parent trace class.
+
+        Examples
+        --------
+        >>> Kde(x=[1, 2, 3], bandwidth=0.5)  # doctest: +SKIP
+        """
         x_arr = np.asarray(x)
         kde = gaussian_kde(dataset=x_arr, bw_method=bandwidth)
 

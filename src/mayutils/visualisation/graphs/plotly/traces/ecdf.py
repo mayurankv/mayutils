@@ -1,3 +1,5 @@
+"""Empirical cumulative distribution function trace."""
+
 from typing import Any, Literal
 
 from mayutils.core.extras import may_require_extras
@@ -9,6 +11,49 @@ with may_require_extras():
 
 
 class Ecdf(Line):
+    """
+    Empirical cumulative distribution function trace.
+
+    Computes a step-wise CDF from raw observations and renders it as a
+    filled :class:`Line` trace.  Supports probability, percentage, and
+    raw-count normalisation as well as reversed and complementary modes.
+
+    Parameters
+    ----------
+    x
+        Raw observation values.
+    y
+        Optional per-observation weights; defaults to uniform weights.
+    y_shift
+        Vertical offset applied after normalisation.
+    norm
+        Normalisation mode for the cumulative sum.
+    mode
+        Direction of the CDF: standard (ascending), reversed, or
+        complementary (survival function).
+    fill
+        Plotly fill mode for the area under the curve.
+    left_inclusive
+        When ``True``, the step function includes the left endpoint.
+    **kwargs
+        Forwarded to :class:`Line`.
+
+    Raises
+    ------
+    ValueError
+        If *x* and *y* have different lengths.
+
+    See Also
+    --------
+    mayutils.visualisation.graphs.plotly.traces.kde.Kde :
+        Kernel density estimate trace.
+
+    Examples
+    --------
+    >>> from mayutils.visualisation.graphs.plotly.traces.ecdf import Ecdf
+    >>> Ecdf(x=[1, 2, 3, 4])  # doctest: +SKIP
+    """
+
     def __init__(
         self,
         *,
@@ -21,6 +66,45 @@ class Ecdf(Line):
         left_inclusive: bool = False,
         **kwargs: Any,  # noqa: ANN401
     ) -> None:
+        """
+        Compute the ECDF and initialise the trace.
+
+        Sorts *x*, computes the cumulative sum (optionally weighted by
+        *y*), normalises according to *norm*, and delegates to
+        :class:`Line`.
+
+        Parameters
+        ----------
+        x
+            Raw observation values.
+        y
+            Optional per-observation weights; defaults to uniform.
+        y_shift
+            Vertical offset applied after normalisation.
+        norm
+            Normalisation mode for the cumulative sum.
+        mode
+            Direction of the CDF.
+        fill
+            Plotly fill mode for the area under the curve.
+        left_inclusive
+            When ``True``, the step includes the left endpoint.
+        **kwargs
+            Forwarded to :class:`Line`.
+
+        Raises
+        ------
+        ValueError
+            If *x* and *y* have different lengths.
+
+        See Also
+        --------
+        Line : Parent trace class.
+
+        Examples
+        --------
+        >>> Ecdf(x=[1, 2, 3], norm="percentage")  # doctest: +SKIP
+        """
         x_arr = np.asarray(x)
         idx = np.argsort(x_arr)
 

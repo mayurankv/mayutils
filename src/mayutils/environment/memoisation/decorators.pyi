@@ -8,7 +8,7 @@ from mayutils.environment.memoisation.types import CacheStore
 from mayutils.objects.dataframes.backends import Backend
 from mayutils.objects.datetime import Duration
 
-class lru_cache:
+class lru_cache:  # noqa: N801
     func: Callable[..., object]
     maxsize: int | None
     typed: bool
@@ -31,7 +31,7 @@ class lru_cache:
     def bypass_cache(self, *args: object, **kwargs: object) -> object: ...
     def __call__(self, *args: object, **kwargs: object) -> object: ...
 
-class cache[CacheObjectType]:
+class cache[CacheObjectType]:  # noqa: N801
     func: Callable[..., CacheObjectType]
     store: CacheStore[CacheObjectType]
 

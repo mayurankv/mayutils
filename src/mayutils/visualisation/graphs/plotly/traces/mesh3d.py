@@ -1,3 +1,5 @@
+"""3-D mesh traces for cuboids and bar charts."""
+
 from typing import Any, Self
 
 from mayutils.core.extras import may_require_extras
@@ -14,6 +16,45 @@ with may_require_extras():
 
 
 class Cuboid(go.Mesh3d):
+    """
+    Single axis-aligned cuboid rendered as a :class:`go.Mesh3d`.
+
+    Constructs the eight vertices and twelve triangular faces of a
+    rectangular box from axis-aligned min/max pairs.
+
+    Parameters
+    ----------
+    x
+        ``(min, max)`` bounds along the x-axis.
+    y
+        ``(min, max)`` bounds along the y-axis.
+    z
+        ``(min, max)`` bounds along the z-axis.
+    weight
+        Uniform intensity value applied to every vertex.
+    flatshading
+        Enable flat shading on the mesh faces.
+    showscale
+        Show the colour-bar scale.
+    alphahull
+        Alpha-hull parameter forwarded to :class:`go.Mesh3d`.
+    cmin
+        Lower bound of the colour scale.
+    cmax
+        Upper bound of the colour scale.
+    **kwargs
+        Forwarded to :class:`go.Mesh3d`.
+
+    See Also
+    --------
+    merge_cuboids : Combine several cuboids into one mesh.
+
+    Examples
+    --------
+    >>> from mayutils.visualisation.graphs.plotly.traces.mesh3d import Cuboid
+    >>> Cuboid(x=(0, 1), y=(0, 1), z=(0, 1))  # doctest: +SKIP
+    """
+
     def __init__(
         self,
         *,
@@ -26,8 +67,45 @@ class Cuboid(go.Mesh3d):
         alphahull: float = 1,
         cmin: float = 0,
         cmax: float = 1,
-        **kwargs: Any,
+        **kwargs: Any,  # noqa: ANN401
     ) -> None:
+        """
+        Build the cuboid vertices and faces.
+
+        Expands the three ``(min, max)`` pairs into eight vertices and
+        delegates to :class:`go.Mesh3d`.
+
+        Parameters
+        ----------
+        x
+            ``(min, max)`` bounds along the x-axis.
+        y
+            ``(min, max)`` bounds along the y-axis.
+        z
+            ``(min, max)`` bounds along the z-axis.
+        weight
+            Uniform intensity value applied to every vertex.
+        flatshading
+            Enable flat shading on the mesh faces.
+        showscale
+            Show the colour-bar scale.
+        alphahull
+            Alpha-hull parameter forwarded to :class:`go.Mesh3d`.
+        cmin
+            Lower bound of the colour scale.
+        cmax
+            Upper bound of the colour scale.
+        **kwargs
+            Forwarded to :class:`go.Mesh3d`.
+
+        See Also
+        --------
+        merge_cuboids : Combine several cuboids into one mesh.
+
+        Examples
+        --------
+        >>> Cuboid(x=(0, 2), y=(0, 3), z=(0, 1))  # doctest: +SKIP
+        """
         x0, x1 = x
         y0, y1 = y
         z0, z1 = z
@@ -50,6 +128,62 @@ class Cuboid(go.Mesh3d):
 
 
 class Bar3d(go.Mesh3d):
+    """
+    3-D bar chart rendered as a :class:`go.Mesh3d`.
+
+    Constructs a grid of cuboid bars from parallel x/y/z arrays,
+    optionally coloured by a separate weight array *w*.
+
+    Parameters
+    ----------
+    x
+        Bar x-positions (may be categorical).
+    y
+        Bar y-positions (may be categorical).
+    z
+        Bar heights.
+    w
+        Optional per-bar colour weights; defaults to uniform.
+    showscale
+        Show the colour-bar scale.
+    alphahull
+        Alpha-hull parameter forwarded to :class:`go.Mesh3d`.
+    flatshading
+        Enable flat shading on the mesh faces.
+    dx
+        Bar width along the x-axis.
+    dy
+        Bar width along the y-axis.
+    z0
+        Baseline z-value for all bars.
+    x_start
+        Global x-offset applied to all bars.
+    y_start
+        Global y-offset applied to all bars.
+    z_start
+        Global z-offset applied to all bars.
+    x_mapping
+        Optional categorical-to-numeric mapping for x values.
+    y_mapping
+        Optional categorical-to-numeric mapping for y values.
+    **kwargs
+        Forwarded to :class:`go.Mesh3d`.
+
+    Raises
+    ------
+    ValueError
+        If input arrays have mismatched lengths.
+
+    See Also
+    --------
+    Cuboid : Single-box primitive used internally.
+
+    Examples
+    --------
+    >>> from mayutils.visualisation.graphs.plotly.traces.mesh3d import Bar3d
+    >>> Bar3d(x=[0, 1], y=[0, 1], z=[5, 10])  # doctest: +SKIP
+    """
+
     def __init__(
         self,
         *,
@@ -70,6 +204,60 @@ class Bar3d(go.Mesh3d):
         y_mapping: ArrayLike | None = None,
         **kwargs: Any,  # noqa: ANN401
     ) -> None:
+        """
+        Construct the 3-D bar mesh from parallel arrays.
+
+        Converts x/y positions to a grid of cuboid vertices and
+        delegates to :class:`go.Mesh3d`.
+
+        Parameters
+        ----------
+        x
+            Bar x-positions.
+        y
+            Bar y-positions.
+        z
+            Bar heights.
+        w
+            Optional colour weights; defaults to uniform.
+        showscale
+            Show the colour-bar scale.
+        alphahull
+            Alpha-hull parameter forwarded to :class:`go.Mesh3d`.
+        flatshading
+            Enable flat shading.
+        dx
+            Bar width along x.
+        dy
+            Bar width along y.
+        z0
+            Baseline z-value.
+        x_start
+            Global x-offset.
+        y_start
+            Global y-offset.
+        z_start
+            Global z-offset.
+        x_mapping
+            Categorical-to-numeric mapping for x.
+        y_mapping
+            Categorical-to-numeric mapping for y.
+        **kwargs
+            Forwarded to :class:`go.Mesh3d`.
+
+        Raises
+        ------
+        ValueError
+            If input arrays have mismatched lengths.
+
+        See Also
+        --------
+        Bar3d.from_dataframe : Build from a pandas DataFrame.
+
+        Examples
+        --------
+        >>> Bar3d(x=[0], y=[0], z=[5])  # doctest: +SKIP
+        """
         x_arr = np.asarray(x)
         y_arr = np.asarray(y)
         z_arr = np.asarray(z, dtype=np.float64)
@@ -163,8 +351,47 @@ class Bar3d(go.Mesh3d):
         value_weights: bool = False,
         x_mapping: ArrayLike | None = None,
         y_mapping: ArrayLike | None = None,
-        **kwargs: Any,
+        **kwargs: Any,  # noqa: ANN401
     ) -> Self:
+        """
+        Build a 3-D bar chart from a pandas DataFrame.
+
+        Melts *df* into x/y/z arrays using its index and columns, then
+        delegates to the standard constructor.
+
+        Parameters
+        ----------
+        df
+            DataFrame whose index maps to x, columns to y, and values
+            to z (bar heights).
+        value_weights
+            When ``True``, use the z-values as colour weights.
+        x_mapping
+            Optional categorical-to-numeric mapping for x.
+        y_mapping
+            Optional categorical-to-numeric mapping for y.
+        **kwargs
+            Forwarded to the constructor.
+
+        Returns
+        -------
+        Self
+            A new ``Bar3d`` trace.
+
+        Raises
+        ------
+        ValueError
+            If the DataFrame has non-unique columns or index.
+
+        See Also
+        --------
+        Bar3d.__init__ : Array-based constructor.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> Bar3d.from_dataframe(pd.DataFrame({"a": [1, 2]}))  # doctest: +SKIP
+        """
         if not df.columns.is_unique:
             msg = "Dataframe columns are not unique"
             raise ValueError(msg)
@@ -194,6 +421,29 @@ class Bar3d(go.Mesh3d):
 def merge_cuboids(
     *cuboids: Cuboid,
 ) -> go.Mesh3d:
+    """
+    Merge multiple cuboids into a single :class:`go.Mesh3d`.
+
+    Concatenates vertex and face-index arrays from each cuboid so they
+    render as one combined mesh trace.
+
+    Parameters
+    ----------
+    *cuboids
+        Cuboid instances to merge.
+
+    Returns
+    -------
+        A single ``go.Mesh3d`` containing all cuboids.
+
+    See Also
+    --------
+    Cuboid : Single-box primitive.
+
+    Examples
+    --------
+    >>> merge_cuboids(c1, c2, c3)  # doctest: +SKIP
+    """
     x = np.zeros(len(cuboids) * 8)
     y = np.zeros(len(cuboids) * 8)
     z = np.zeros(len(cuboids) * 8)
