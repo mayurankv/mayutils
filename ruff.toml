@@ -60,6 +60,11 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 "tests/**/*.py" = [
     "S101",
 ]
+"src/mayutils/visualisation/graphs/plotly/charts/plot.pyi" = [
+    "ANN001",
+	"ANN401",
+	"A002",
+]
 
 [lint.pep8-naming]
 classmethod-decorators = [

@@ -129,8 +129,6 @@ class Cuboid(go.Mesh3d):
 
 
 class Bar3d(go.Mesh3d):
-    trace_type: ClassVar[TraceType] = TraceType.BAR3D
-
     """
     3-D bar chart rendered as a :class:`go.Mesh3d`.
 
@@ -186,6 +184,8 @@ class Bar3d(go.Mesh3d):
     >>> from mayutils.visualisation.graphs.plotly.traces.mesh3d import Bar3d
     >>> Bar3d(x=[0, 1], y=[0, 1], z=[5, 10])  # doctest: +SKIP
     """
+
+    trace_type: ClassVar[TraceType] = TraceType.BAR3D
 
     def __init__(
         self,

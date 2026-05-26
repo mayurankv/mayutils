@@ -641,7 +641,7 @@ class Plot(go.Figure):
         return self
 
     @final
-    def add_rug(
+    def add_rug(  # noqa: C901, PLR0912
         self,
         *,
         rug_type: Literal["scatter", "violin", "box", "strip", "histogram", "ecdf"] = "scatter",
@@ -1074,7 +1074,7 @@ class Plot(go.Figure):
 
         return self
 
-    def set_visible_y_range(
+    def set_visible_y_range(  # noqa: C901
         self,
         *,
         y_padding: float = 0.05,

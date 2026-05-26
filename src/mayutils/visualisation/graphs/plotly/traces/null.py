@@ -12,7 +12,6 @@ with may_require_extras():
 
 
 class Null(go.Scatter):
-    trace_type: ClassVar[TraceType] = TraceType.NULL
     """
     Invisible scatter trace used to initialise an axis without visible data.
 
@@ -39,6 +38,8 @@ class Null(go.Scatter):
     >>> trace.showlegend  # doctest: +SKIP
     False
     """
+
+    trace_type: ClassVar[TraceType] = TraceType.NULL
 
     def __init__(
         self,

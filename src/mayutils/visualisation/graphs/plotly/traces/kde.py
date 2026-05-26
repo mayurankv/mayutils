@@ -13,7 +13,6 @@ with may_require_extras():
 
 
 class Kde(Line):
-    trace_type: ClassVar[TraceType] = TraceType.KDE
     """
     Kernel density estimate rendered as a filled line trace.
 
@@ -40,6 +39,8 @@ class Kde(Line):
     >>> from mayutils.visualisation.graphs.plotly.traces.kde import Kde
     >>> Kde(x=[1, 2, 2, 3, 3, 3])  # doctest: +SKIP
     """
+
+    trace_type: ClassVar[TraceType] = TraceType.KDE
 
     def __init__(
         self,

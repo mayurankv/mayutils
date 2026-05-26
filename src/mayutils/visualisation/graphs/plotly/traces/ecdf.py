@@ -12,7 +12,6 @@ with may_require_extras():
 
 
 class Ecdf(Line):
-    trace_type: ClassVar[TraceType] = TraceType.ECDF
     """
     Empirical cumulative distribution function trace.
 
@@ -55,6 +54,8 @@ class Ecdf(Line):
     >>> from mayutils.visualisation.graphs.plotly.traces.ecdf import Ecdf
     >>> Ecdf(x=[1, 2, 3, 4])  # doctest: +SKIP
     """
+
+    trace_type: ClassVar[TraceType] = TraceType.ECDF
 
     def __init__(
         self,

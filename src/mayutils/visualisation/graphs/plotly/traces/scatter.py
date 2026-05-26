@@ -16,7 +16,6 @@ with may_require_extras():
 
 
 class Scatter(go.Scatter):
-    trace_type: ClassVar[TraceType] = TraceType.SCATTER
     """
     Scatter trace defaulting to marker mode.
 
@@ -45,6 +44,8 @@ class Scatter(go.Scatter):
     --------
     >>> Scatter(x=[1, 2, 3], y=[4, 5, 6])  # doctest: +SKIP
     """
+
+    trace_type: ClassVar[TraceType] = TraceType.SCATTER
 
     def __init__(
         self,
