@@ -1,6 +1,6 @@
 """Plotly template registration and management for consistent chart styling."""
 
-from collections.abc import Generator
+from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from typing import cast
 
@@ -128,6 +128,18 @@ def set_renderer(
     >>> set_renderer("vscode")
     """
     pio.renderers.default = renderer  # pyright: ignore[reportAttributeAccessIssue]
+
+
+def get_template_layout(
+    template: go.layout.Template,
+    /,
+) -> go.Layout:
+    layout = getattr(template, "layout", None)
+
+    if layout is None:
+        layout = go.Layout()
+
+    return layout
 
 
 PLOTLY_DEFAULT_TEMPLATE_NAME = get_default_template_name()
@@ -652,6 +664,17 @@ def register_templates() -> None:
         ),
     )
     register_template(
+        "save_white",
+        template=go.layout.Template(
+            {
+                "layout": {
+                    "paper_bgcolor": "rgba(255,255,255,1)",
+                    "plot_bgcolor": "rgba(255,255,255,1)",
+                }
+            }
+        ),
+    )
+    register_template(
         "business_compliant",
         template=go.layout.Template(
             {
@@ -665,6 +688,23 @@ def register_templates() -> None:
     )
 
     set_template()
+
+
+def get_layout_value(
+    layout: go.Layout,
+    /,
+    *,
+    props: Sequence[str],
+) -> object | None:
+    if len(props) == 0:
+        msg = "At least one layout property must be specified"
+        raise ValueError(msg)
+
+    current_value = layout
+    for layout_prop in props:
+        current_value = getattr(current_value, layout_prop, None)
+
+    return current_value
 
 
 def setup_plot_export(
