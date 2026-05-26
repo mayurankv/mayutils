@@ -1,3 +1,11 @@
+"""
+Plotly figure wrapper with fluent chaining and layout composition.
+
+Provides the :class:`Plot` class, a thin wrapper around
+:class:`plotly.graph_objects.Figure` that adds fluent chaining, multi-y-axis
+layout composition, and convenience methods for common chart enhancements.
+"""
+
 import datetime
 from collections.abc import Callable, Iterator, Mapping, Sequence, Sized
 from pathlib import Path
@@ -64,6 +72,36 @@ TRACE_IDENTIFIERS = {
 
 
 class Plot(go.Figure):
+    """
+    Plotly figure with fluent chaining and multi-y-axis support.
+
+    Wraps :class:`plotly.graph_objects.Figure` to add a fluent builder API,
+    automatic multi-y-axis domain management, and convenience methods for
+    common chart enhancements such as rug plots, KDEs, and density overlays.
+
+    Parameters
+    ----------
+    config
+        Axis and trace configuration for the plot.
+    description
+        Human-readable description used as the default file-save name.
+    layout
+        Initial Plotly layout or mapping of layout properties.
+    modification_kwargs
+        Extra keyword arguments forwarded to :meth:`modifications`.
+    **kwargs
+        Forwarded to :class:`plotly.graph_objects.Figure`.
+
+    See Also
+    --------
+    SubPlot : Multi-cell grid built from several ``Plot`` instances.
+    PlotConfig : Dataclass that bundles axis configs with traces.
+
+    Examples
+    --------
+    >>> Plot(PlotConfig.empty(), description="empty")  # doctest: +SKIP
+    """
+
     def __init__(  # noqa: C901, PLR0912
         self,
         config: PlotConfig,
@@ -74,6 +112,33 @@ class Plot(go.Figure):
         modification_kwargs: Mapping[str, Any] | None = None,
         **kwargs: Any,  # noqa: ANN401
     ) -> None:
+        """
+        Initialise the plot from a configuration object.
+
+        Builds the Plotly figure, applies axis configs for each y-axis group,
+        adds all traces, and runs post-creation modifications.
+
+        Parameters
+        ----------
+        config
+            Axis and trace configuration for the plot.
+        description
+            Human-readable description used as the default file-save name.
+        layout
+            Initial Plotly layout or mapping of layout properties.
+        modification_kwargs
+            Extra keyword arguments forwarded to :meth:`modifications`.
+        **kwargs
+            Forwarded to :class:`plotly.graph_objects.Figure`.
+
+        See Also
+        --------
+        Plot.from_traces : Shortcut that builds a ``PlotConfig`` internally.
+
+        Examples
+        --------
+        >>> Plot(PlotConfig.empty(), description="demo")  # doctest: +SKIP
+        """
         if layout is None:
             layout = Layout()
         elif not isinstance(layout, Layout):
@@ -173,12 +238,50 @@ class Plot(go.Figure):
     def description(
         self,
     ) -> str:
+        """
+        Human-readable description of the plot.
+
+        Returns the description string provided at construction, which is also
+        used as the default filename when saving.
+
+        Returns
+        -------
+        str
+            The description string.
+
+        See Also
+        --------
+        Plot.save : Uses the description as the default save name.
+
+        Examples
+        --------
+        >>> plot.description  # doctest: +SKIP
+        """
         return self._description
 
     @property
     def num_traces(
         self,
     ) -> int:
+        """
+        Number of traces currently in the figure.
+
+        Returns the count of all trace objects attached to the figure,
+        including hidden or auxiliary traces.
+
+        Returns
+        -------
+        int
+            The trace count.
+
+        See Also
+        --------
+        Plot.trace : Retrieve a single trace by index.
+
+        Examples
+        --------
+        >>> plot.num_traces  # doctest: +SKIP
+        """
         return len(self.data)
 
     @classmethod
@@ -191,6 +294,41 @@ class Plot(go.Figure):
         layout: Mapping[str, Any] | Layout | None = None,
         **kwargs: Any,  # noqa: ANN401
     ) -> Self:
+        """
+        Build a plot from one or more traces sharing a single y-axis.
+
+        Convenience constructor that internally builds a :class:`PlotConfig`
+        from the supplied traces and axis overrides.
+
+        Parameters
+        ----------
+        *traces
+            Plotly trace objects to display.
+        description
+            Human-readable description used as the default file-save name.
+        xaxis_config
+            Optional x-axis layout overrides.
+        yaxis_config
+            Optional y-axis layout overrides.
+        layout
+            Initial Plotly layout or mapping of layout properties.
+        **kwargs
+            Forwarded to :class:`Plot`.
+
+        Returns
+        -------
+        Self
+            A new ``Plot`` instance.
+
+        See Also
+        --------
+        Plot.from_figure : Build from an existing ``go.Figure``.
+        PlotConfig.from_traces : Lower-level config builder.
+
+        Examples
+        --------
+        >>> Plot.from_traces(trace, description="demo")  # doctest: +SKIP
+        """
         if xaxis_config is None:
             xaxis_config = {}
         if yaxis_config is None:
@@ -215,6 +353,32 @@ class Plot(go.Figure):
         *,
         description: str,
     ) -> Self:
+        """
+        Wrap an existing Plotly figure in a ``Plot``.
+
+        Creates a new ``Plot`` whose data and layout come from the supplied
+        :class:`plotly.graph_objects.Figure`.
+
+        Parameters
+        ----------
+        fig
+            The Plotly figure to wrap.
+        description
+            Human-readable description used as the default file-save name.
+
+        Returns
+        -------
+        Self
+            A new ``Plot`` instance.
+
+        See Also
+        --------
+        Plot.from_existing : Wrap an existing ``Plot`` instance.
+
+        Examples
+        --------
+        >>> Plot.from_figure(go.Figure(), description="wrapped")  # doctest: +SKIP
+        """
         return cls(
             PlotConfig.empty(),
             description=description,
@@ -229,6 +393,32 @@ class Plot(go.Figure):
         *,
         description: str,
     ) -> Self:
+        """
+        Copy an existing ``Plot`` into a new instance.
+
+        Delegates to :meth:`from_figure`, transferring data and layout while
+        allowing a new description.
+
+        Parameters
+        ----------
+        plot
+            The source ``Plot`` to copy.
+        description
+            Human-readable description for the new instance.
+
+        Returns
+        -------
+        Self
+            A new ``Plot`` instance.
+
+        See Also
+        --------
+        Plot.copy : Instance-level copy that preserves the description.
+
+        Examples
+        --------
+        >>> Plot.from_existing(existing_plot, description="copy")  # doctest: +SKIP
+        """
         return cls.from_figure(
             plot,
             description=description,
@@ -240,6 +430,30 @@ class Plot(go.Figure):
         *,
         description: str,
     ) -> Self:
+        """
+        Create an empty plot with no traces.
+
+        Useful as a starting point when traces will be added incrementally
+        via :meth:`add_trace` or the fluent builder methods.
+
+        Parameters
+        ----------
+        description
+            Human-readable description used as the default file-save name.
+
+        Returns
+        -------
+        Self
+            An empty ``Plot`` instance.
+
+        See Also
+        --------
+        Plot.from_traces : Build a plot with traces in one call.
+
+        Examples
+        --------
+        >>> Plot.empty(description="blank")  # doctest: +SKIP
+        """
         return cls(
             PlotConfig.empty(),
             description=description,
@@ -251,6 +465,33 @@ class Plot(go.Figure):
         description: str,
         **plots: Self,
     ) -> Self:
+        """
+        Combine multiple plots into a single figure with a dropdown selector.
+
+        Each supplied plot becomes a selectable frame. The dropdown menu
+        switches between frames so the viewer can toggle between different
+        data views within one figure.
+
+        Parameters
+        ----------
+        description
+            Human-readable description used as the default file-save name.
+        **plots
+            Named plots whose keys become dropdown labels.
+
+        Returns
+        -------
+        Self
+            A new ``Plot`` with dropdown-based frame selection.
+
+        See Also
+        --------
+        Plot.add_button : Add a custom toggle button to the figure.
+
+        Examples
+        --------
+        >>> Plot.as_dropdown("comparison", a=plot_a, b=plot_b)  # doctest: +SKIP
+        """
         first_plot = next(iter(plots.values()))
         layout: Layout = first_plot.layout.update(  # ty:ignore[invalid-assignment]
             updatemenus=[
@@ -364,11 +605,49 @@ class Plot(go.Figure):
     def to_figure(
         self,
     ) -> go.Figure:
+        """
+        Convert to a plain Plotly figure.
+
+        Returns a new :class:`plotly.graph_objects.Figure` that carries the
+        same data and layout but drops the ``Plot``-specific API.
+
+        Returns
+        -------
+        go.Figure
+            A standard Plotly figure.
+
+        See Also
+        --------
+        Plot.from_figure : The inverse operation.
+
+        Examples
+        --------
+        >>> plot.to_figure()  # doctest: +SKIP
+        """
         return go.Figure(data=self)
 
     def empty_traces(
         self,
     ) -> Self:
+        """
+        Remove all traces from the figure.
+
+        Clears the data list in place, leaving the layout and description
+        intact for subsequent re-population.
+
+        Returns
+        -------
+        Self
+            The instance for fluent chaining.
+
+        See Also
+        --------
+        Plot.empty : Class-level constructor for a traceless plot.
+
+        Examples
+        --------
+        >>> plot.empty_traces()  # doctest: +SKIP
+        """
         self.data = []
 
         return self
@@ -384,6 +663,40 @@ class Plot(go.Figure):
         y_domain: tuple[float, float] = (0, 1),
         **kwargs: Any,  # noqa: ANN401
     ) -> Self:
+        """
+        Add an axis-edge title annotation to the figure.
+
+        Places a title annotation at the specified edge of the given domain
+        rectangle, useful for labelling secondary y-axes or subplot regions.
+
+        Parameters
+        ----------
+        title
+            The text to display.
+        edge
+            Which edge of the domain to attach the title to.
+        offset
+            Pixel offset from the edge.
+        x_domain
+            Horizontal domain fraction range as ``(start, end)``.
+        y_domain
+            Vertical domain fraction range as ``(start, end)``.
+        **kwargs
+            Forwarded to :meth:`plotly.graph_objects.Figure.add_annotation`.
+
+        Returns
+        -------
+        Self
+            The instance for fluent chaining.
+
+        See Also
+        --------
+        Plot.shift_title : Shift the main title vertically.
+
+        Examples
+        --------
+        >>> plot.add_title("Secondary Y")  # doctest: +SKIP
+        """
         annotations = _build_subplot_title_annotations(
             subplot_titles=[title],
             list_of_domains=[x_domain, y_domain],
@@ -405,6 +718,30 @@ class Plot(go.Figure):
         self,
         func: Callable[[Self], Self],
     ) -> Self:
+        """
+        Apply an arbitrary callable to the plot for fluent chaining.
+
+        Calls *func* with the plot instance and returns ``self``, allowing
+        ad-hoc transformations to be embedded in a method chain.
+
+        Parameters
+        ----------
+        func
+            A callable that receives and mutates the plot instance.
+
+        Returns
+        -------
+        Self
+            The instance for fluent chaining.
+
+        See Also
+        --------
+        Plot.adjust_layout : Targeted layout property callback.
+
+        Examples
+        --------
+        >>> plot.pipe(lambda p: p.update_layout(title="Hi"))  # doctest: +SKIP
+        """
         func(self)
 
         return self
@@ -417,6 +754,41 @@ class Plot(go.Figure):
         callback: Callable[[Any | None], Any],
         fallback: bool = False,
     ) -> Self:
+        """
+        Adjust a nested layout property via a callback function.
+
+        Reads the current value at the nested property path, optionally
+        falling back to the template layout, then writes back the value
+        returned by *callback*.
+
+        Parameters
+        ----------
+        props
+            Sequence of nested property names (e.g. ``["title", "pad", "b"]``).
+        callback
+            Function that receives the current value and returns the new value.
+        fallback
+            If ``True`` and the property is not set on the figure, read from
+            the active template layout instead.
+
+        Returns
+        -------
+        Self
+            The instance for fluent chaining.
+
+        Raises
+        ------
+        TypeError
+            If the resolved value is a :class:`Layout` instance.
+
+        See Also
+        --------
+        Plot.shift_title : Common use case that adjusts title padding.
+
+        Examples
+        --------
+        >>> plot.adjust_layout(["margin", "t"], callback=lambda v: (v or 0) + 20)  # doctest: +SKIP
+        """
         current_value = get_layout_value(self.layout, props=props)
 
         if current_value is None and fallback:
@@ -435,6 +807,30 @@ class Plot(go.Figure):
         self,
         offset: int,
     ) -> Self:
+        """
+        Shift the main title downward by increasing top padding.
+
+        Adjusts both the title bottom padding and the top margin by *offset*
+        pixels so the title moves without clipping.
+
+        Parameters
+        ----------
+        offset
+            Number of pixels to shift the title downward.
+
+        Returns
+        -------
+        Self
+            The instance for fluent chaining.
+
+        See Also
+        --------
+        Plot.adjust_layout : General-purpose layout adjustment.
+
+        Examples
+        --------
+        >>> plot.shift_title(20)  # doctest: +SKIP
+        """
         self.adjust_layout(
             ["title", "pad", "b"],
             callback=lambda current_value: (current_value or 0) + offset,
@@ -456,6 +852,37 @@ class Plot(go.Figure):
         layout: Mapping[str, Any] | Layout | None = None,
         **kwargs: Any,  # noqa: ANN401
     ) -> None:
+        """
+        Display the figure with sensible default display configuration.
+
+        Wraps the parent ``show`` method, disabling tips and the Plotly logo
+        by default and optionally overriding width, height, or layout.
+
+        Parameters
+        ----------
+        renderer
+            Plotly renderer name (e.g. ``"browser"``).
+        validate
+            Whether to validate the figure before rendering.
+        width
+            Override width in pixels.
+        height
+            Override height in pixels.
+        config
+            Extra Plotly display config merged on top of defaults.
+        layout
+            Additional layout overrides applied to a copy of the figure.
+        **kwargs
+            Forwarded to :meth:`plotly.graph_objects.Figure.show`.
+
+        See Also
+        --------
+        Plot.save : Persist the figure to disk instead of displaying.
+
+        Examples
+        --------
+        >>> plot.show(width=800, height=600)  # doctest: +SKIP
+        """
         default_config: dict[str, Any] = {
             "showTips": False,
             "displaylogo": False,
@@ -487,6 +914,30 @@ class Plot(go.Figure):
         self,
         description: str | None = None,
     ) -> Self:
+        """
+        Create a shallow copy of the plot.
+
+        Returns a new ``Plot`` with the same data and layout. An optional
+        *description* overrides the original.
+
+        Parameters
+        ----------
+        description
+            New description; defaults to the current one if not given.
+
+        Returns
+        -------
+        Self
+            A new ``Plot`` instance.
+
+        See Also
+        --------
+        Plot.from_existing : Class-level equivalent.
+
+        Examples
+        --------
+        >>> plot.copy(description="variant")  # doctest: +SKIP
+        """
         return type(self).from_existing(
             self,
             description=description or self.description,
@@ -503,6 +954,42 @@ class Plot(go.Figure):
         overwrite: bool = True,
         **kwargs: Any,  # noqa: ANN401
     ) -> Path:
+        """
+        Save the figure to disk as one or more image files.
+
+        Resolves the output path, applies a white save template, and writes
+        the image in each requested format via Plotly's ``write_image``.
+
+        Parameters
+        ----------
+        path
+            Destination path; ``None`` uses the default images folder and
+            the plot description as the filename.
+        formats
+            Image format suffixes (e.g. ``["png", "svg"]``). Inferred from
+            *path* when empty.
+        scale
+            Resolution multiplier for raster formats.
+        template
+            Plotly template string applied before writing.
+        overwrite
+            Whether to overwrite an existing file at the same path.
+        **kwargs
+            Forwarded to :meth:`plotly.graph_objects.Figure.write_image`.
+
+        Returns
+        -------
+        Path
+            The resolved output path.
+
+        See Also
+        --------
+        Plot.show : Display the figure interactively instead of saving.
+
+        Examples
+        --------
+        >>> plot.save("chart.png")  # doctest: +SKIP
+        """
         resolved, image_formats = resolve_save_path(
             path,
             suffixes=formats,
@@ -530,6 +1017,25 @@ class Plot(go.Figure):
     def __iter__(  # pyright: ignore[reportIncompatibleMethodOverride]  # ty:ignore[invalid-method-override]
         self,
     ) -> Iterator[Trace]:
+        """
+        Iterate over the traces in the figure.
+
+        Yields each :class:`~plotly.basedatatypes.BaseTraceType` in insertion
+        order, enabling ``for trace in plot`` patterns.
+
+        Returns
+        -------
+        Iterator[Trace]
+            An iterator over the figure's traces.
+
+        See Also
+        --------
+        Plot.trace : Access a single trace by index.
+
+        Examples
+        --------
+        >>> list(plot)  # doctest: +SKIP
+        """
         return iter(self.data)
 
     def set_bound_group_colours(
@@ -537,6 +1043,31 @@ class Plot(go.Figure):
         *,
         fill_opacity: float = 0.1,
     ) -> Self:
+        """
+        Synchronise fill colours of bound-group traces with their parent line.
+
+        Finds legend groups prefixed with ``_bounds_`` and sets the fill
+        colour of each bound trace to match the line colour of its parent
+        trace at the specified opacity.
+
+        Parameters
+        ----------
+        fill_opacity
+            Opacity applied to the fill when no existing fill opacity is found.
+
+        Returns
+        -------
+        Self
+            The instance for fluent chaining.
+
+        See Also
+        --------
+        Plot.set_trace_colours : Colour synchronisation for non-bound traces.
+
+        Examples
+        --------
+        >>> plot.set_bound_group_colours(fill_opacity=0.2)  # doctest: +SKIP
+        """
         bound_groups: dict[str | int, tuple[tuple[str | None, int], list[Trace]]] = {}
         for idx, trace in enumerate(self):
             if (
@@ -572,6 +1103,30 @@ class Plot(go.Figure):
         *,
         fill_opacity: float = 0.1,
     ) -> Self:
+        """
+        Apply consistent marker, line, and fill colours across traces.
+
+        Ensures histograms, KDEs, lines, and ECDFs have their marker outline,
+        text font, and fill colours synchronised with the colour-scale.
+
+        Parameters
+        ----------
+        fill_opacity
+            Default opacity for ECDF and KDE fill areas.
+
+        Returns
+        -------
+        Self
+            The instance for fluent chaining.
+
+        See Also
+        --------
+        Plot.set_bound_group_colours : Colour sync for bound-group traces.
+
+        Examples
+        --------
+        >>> plot.set_trace_colours(fill_opacity=0.15)  # doctest: +SKIP
+        """
 
         for idx, trace in enumerate(self):
             if isinstance(trace, go.Histogram) or trace.meta == TraceType.KDE:
@@ -590,6 +1145,31 @@ class Plot(go.Figure):
         *,
         fill_opacity: float = 0.1,
     ) -> Self:
+        """
+        Run all post-creation colour modifications.
+
+        Convenience method that calls :meth:`set_trace_colours` and
+        :meth:`set_bound_group_colours` in sequence.
+
+        Parameters
+        ----------
+        fill_opacity
+            Opacity forwarded to both colour-setting methods.
+
+        Returns
+        -------
+        Self
+            The instance for fluent chaining.
+
+        See Also
+        --------
+        Plot.set_trace_colours : Per-trace colour synchronisation.
+        Plot.set_bound_group_colours : Bound-group colour synchronisation.
+
+        Examples
+        --------
+        >>> plot.modifications(fill_opacity=0.2)  # doctest: +SKIP
+        """
         self.set_trace_colours(fill_opacity=fill_opacity)
         self.set_bound_group_colours(fill_opacity=fill_opacity)
 
@@ -598,6 +1178,25 @@ class Plot(go.Figure):
     def add_histogram_gaussians(
         self,
     ) -> Self:
+        """
+        Overlay fitted Gaussian curves on every histogram trace.
+
+        For each histogram in the figure, fits a normal distribution to its
+        data and adds a dashed line trace showing the probability density.
+
+        Returns
+        -------
+        Self
+            The instance for fluent chaining.
+
+        See Also
+        --------
+        Plot.add_kde_to_histogram : Overlay KDE curves instead of Gaussians.
+
+        Examples
+        --------
+        >>> plot.add_histogram_gaussians()  # doctest: +SKIP
+        """
         for idx, trace in enumerate(self):
             if isinstance(trace, go.Histogram):
                 self.add_trace(

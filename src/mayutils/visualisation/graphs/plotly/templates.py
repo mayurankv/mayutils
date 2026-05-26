@@ -54,6 +54,12 @@ def get_template(
 
     Looks up ``plotly.io.templates.default`` and resolves it to the full template.
 
+    Parameters
+    ----------
+    template_name
+        Name of a registered template to look up.  When ``None`` (the
+        default), the current global default is used.
+
     Returns
     -------
     Template
@@ -134,6 +140,35 @@ def get_template_layout(
     template: go.layout.Template,
     /,
 ) -> go.Layout:
+    """
+    Extract the layout from a Plotly template.
+
+    Returns the ``layout`` attribute of *template*, falling back to an empty
+    ``go.Layout()`` when the attribute is missing or ``None``.
+
+    Parameters
+    ----------
+    template
+        A Plotly ``Template`` instance.
+
+    Returns
+    -------
+    go.Layout
+        The template's layout object, or a fresh empty layout.
+
+    See Also
+    --------
+    get_template : Retrieve a registered template by name.
+    get_layout_value : Drill into a layout to read a nested property.
+
+    Examples
+    --------
+    >>> from mayutils.visualisation.graphs.plotly.templates import (
+    ...     get_template,
+    ...     get_template_layout,
+    ... )
+    >>> layout = get_template_layout(get_template())  # doctest: +SKIP
+    """
     layout = getattr(template, "layout", None)
 
     if layout is None:
@@ -265,6 +300,10 @@ def register_template(
     """
     Register a custom Plotly template under a given name.
 
+    Adds *template* to the ``plotly.io.templates`` registry so it can be
+    activated later via `set_template` or combined with other templates using
+    the ``"+"`` syntax (e.g. ``"base+save"``).
+
     Parameters
     ----------
     name
@@ -272,6 +311,11 @@ def register_template(
         passed to `set_template` to activate it.
     template
         The Plotly Template object to register.
+
+    See Also
+    --------
+    register_templates : Batch-register all built-in custom templates.
+    set_template : Activate a registered template as the global default.
 
     Examples
     --------
@@ -696,6 +740,46 @@ def get_layout_value(
     *,
     props: Sequence[str],
 ) -> object | None:
+    """
+    Retrieve a nested property from a Plotly layout by attribute chain.
+
+    Walks *props* from left to right, calling ``getattr`` at each level.
+    Returns ``None`` as soon as any intermediate attribute is missing.
+
+    Parameters
+    ----------
+    layout
+        The ``go.Layout`` instance to inspect.
+    props
+        Ordered sequence of attribute names forming the property path
+        (e.g. ``["xaxis", "title", "text"]``).
+
+    Returns
+    -------
+    object | None
+        The value found at the end of the chain, or ``None`` if any
+        intermediate attribute does not exist.
+
+    Raises
+    ------
+    ValueError
+        If *props* is empty.
+
+    See Also
+    --------
+    get_template_layout : Extract the layout object from a template.
+
+    Examples
+    --------
+    >>> from mayutils.visualisation.graphs.plotly.templates import (
+    ...     get_layout_value,
+    ...     get_template,
+    ...     get_template_layout,
+    ... )
+    >>> layout = get_template_layout(get_template())  # doctest: +SKIP
+    >>> get_layout_value(layout, props=["xaxis", "showgrid"])  # doctest: +SKIP
+    True
+    """
     if len(props) == 0:
         msg = "At least one layout property must be specified"
         raise ValueError(msg)
