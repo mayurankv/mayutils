@@ -62,6 +62,11 @@ class Null(go.Scatter):
             Additional keyword arguments forwarded to
             ``plotly.graph_objects.Scatter``.
 
+        Raises
+        ------
+        ValueError
+            If ``meta`` is passed, since it is reserved for internal use.
+
         See Also
         --------
         plotly.graph_objects.Scatter : Parent trace class.
