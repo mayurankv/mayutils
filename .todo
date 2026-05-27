@@ -21,7 +21,7 @@ Test out fail imports
 
 ```plotly
 Combine plotly imports in the init
-line.py, plot.py, subplot.py, stub generation
+subplot.py, stub generation
 ```
 
 ```documentation
@@ -35,4 +35,8 @@ Ensure doctest skip is only used where necessary and not overused
 Add tests for all functions and methods, ensuring that they cover a wide range of cases and edge cases.
 Use pytest for testing and ensure that all tests pass successfully.
 Make sure all docstrings have proper examples which are tested with pytest where possible and doctest skipped only where necessary
+```
+
+```agents
+Add an updated AGENTS.md file to make this repo usable by AI agents, including instructions on how to use the repo and its various components.
 ```

@@ -1127,7 +1127,6 @@ class Plot(go.Figure):
         --------
         >>> plot.set_trace_colours(fill_opacity=0.15)  # doctest: +SKIP
         """
-
         for idx, trace in enumerate(self):
             if isinstance(trace, go.Histogram) or trace.meta == TraceType.KDE:
                 trace.marker.line.color = trace.marker.color or shuffled_colourscale[idx % len(shuffled_colourscale)]
@@ -1247,6 +1246,44 @@ class Plot(go.Figure):
         rug_height: float | None = None,
         **kwargs: Any,  # noqa: ANN401
     ) -> Self:
+        """
+        Add a rug plot beneath histograms and KDE traces.
+
+        Creates a secondary y-axis region below the main plot and populates
+        it with per-trace rug representations. The method is idempotent and
+        will not add rugs a second time.
+
+        Parameters
+        ----------
+        rug_type
+            Visual representation for each rug (e.g. ``"scatter"``,
+            ``"violin"``, ``"box"``).
+        rug_height
+            Fraction of the figure height reserved for the rug region.
+            Defaults to 0.15 for scatter and 0.3 for other types.
+        **kwargs
+            Forwarded to the underlying rug trace constructor.
+
+        Returns
+        -------
+        Self
+            The instance for fluent chaining.
+
+        Raises
+        ------
+        NotImplementedError
+            If *rug_type* is ``"histogram"``.
+        ValueError
+            If *rug_type* is not recognised.
+
+        See Also
+        --------
+        Plot.add_kde_to_histogram : Another histogram enhancement.
+
+        Examples
+        --------
+        >>> plot.add_rug(rug_type="violin")  # doctest: +SKIP
+        """
         if getattr(self, "_added_rugs", False):
             return self
 
@@ -1460,6 +1497,30 @@ class Plot(go.Figure):
         idx: int,
         /,
     ) -> Trace:
+        """
+        Retrieve a single trace by its integer index.
+
+        Provides direct index-based access to the underlying data tuple,
+        which is more explicit than subscripting the figure directly.
+
+        Parameters
+        ----------
+        idx
+            Zero-based index of the desired trace.
+
+        Returns
+        -------
+        Trace
+            The trace at the given index.
+
+        See Also
+        --------
+        Plot.get_traces_by_type : Filter traces by their type identifier.
+
+        Examples
+        --------
+        >>> plot.trace(0)  # doctest: +SKIP
+        """
         return self.data[idx]
 
     def get_traces_by_type(
@@ -1467,6 +1528,30 @@ class Plot(go.Figure):
         trace_type: str,
         /,
     ) -> Iterator[tuple[int, Trace]]:
+        """
+        Yield ``(index, trace)`` pairs matching a trace type identifier.
+
+        Looks up the trace class in :data:`TRACE_IDENTIFIERS` and matches
+        by ``isinstance`` or by comparing the ``meta`` attribute.
+
+        Parameters
+        ----------
+        trace_type
+            String key or :class:`TraceType` value identifying the trace kind.
+
+        Returns
+        -------
+        Iterator[tuple[int, Trace]]
+            Pairs of ``(index, trace)`` for every matching trace.
+
+        See Also
+        --------
+        Plot.trace : Access a single trace by index.
+
+        Examples
+        --------
+        >>> list(plot.get_traces_by_type("histogram"))  # doctest: +SKIP
+        """
         trace_cls = TRACE_IDENTIFIERS.get(trace_type)
 
         return (
@@ -1483,6 +1568,32 @@ class Plot(go.Figure):
         *,
         menu_index: int = 0,
     ) -> Self:
+        """
+        Append a toggle button to an update-menu in the figure layout.
+
+        Inserts the button mapping into the specified update-menu, creating
+        the menu if it does not yet exist.
+
+        Parameters
+        ----------
+        button
+            A Plotly update-menu button specification.
+        menu_index
+            Index of the update-menu to append to.
+
+        Returns
+        -------
+        Self
+            The instance for fluent chaining.
+
+        See Also
+        --------
+        Plot.add_histogram_to_2d_scatter : Uses this to add a density toggle.
+
+        Examples
+        --------
+        >>> plot.add_button({"label": "Toggle", "method": "restyle", "args": [{"visible": True}]})  # doctest: +SKIP
+        """
         existing_menus: list[dict[str, Any]] = [menu.to_plotly_json() for menu in (self.layout.updatemenus or ())]
 
         if menu_index < len(existing_menus):
@@ -1501,6 +1612,36 @@ class Plot(go.Figure):
         index_used: int = 99,
         **kwargs: Any,  # noqa: ANN401
     ) -> Self:
+        """
+        Add a toggleable 2-D density histogram over existing scatter traces.
+
+        Groups scatter traces by their axis assignment, computes a
+        :class:`~plotly.graph_objects.Histogram2d` for each group, and adds a
+        toggle button to show or hide the density layer.
+
+        Parameters
+        ----------
+        colour
+            Base colour for the density colour-scale; defaults to red.
+        index_used
+            Numeric index used for the colour-axis and bin-group identifiers
+            to avoid collisions with existing axes.
+        **kwargs
+            Forwarded to :class:`plotly.graph_objects.Histogram2d`.
+
+        Returns
+        -------
+        Self
+            The instance for fluent chaining.
+
+        See Also
+        --------
+        Plot.add_default_extras : Calls this method automatically.
+
+        Examples
+        --------
+        >>> plot.add_histogram_to_2d_scatter(colour=Colour.parse("blue"))  # doctest: +SKIP
+        """
         if colour is None:
             colour = Colour.parse("red")
 
@@ -1560,6 +1701,32 @@ class Plot(go.Figure):
         self,
         **kwargs: Any,  # noqa: ANN401
     ) -> Self:
+        """
+        Overlay kernel density estimate curves on every histogram trace.
+
+        Adds a :class:`~mayutils.visualisation.graphs.plotly.traces.Kde` trace
+        for each histogram, inheriting the histogram's colour and axis.
+
+        Parameters
+        ----------
+        **kwargs
+            Overrides merged on top of the default KDE styling (opacity,
+            line width, fill, etc.) and forwarded to :class:`Kde`.
+
+        Returns
+        -------
+        Self
+            The instance for fluent chaining.
+
+        See Also
+        --------
+        Plot.add_histogram_gaussians : Parametric Gaussian overlay instead.
+        Plot.add_default_extras : Calls this method automatically.
+
+        Examples
+        --------
+        >>> plot.add_kde_to_histogram(opacity=0.7)  # doctest: +SKIP
+        """
         kwargs = {
             "opacity": 0.9,
             "showlegend": False,
@@ -1597,6 +1764,27 @@ class Plot(go.Figure):
     def add_heatmap_alternative_to_3d_bar(
         self,
     ) -> Self:
+        """
+        Add toggle buttons to switch 3-D bar traces to a 2-D heatmap view.
+
+        If the figure contains any :class:`Bar3d` traces, two update-menu
+        buttons are added: one restores the 3-D bar representation and the
+        other re-styles all traces as a heatmap.
+
+        Returns
+        -------
+        Self
+            The instance for fluent chaining.
+
+        See Also
+        --------
+        Plot.add_default_extras : Calls this method automatically.
+        Plot.add_button : Low-level button insertion.
+
+        Examples
+        --------
+        >>> plot.add_heatmap_alternative_to_3d_bar()  # doctest: +SKIP
+        """
         bar3d_indices = {idx for idx, _ in self.get_traces_by_type(TraceType.BAR3D)}
 
         if not bar3d_indices:
@@ -1635,6 +1823,27 @@ class Plot(go.Figure):
     def add_default_extras(
         self,
     ) -> Self:
+        """
+        Apply all standard chart enhancements in one call.
+
+        Sequentially adds a 2-D density overlay for scatter plots, KDE
+        curves for histograms, and a heatmap toggle for 3-D bars.
+
+        Returns
+        -------
+        Self
+            The instance for fluent chaining.
+
+        See Also
+        --------
+        Plot.add_histogram_to_2d_scatter : Density overlay.
+        Plot.add_kde_to_histogram : KDE curves.
+        Plot.add_heatmap_alternative_to_3d_bar : Heatmap toggle.
+
+        Examples
+        --------
+        >>> plot.add_default_extras()  # doctest: +SKIP
+        """
         self.add_histogram_to_2d_scatter()
         self.add_kde_to_histogram()
         self.add_heatmap_alternative_to_3d_bar()
@@ -1647,6 +1856,34 @@ class Plot(go.Figure):
         /,
         **kwargs: Any,  # noqa: ANN401
     ) -> Self:
+        """
+        Highlight a date interval with a translucent vertical rectangle.
+
+        Draws a :meth:`~plotly.graph_objects.Figure.add_vrect` spanning the
+        interval's start and end dates. Does nothing when *interval* is
+        ``None``.
+
+        Parameters
+        ----------
+        interval
+            The date or datetime interval to highlight, or ``None`` to skip.
+        **kwargs
+            Overrides merged on top of the default styling and forwarded to
+            :meth:`~plotly.graph_objects.Figure.add_vrect`.
+
+        Returns
+        -------
+        Self
+            The instance for fluent chaining.
+
+        See Also
+        --------
+        Plot.adjust_layout : General-purpose layout tweaks.
+
+        Examples
+        --------
+        >>> plot.add_interval(interval)  # doctest: +SKIP
+        """
         if interval is None:
             return self
 
@@ -1665,6 +1902,30 @@ class Plot(go.Figure):
         names: Sequence[str],
         /,
     ) -> Self:
+        """
+        Hide named traces by setting them to legend-only visibility.
+
+        Iterates over the provided trace names and marks each matching trace
+        as ``"legendonly"`` so it is hidden from the plot but still toggleable.
+
+        Parameters
+        ----------
+        names
+            Trace names to hide.
+
+        Returns
+        -------
+        Self
+            The instance for fluent chaining.
+
+        See Also
+        --------
+        Plot.get_traces_by_type : Retrieve traces for programmatic filtering.
+
+        Examples
+        --------
+        >>> plot.hide_traces(["Trace A", "Trace B"])  # doctest: +SKIP
+        """
         for name in names:
             self.update_traces(
                 visible="legendonly",
@@ -1678,6 +1939,36 @@ class Plot(go.Figure):
         *,
         y_padding: float = 0.05,
     ) -> Self:
+        """
+        Restrict each y-axis range to values visible within the current x-axis range.
+
+        Scans all traces, filters each trace's y-data to the current x-axis
+        window, and updates every y-axis range (with padding) to fit only the
+        visible data.
+
+        Parameters
+        ----------
+        y_padding
+            Fractional padding added above and below the visible y-range.
+
+        Returns
+        -------
+        Self
+            The instance for fluent chaining.
+
+        Raises
+        ------
+        ValueError
+            If the x-axis range has not been set on the layout.
+
+        See Also
+        --------
+        Plot.adjust_layout : General-purpose layout adjustment.
+
+        Examples
+        --------
+        >>> plot.set_visible_y_range(y_padding=0.1)  # doctest: +SKIP
+        """
         xaxis_range: tuple[Any, Any] | None = getattr(self.layout.xaxis, "range", None)
         if xaxis_range is None:
             msg = "X-axis range must be set to determine visible y-axis range"
@@ -1778,6 +2069,33 @@ class Plot(go.Figure):
         save: bool = True,
         show: bool = True,
     ) -> Self:
+        """
+        Save and/or display the plot in a single call.
+
+        Convenience shortcut that optionally saves the figure to disk and
+        displays it interactively, returning ``self`` for further chaining.
+
+        Parameters
+        ----------
+        save
+            If ``True``, save the figure to the default path.
+        show
+            If ``True``, display the figure interactively.
+
+        Returns
+        -------
+        Self
+            The instance for fluent chaining.
+
+        See Also
+        --------
+        Plot.save : Save without displaying.
+        Plot.show : Display without saving.
+
+        Examples
+        --------
+        >>> plot(save=True, show=False)  # doctest: +SKIP
+        """
         if save:
             self.save(None)
 
