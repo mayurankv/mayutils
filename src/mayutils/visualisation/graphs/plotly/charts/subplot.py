@@ -1,5 +1,5 @@
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 
 from mayutils.core.extras import may_require_extras
 
@@ -15,8 +15,8 @@ from mayutils.visualisation.graphs.plotly.charts import (
 )
 from mayutils.visualisation.graphs.plotly.charts.plot import Plot
 from mayutils.visualisation.graphs.plotly.templates import (
-    axis_dict,
-    non_primary_axis_dict,
+    axis_structure_dict,
+    non_primary_axis_structure_dict,
 )
 from mayutils.visualisation.graphs.plotly.traces import (
     Null,
@@ -42,8 +42,6 @@ class SubPlot(Plot):
         if layout is None:
             layout = {}
 
-        self._config = config
-
         self._specs: list[list[dict[str, str | int | float]]] = [
             [
                 {"type": "surface"}
@@ -56,7 +54,7 @@ class SubPlot(Plot):
                 else {}
                 for plot_config in row_configs
             ]
-            for row_configs in self._config.plots
+            for row_configs in config.plots
         ]
 
         super().__init__(
@@ -64,12 +62,13 @@ class SubPlot(Plot):
             description=description,
             layout={},
             data=make_subplots(
-                rows=len(self._config.plots),
-                cols=len(self._config.plots[0]),
-                specs=self._specs,
+                rows=len(config.plots),
+                cols=len(config.plots[0]),
+                specs=cast("list[list[dict[str, str | int | float] | None]]", self._specs),
             ),
             **kwargs,
         )
+        self._config = config
         self.update_layout(
             dict(layout),
         )
@@ -88,7 +87,7 @@ class SubPlot(Plot):
 
         self.modifications()
 
-    def add_titles(
+    def add_titles(  # noqa: C901
         self,
         *,
         title_styles: Mapping[str, Any] | None = None,
@@ -215,9 +214,7 @@ class SubPlot(Plot):
                     PlotConfig(
                         yaxes_configs=(
                             TracesConfig.from_trace(
-                                Null(
-                                    x_datetime=x_datetime,
-                                ),
+                                Null(x_datetime=x_datetime),
                                 yaxis_config={},
                             ),
                         ),
@@ -248,7 +245,7 @@ class SubPlot(Plot):
                     if is_scene
                     else {
                         f"xaxis{xaxis_str}": {
-                            **axis_dict,
+                            **axis_structure_dict,
                             **self._config.main_axis_configs.xaxis.config,
                             **used_plot_config.xaxis_config,
                             "matches": "x" if self._config.main_axis_configs.xaxis.mode != "independent" else None,
@@ -272,10 +269,10 @@ class SubPlot(Plot):
                             {
                                 f"yaxis{yaxis_str}": {
                                     **(
-                                        axis_dict
+                                        axis_structure_dict
                                         if axis_idx == 0
                                         else {
-                                            **non_primary_axis_dict,
+                                            **non_primary_axis_structure_dict,
                                             "position": get_domain_fraction(
                                                 axis_idx=axis_idx,
                                                 max_yaxis=self._config.max_yaxis,

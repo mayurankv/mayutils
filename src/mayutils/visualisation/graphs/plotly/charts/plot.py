@@ -22,6 +22,7 @@ from mayutils.visualisation.graphs.plotly.charts import (
     DEFAULT_YAXIS_NUM,
     AxisConfig,
     PlotConfig,
+    Trace,
     get_domain_fraction,
     sort_traces_by_axes,
 )
@@ -54,7 +55,6 @@ with may_require_extras():
     from pandas import Series
     from pandas import to_datetime as to_pandas_datetime
     from plotly._subplots import _build_subplot_title_annotations  # pyright: ignore[reportPrivateUsage]  # ty:ignore[unresolved-import]
-    from plotly.basedatatypes import BaseTraceType as Trace
     from plotly.graph_objects import Layout
     from scipy.stats import norm
 
@@ -815,7 +815,7 @@ class Plot(go.Figure):
 
         self.update_layout(
             {
-                "".join(props): callback(current_value),
+                "_".join(props): callback(current_value),
             }
         )
 

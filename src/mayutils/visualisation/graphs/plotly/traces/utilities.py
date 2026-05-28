@@ -2,10 +2,7 @@
 
 from typing import cast
 
-from mayutils.core.extras import may_require_extras
-
-with may_require_extras():
-    from plotly.basedatatypes import BaseTraceType as Trace
+from mayutils.visualisation.graphs.plotly.charts import Trace
 
 
 def is_trace_3d(

@@ -7,16 +7,14 @@ from typing import Any, Literal, Self, cast
 
 from mayutils.core.extras import may_require_extras
 from mayutils.objects.datetime import DateTime
-from mayutils.visualisation.graphs.plotly.charts.plot import Plot
-from mayutils.visualisation.graphs.plotly.charts.subplot import SubPlot
 
 with may_require_extras():
     import datetime
 
-    from plotly.basedatatypes import BaseTraceType as Trace
+    from plotly.basedatatypes import BaseTraceType
 
 AxisConfig = Mapping[str, Any]
-
+Trace = BaseTraceType
 
 DEFAULT_YAXIS_NUM = 1
 
@@ -359,12 +357,13 @@ class MainAxisConfig:
     MainAxisConfig(config={}, mode='shared')
     """
 
-    config: AxisConfig = field(default_factory=AxisConfig)
+    config: AxisConfig = field(default_factory=lambda: cast("AxisConfig", {}))
     mode: Literal["independent", "shared", "collapsed"] = "collapsed"
 
     @classmethod
     def from_dict(
         cls,
+        *,
         mode: Literal["independent", "shared", "collapsed"] = "collapsed",
         **kwargs: object,
     ) -> Self:
@@ -863,6 +862,9 @@ def sort_traces_by_axes(
 
     return traces_axes
 
+
+from mayutils.visualisation.graphs.plotly.charts.plot import Plot  # noqa: E402
+from mayutils.visualisation.graphs.plotly.charts.subplot import SubPlot  # noqa: E402
 
 __all__ = [
     "AxisConfig",

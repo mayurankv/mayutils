@@ -1,5 +1,4 @@
-- src/mayutils/visualisation/graphs/plotly/
-- Notebooks/examples/charts.ipynb
+- markdown.py
 - temp/temp.ipy
 - Templates
 - misc:
@@ -20,9 +19,7 @@ Test out fail imports
 ------------------------------------------------------------
 
 ```plotly
-Combine plotly imports in the init
-Why doesn't the `save` template impact `Subplot` instances?
-subplot.py, stub generation
+stub generation, charts.ipynb examples
 ```
 
 ```documentation

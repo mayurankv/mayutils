@@ -219,22 +219,15 @@ def use_template(
         set_template(template=previous)
 
 
-axis_dict = {
+axis_structure_dict = {
     "showgrid": True,
     "gridwidth": 2,
     "zeroline": True,
     "zerolinewidth": 2,
-    "zerolinecolor": "#283442",
     "showline": True,
     "mirror": True,
-    "gridcolor": "#283442",
-    "linecolor": "#506784",
     "minor": {
         "showgrid": True,
-        "gridcolor": hex_to_rgba(
-            cast("str", PLOTLY_DARK_TEMPLATE.layout.xaxis.gridcolor),  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
-            alpha=0.4,
-        ),
     },
     "title": {
         "standoff": 10,
@@ -246,6 +239,19 @@ axis_dict = {
         "size": 12,
     },
     "ticklabelmode": "period",
+}
+axis_dict = {
+    **axis_structure_dict,
+    "zerolinecolor": "#283442",
+    "gridcolor": "#283442",
+    "linecolor": "#506784",
+    "minor": {
+        "showgrid": True,
+        "gridcolor": hex_to_rgba(
+            cast("str", PLOTLY_DARK_TEMPLATE.layout.xaxis.gridcolor),  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
+            alpha=0.4,
+        ),
+    },
 }
 scene_axis_dict = {
     "backgroundcolor": TRANSPARENT,
@@ -259,8 +265,8 @@ scene_axis_dict = {
     "showline": True,
     "mirror": True,
 }
-non_primary_axis_dict = {
-    **axis_dict,
+non_primary_axis_structure_dict = {
+    **axis_structure_dict,
     "side": "right",
     "anchor": "x",
     "overlaying": "y",
@@ -270,6 +276,10 @@ non_primary_axis_dict = {
     "minor": {
         "showgrid": False,
     },
+}
+non_primary_axis_dict = {
+    **axis_dict,
+    **non_primary_axis_structure_dict,
 }
 save_axis_dict = {
     "zerolinecolor": "rgba(200,200,200,0.5)",
