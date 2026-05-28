@@ -753,6 +753,33 @@ class Plot(go.Figure):
         *,
         fallback: bool = False,
     ) -> Any:  # noqa: ANN401
+        """
+        Read a nested layout property by path.
+
+        Traverses the layout using *props* as successive attribute names.
+        When *fallback* is ``True`` and the value is ``None``, retries
+        against the active template layout.
+
+        Parameters
+        ----------
+        props
+            Attribute path, e.g. ``["margin", "t"]``.
+        fallback
+            When ``True``, fall back to the template layout if the
+            value is ``None``.
+
+        Returns
+        -------
+            The resolved layout value, or ``None``.
+
+        See Also
+        --------
+        Plot.adjust_layout : Modify a nested layout property in-place.
+
+        Examples
+        --------
+        >>> plot.get_layout_value(["margin", "t"])  # doctest: +SKIP
+        """
         current_value = get_layout_value(self.layout, props=props)
 
         if current_value is None and fallback:

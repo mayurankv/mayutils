@@ -1,3 +1,5 @@
+"""Multi-panel subplot chart built on :class:`Plot`."""
+
 from collections.abc import Mapping
 from typing import Any, cast
 
@@ -25,6 +27,49 @@ from mayutils.visualisation.graphs.plotly.traces import (
 
 
 class SubPlot(Plot):
+    """
+    Multi-panel subplot chart.
+
+    Extends :class:`Plot` with a grid layout defined by a
+    :class:`SubPlotConfig`.  Handles domain computation, shared/independent
+    axis modes, and automatic title placement for rows, columns, and
+    individual cells.
+
+    Parameters
+    ----------
+    config
+        Subplot grid definition including plots, axis configs, and titles.
+    description
+        Human-readable label used for filenames and identification.
+    layout
+        Additional Plotly layout overrides applied after grid setup.
+    fill_nulls
+        When ``True``, empty cells receive an invisible :class:`Null` trace
+        so their axes are initialised.
+    x_spacing
+        Override horizontal spacing between columns.
+    y_spacing
+        Override vertical spacing between rows.
+    title_styles
+        Mapping with optional ``"line"`` and ``"plot"`` keys controlling
+        font styles for row/column and cell titles respectively.
+    line_title_offsets
+        ``(row_offset, col_offset)`` in pixels for row and column title
+        placement.
+    **kwargs
+        Forwarded to :class:`Plot`.
+
+    See Also
+    --------
+    Plot : Single-panel base class.
+    SubPlotConfig : Grid configuration dataclass.
+
+    Examples
+    --------
+    >>> from mayutils.visualisation.graphs.plotly.charts.subplot import SubPlot
+    >>> SubPlot(config, description="grid")  # doctest: +SKIP
+    """
+
     def __init__(
         self,
         config: SubPlotConfig,
@@ -39,6 +84,42 @@ class SubPlot(Plot):
         line_title_offsets: tuple[float, float] | None = None,
         **kwargs: Any,  # noqa: ANN401
     ) -> None:
+        """
+        Build the subplot grid, add titles, and populate traces.
+
+        Delegates to :meth:`add_titles` and :meth:`add_plots` after
+        computing domains from the supplied *config*.
+
+        Parameters
+        ----------
+        config
+            Subplot grid definition.
+        description
+            Human-readable label.
+        layout
+            Additional layout overrides.
+        fill_nulls
+            Fill empty cells with invisible traces.
+        x_spacing
+            Horizontal spacing override.
+        y_spacing
+            Vertical spacing override.
+        title_styles
+            Font styles for titles.
+        line_title_offsets
+            Pixel offsets for row/column titles.
+        **kwargs
+            Forwarded to :class:`Plot`.
+
+        See Also
+        --------
+        SubPlot.add_titles : Title placement logic.
+        SubPlot.add_plots : Trace population logic.
+
+        Examples
+        --------
+        >>> SubPlot(config, description="grid")  # doctest: +SKIP
+        """
         if layout is None:
             layout = {}
 
@@ -93,6 +174,29 @@ class SubPlot(Plot):
         title_styles: Mapping[str, Any] | None = None,
         line_title_offsets: tuple[float, float] | None = None,
     ) -> None:
+        """
+        Place main, row, column, and per-cell titles on the figure.
+
+        Reads title text from :attr:`_config.titles` and positions each
+        annotation using the pre-computed domain arrays.
+
+        Parameters
+        ----------
+        title_styles
+            Mapping with optional ``"line"`` and ``"plot"`` keys for
+            font styling overrides.
+        line_title_offsets
+            ``(row_offset, col_offset)`` pixel offsets for row and
+            column title annotations.
+
+        See Also
+        --------
+        SubPlot.add_plots : Companion method that populates traces.
+
+        Examples
+        --------
+        >>> subplot.add_titles()  # doctest: +SKIP
+        """
         if title_styles is None:
             line_title_styles: dict[str, Any] = {}
             plot_title_styles: dict[str, Any] = {}
@@ -205,6 +309,27 @@ class SubPlot(Plot):
         *,
         fill_nulls: bool = True,
     ) -> None:
+        """
+        Populate every subplot cell with its configured traces.
+
+        Iterates the grid, assigns x/y axes or 3-D scenes, and adds
+        traces to the figure.  Empty cells receive an invisible
+        :class:`Null` trace when *fill_nulls* is ``True``.
+
+        Parameters
+        ----------
+        fill_nulls
+            When ``True``, empty cells get a :class:`Null` placeholder
+            trace so their axes are initialised.
+
+        See Also
+        --------
+        SubPlot.add_titles : Companion method that places titles.
+
+        Examples
+        --------
+        >>> subplot.add_plots()  # doctest: +SKIP
+        """
         x_datetime = self._config.infer_x_datetime()
 
         scene_count = 0

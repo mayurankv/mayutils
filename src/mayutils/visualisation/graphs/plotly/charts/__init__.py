@@ -582,6 +582,24 @@ class SubPlotConfig:
     def max_yaxis(
         self,
     ) -> int:
+        """
+        Return the maximum number of y-axes across all subplot cells.
+
+        Scans every :class:`PlotConfig` in the grid and returns the
+        largest ``yaxes_configs`` length found.
+
+        Returns
+        -------
+            Maximum y-axis count.
+
+        See Also
+        --------
+        SubPlotConfig.plot_count : Total number of subplot cells.
+
+        Examples
+        --------
+        >>> config.max_yaxis  # doctest: +SKIP
+        """
         return max(
             len(plot_config.yaxes_configs) if plot_config is not None else 0
             for row_plot_configs in self.plots
@@ -592,6 +610,23 @@ class SubPlotConfig:
     def plot_count(
         self,
     ) -> int:
+        """
+        Return the total number of subplot cells in the grid.
+
+        Computed as ``rows * cols`` from the :attr:`plots` array shape.
+
+        Returns
+        -------
+            Total cell count.
+
+        See Also
+        --------
+        SubPlotConfig.max_yaxis : Maximum y-axes per cell.
+
+        Examples
+        --------
+        >>> config.plot_count  # doctest: +SKIP
+        """
         return len(self.plots) * len(self.plots[0])
 
     def get_domains(
@@ -600,6 +635,34 @@ class SubPlotConfig:
         x_spacing: float | None = None,
         y_spacing: float | None = None,
     ) -> tuple[list[list[float]], list[list[float]]]:
+        """
+        Compute x and y domain pairs for every subplot cell.
+
+        Determines spacing from the axis sharing modes when explicit
+        values are not provided, then delegates to :func:`get_domains`.
+
+        Parameters
+        ----------
+        x_spacing
+            Override for horizontal spacing; inferred from axis modes
+            when ``None``.
+        y_spacing
+            Override for vertical spacing; inferred from axis modes
+            when ``None``.
+
+        Returns
+        -------
+            ``(x_domains, y_domains)`` where each is a list of
+            ``[start, end]`` pairs.
+
+        See Also
+        --------
+        get_domains : Module-level helper that performs the calculation.
+
+        Examples
+        --------
+        >>> config.get_domains()  # doctest: +SKIP
+        """
         default_spacing = {
             "x": {
                 "collapsed": 0.01,
@@ -666,6 +729,24 @@ class SubPlotConfig:
     def infer_x_datetime(
         self,
     ) -> bool:
+        """
+        Detect whether any trace in the grid uses datetime x-values.
+
+        Scans all traces across every subplot cell, checking whether the
+        first element of the ``x`` array is a date or datetime type.
+
+        Returns
+        -------
+            ``True`` if at least one trace has datetime x-values.
+
+        See Also
+        --------
+        SubPlotConfig.get_domains : Companion method for layout computation.
+
+        Examples
+        --------
+        >>> config.infer_x_datetime()  # doctest: +SKIP
+        """
         for row_configs in self.plots:
             for plot_config in row_configs:
                 if plot_config is None:
