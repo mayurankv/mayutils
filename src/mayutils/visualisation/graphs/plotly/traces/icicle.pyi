@@ -43,3 +43,8 @@ class Icicle(go.Icicle):
         visible: bool | str | None = ...,
         **kwargs: Any,  # noqa: ANN401
     ) -> Icicle: ...
+
+def build_icicle(
+    icicle_dict: RecursiveMapping[str, float],
+    /,
+) -> tuple[list[str], list[str], list[str], list[float]]: ...

@@ -1,15 +1,11 @@
 # pyright: reportUnusedImport=false
-from collections.abc import Callable, Hashable, Iterator, Mapping, Sequence
-from pathlib import Path
-from typing import Any, Literal, Self, final
+from collections.abc import Callable, Hashable, Mapping, Sequence
+from typing import Any, Self
 
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
 from plotly.basedatatypes import BaseFigure, BaseLayoutHierarchyType, BaseTraceType
-from plotly.basedatatypes import BaseTraceType as Trace
 from plotly.graph_objs import (
-    Layout,
     bar,
     barpolar,
     box,
@@ -62,195 +58,37 @@ from plotly.graph_objs import (
     waterfall,
 )
 
-from mayutils.objects.colours import Colour
-from mayutils.objects.datetime import Date, DateTime, Interval
 from mayutils.visualisation.graphs.plotly.charts import (
-    AxisConfig,
-    PlotConfig,
+    SubPlotConfig,
 )
+from mayutils.visualisation.graphs.plotly.charts.plot import Plot
 
-class Plot(go.Figure):
+class SubPlot(Plot):
     def __init__(
         self,
-        config: PlotConfig,
+        config: SubPlotConfig,
         /,
         *,
         description: str,
-        layout: Mapping[str, Any] | Layout | None = None,
-        modification_kwargs: Mapping[str, Any] | None = None,
+        layout: Mapping[str, Any] | None = None,
+        fill_nulls: bool = True,
+        x_spacing: float | None = None,
+        y_spacing: float | None = None,
+        title_styles: Mapping[str, Any] | None = None,
+        line_title_offsets: tuple[float, float] | None = None,
         **kwargs: Any,
     ) -> None: ...
-    @property
-    def description(self) -> str: ...
-    @property
-    def num_traces(self) -> int: ...
-    @classmethod
-    def from_traces(
-        cls,
-        *traces: Trace,
-        description: str,
-        xaxis_config: AxisConfig | None = None,
-        yaxis_config: AxisConfig | None = None,
-        layout: Mapping[str, Any] | Layout | None = None,
-        **kwargs: Any,
-    ) -> Self: ...
-    @classmethod
-    def from_figure(
-        cls,
-        fig: go.Figure,
-        /,
-        *,
-        description: str,
-    ) -> Self: ...
-    @classmethod
-    def from_existing(
-        cls,
-        plot: Plot,
-        /,
-        *,
-        description: str,
-    ) -> Self: ...
-    @classmethod
-    def empty(
-        cls,
-        *,
-        description: str,
-    ) -> Self: ...
-    @classmethod
-    def as_dropdown(
-        cls,
-        description: str,
-        **plots: Self,
-    ) -> Self: ...
-    def to_figure(self) -> go.Figure: ...
-    def empty_traces(self) -> Self: ...
-    def add_title(
-        self,
-        title: str,
-        /,
-        *,
-        edge: Literal["left", "right", "top", "bottom"] = "right",
-        offset: float = 30,
-        x_domain: tuple[float, float] = (0, 1),
-        y_domain: tuple[float, float] = (0, 1),
-        **kwargs: Any,
-    ) -> Self: ...
-    def pipe(self, func: Callable[[Self], Self]) -> Self: ...
-    def get_layout_value(
-        self,
-        props: Sequence[str],
-        /,
-        *,
-        fallback: bool = False,
-    ) -> Any: ...
-    def adjust_layout(
-        self,
-        props: Sequence[str],
-        /,
-        *,
-        callback: Callable[[Any | None], Any],
-        fallback: bool = False,
-    ) -> Self: ...
-    def shift_title(self, offset: int) -> Self: ...
-    def show(  # pyright: ignore[reportIncompatibleMethodOverride] # ty:ignore[invalid-method-override]
+    def add_titles(
         self,
         *,
-        renderer: str | None = None,
-        validate: bool = True,
-        width: float | None = None,
-        height: float | None = None,
-        config: Mapping[str, Any] | None = None,
-        layout: Mapping[str, Any] | Layout | None = None,
-        **kwargs: Any,
+        title_styles: Mapping[str, Any] | None = None,
+        line_title_offsets: tuple[float, float] | None = None,
     ) -> None: ...
-    def copy(self, description: str | None = None) -> Self: ...
-    def save(
-        self,
-        path: Path | str | None,
-        /,
-        *,
-        formats: Sequence[str] = (),
-        scale: int | None = 5,
-        template: str | None = None,
-        overwrite: bool = True,
-        **kwargs: Any,
-    ) -> Path: ...
-    def __iter__(  # pyright: ignore[reportIncompatibleMethodOverride]  # ty:ignore[invalid-method-override]
-        self,
-    ) -> Iterator[Trace]: ...
-    def set_bound_group_colours(
+    def add_plots(
         self,
         *,
-        fill_opacity: float = 0.1,
-    ) -> Self: ...
-    def set_trace_colours(
-        self,
-        *,
-        fill_opacity: float = 0.1,
-    ) -> Self: ...
-    def modifications(
-        self,
-        *,
-        fill_opacity: float = 0.1,
-    ) -> Self: ...
-    def add_histogram_gaussians(self) -> Self: ...
-    @final
-    def add_rug(
-        self,
-        *,
-        rug_type: Literal["scatter", "violin", "box", "strip", "histogram", "ecdf"] = "scatter",
-        rug_height: float | None = None,
-        **kwargs: Any,
-    ) -> Self: ...
-    def trace(
-        self,
-        idx: int,
-        /,
-    ) -> Trace: ...
-    def get_traces_by_type(
-        self,
-        trace_type: str,
-        /,
-    ) -> Iterator[tuple[int, Trace]]: ...
-    def add_button(
-        self,
-        button: Mapping[str, Any],
-        /,
-        *,
-        menu_index: int = 0,
-    ) -> Self: ...
-    def add_histogram_to_2d_scatter(
-        self,
-        *,
-        colour: Colour | None = None,
-        index_used: int = 99,
-        **kwargs: Any,
-    ) -> Self: ...
-    def add_kde_to_histogram(self, **kwargs: Any) -> Self: ...
-    def add_heatmap_alternative_to_3d_bar(self) -> Self: ...
-    def add_default_extras(self) -> Self: ...
-    def add_interval(
-        self,
-        interval: Interval[Date] | Interval[DateTime] | None,
-        /,
-        **kwargs: Any,
-    ) -> Self: ...
-    def hide_traces(
-        self,
-        names: Sequence[str],
-        /,
-    ) -> Self: ...
-    def set_visible_y_range(
-        self,
-        *,
-        y_padding: float = 0.05,
-    ) -> Self: ...
-    def __call__(
-        self,
-        *,
-        save: bool = True,
-        show: bool = True,
-    ) -> Self: ...
+        fill_nulls: bool = True,
+    ) -> None: ...
     def update(
         self,
         dict1: dict[str, Any] = ...,

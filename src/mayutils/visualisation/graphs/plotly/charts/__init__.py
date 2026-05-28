@@ -6,13 +6,19 @@ from math import ceil, isqrt
 from typing import Any, Literal, Self, cast
 
 from mayutils.core.extras import may_require_extras
+from mayutils.objects.datetime import DateTime
 from mayutils.visualisation.graphs.plotly.charts.plot import Plot
 from mayutils.visualisation.graphs.plotly.charts.subplot import SubPlot
 
 with may_require_extras():
+    import datetime
+
     from plotly.basedatatypes import BaseTraceType as Trace
 
 AxisConfig = Mapping[str, Any]
+
+
+DEFAULT_YAXIS_NUM = 1
 
 
 @dataclass
@@ -511,12 +517,9 @@ class SubPlotConfig:
         if self.titles.plots is None:
             self.titles.plots = tuple(tuple("" for _ in range(len(self.plots[0]))) for _ in range(len(self.plots)))
 
-        max_yaxis = max(
-            len(plot_config.yaxes_configs) if plot_config is not None else 0
-            for row_plot_configs in self.plots
-            for plot_config in row_plot_configs
-        )
-        self.main_axis_configs.yaxes = (self.main_axis_configs.yaxes + tuple(MainAxisConfig() for _ in range(max_yaxis)))[:max_yaxis]
+        self.main_axis_configs.yaxes = (self.main_axis_configs.yaxes + tuple(MainAxisConfig() for _ in range(self.max_yaxis)))[
+            : self.max_yaxis
+        ]
 
     @classmethod
     def flat(
@@ -527,7 +530,7 @@ class SubPlotConfig:
         cols: int | None = None,
         main_axis_configs: MainAxisConfigs | None = None,
         titles: Titles | None = None,
-    ) -> "SubPlotConfig":
+    ) -> Self:
         """
         Arrange a flat sequence of plots into a grid with automatic row wrapping.
 
@@ -575,6 +578,118 @@ class SubPlotConfig:
             main_axis_configs=main_axis_configs,
             titles=titles,
         )
+
+    @property
+    def max_yaxis(
+        self,
+    ) -> int:
+        return max(
+            len(plot_config.yaxes_configs) if plot_config is not None else 0
+            for row_plot_configs in self.plots
+            for plot_config in row_plot_configs
+        )
+
+    @property
+    def plot_count(
+        self,
+    ) -> int:
+        return len(self.plots) * len(self.plots[0])
+
+    def get_domains(
+        self,
+        *,
+        x_spacing: float | None = None,
+        y_spacing: float | None = None,
+    ) -> tuple[list[list[float]], list[list[float]]]:
+        default_spacing = {
+            "x": {
+                "collapsed": 0.01,
+                "shared": 0.06,
+                "independent": 0.06,
+            },
+            "y": {
+                "collapsed": 0.025,
+                "shared": 0.08,
+                "independent": 0.08,
+            },
+        }
+
+        x_spacing = (
+            x_spacing
+            if x_spacing is not None
+            else (
+                default_spacing["x"]["collapsed"]
+                if all(yaxis_info.mode == "collapsed" for yaxis_info in self.main_axis_configs.yaxes)
+                else (
+                    default_spacing["x"]["independent"]
+                    if any(yaxis_info.mode == "independent" for yaxis_info in self.main_axis_configs.yaxes)
+                    else default_spacing["x"]["shared"]
+                )
+            )
+        )
+        y_spacing = (
+            y_spacing
+            if y_spacing is not None
+            else (
+                default_spacing["y"]["collapsed"]
+                if self.main_axis_configs.xaxis.mode == "collapsed"
+                else (
+                    default_spacing["y"]["independent"]
+                    if self.main_axis_configs.xaxis.mode == "independent"
+                    else default_spacing["y"]["shared"]
+                )
+            )
+        )
+
+        max_yaxis = max(
+            len(plot_config.yaxes_configs) if plot_config is not None else 0
+            for row_plot_configs in self.plots
+            for plot_config in row_plot_configs
+        )
+
+        x_domains = get_domains(
+            spacing=x_spacing * max_yaxis,
+            num_axes=len(self.plots[0]),
+            fraction=get_domain_fraction(
+                axis_idx=1,
+                max_yaxis=max_yaxis,
+            )
+            if max_yaxis > DEFAULT_YAXIS_NUM + 1
+            else 1,
+        )
+        y_domains = get_domains(
+            spacing=y_spacing + (0.025 if self.titles.plots is not None else 0),
+            num_axes=len(self.plots),
+        )
+
+        return x_domains, y_domains
+
+    def infer_x_datetime(
+        self,
+    ) -> bool:
+        for row_configs in self.plots:
+            for plot_config in row_configs:
+                if plot_config is None:
+                    continue
+                for traces_config in plot_config.yaxes_configs:
+                    for trace in traces_config.traces:
+                        x = getattr(trace, "x", None)
+                        if x is not None and len(x) > 0:
+                            is_datetime = isinstance(x[0], (datetime.date, datetime.datetime))
+
+                            if is_datetime:
+                                return True
+
+                            try:
+                                DateTime.parse(x[0])
+                                is_datetime = True
+                            except ValueError:
+                                pass
+
+                            if is_datetime:
+                                return True
+
+        return False
 
 
 def pop_axis_config_title(

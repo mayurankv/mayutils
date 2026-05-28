@@ -19,6 +19,7 @@ from mayutils.objects.datetime import Date, DateTime, Interval
 from mayutils.objects.functions import set_inline
 from mayutils.objects.paths import resolve_save_path
 from mayutils.visualisation.graphs.plotly.charts import (
+    DEFAULT_YAXIS_NUM,
     AxisConfig,
     PlotConfig,
     get_domain_fraction,
@@ -58,8 +59,6 @@ with may_require_extras():
     from scipy.stats import norm
 
 logger = Logger.spawn()
-
-DEFAULT_YAXIS_NUM = 1
 
 TRACE_IDENTIFIERS = {
     TraceType.BAR3D: Bar3d,
@@ -147,6 +146,7 @@ class Plot(go.Figure):
         if modification_kwargs is None:
             modification_kwargs = {}
 
+        self._config = config
         self._description = description
 
         super().__init__(
@@ -746,6 +746,21 @@ class Plot(go.Figure):
 
         return self
 
+    def get_layout_value(
+        self,
+        props: Sequence[str],
+        /,
+        *,
+        fallback: bool = False,
+    ) -> Any:  # noqa: ANN401
+        current_value = get_layout_value(self.layout, props=props)
+
+        if current_value is None and fallback:
+            template_layout = get_template_layout(get_template())
+            current_value = get_layout_value(template_layout, props=props)
+
+        return current_value
+
     def adjust_layout(
         self,
         props: Sequence[str],
@@ -789,17 +804,20 @@ class Plot(go.Figure):
         --------
         >>> plot.adjust_layout(["margin", "t"], callback=lambda v: (v or 0) + 20)  # doctest: +SKIP
         """
-        current_value = get_layout_value(self.layout, props=props)
-
-        if current_value is None and fallback:
-            template_layout = get_template_layout(get_template())
-            current_value = get_layout_value(template_layout, props=props)
+        current_value = self.get_layout_value(
+            props,
+            fallback=fallback,
+        )
 
         if isinstance(current_value, Layout):
             msg = "Do not adjust Layout instance directly"
             raise TypeError(msg)
 
-        self.update_layout({"".join(props): callback(current_value)})
+        self.update_layout(
+            {
+                "".join(props): callback(current_value),
+            }
+        )
 
         return self
 
