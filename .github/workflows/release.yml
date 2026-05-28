@@ -5,20 +5,21 @@ on:
     tags:
       - "v*"
 
-permissions:
-  contents: write
+permissions: {}
 
 jobs:
   release:
     name: Build, publish, and release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@c0c76fcf76c37099e6a452584d04b015240faefc # main
         with:
           enable-cache: true
           cache-dependency-glob: uv.lock

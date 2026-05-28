@@ -225,15 +225,13 @@ class Drive:
         >>> isinstance(drive, Drive)  # doctest: +SKIP
         True
         """
-        drive_service: DriveResource = build(  # pyright: ignore[reportUnknownVariableType]
+        drive_service = build(
             serviceName="drive",
             version="v3",
             credentials=creds,
         )
 
-        return cls(
-            drive_service,  # pyright: ignore[reportUnknownArgumentType]
-        )
+        return cls(drive_service)
 
     def query_files(
         self,
