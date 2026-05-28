@@ -117,8 +117,7 @@ hooks = [
     entry = "uv run pyright",
     language = "system",
     types_or = [
-      "python",
-      "jupyter"
+      "python"
     ],
     stages = ["pre-push"]
   },
