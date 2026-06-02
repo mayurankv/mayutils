@@ -6,8 +6,12 @@ metadata and the ``requires_extras`` context manager.
 
 from __future__ import annotations
 
+from importlib import metadata
+from typing import TYPE_CHECKING
+
 import pytest
 
+from mayutils.core import extras
 from mayutils.core.extras import (
     extras_for_module,
     format_missing_extra_hint,
@@ -17,6 +21,9 @@ from mayutils.core.extras import (
     parse_requires_dist_line,
     requires_extras,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 class TestParseRequiresDist:
@@ -56,6 +63,76 @@ class TestModulesForDistribution:
     def test_naive_heuristic_for_unknown_dist(self) -> None:
         """Uninstalled distributions fall back to ``name.replace("-", "_")``."""
         assert modules_for_distribution("totally-made-up-xyz") == ("totally_made_up_xyz",)
+
+
+@pytest.fixture
+def all_dists_uninstalled(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Make every distribution look uninstalled, as in a fresh ``mayutils`` install.
+
+    This forces :func:`modules_for_distribution` down the not-installed path for
+    *all* optional dependencies — the exact scenario in which the install hints
+    matter — without uninstalling anything from the dev environment. The
+    ``mayutils`` distribution metadata itself is read via :func:`metadata.metadata`
+    (not :func:`metadata.distribution`) so it stays available.
+
+    Yields
+    ------
+        Control while the patch is active; the extras-map cache is cleared on
+        both entry and exit so neither this test nor its neighbours see stale data.
+    """
+
+    def _raise(distribution_name: str) -> metadata.Distribution:
+        raise metadata.PackageNotFoundError(distribution_name)
+
+    monkeypatch.setattr(extras.metadata, "distribution", _raise)
+    load_extras_map.cache_clear()
+    yield
+    load_extras_map.cache_clear()
+
+
+@pytest.mark.usefixtures("all_dists_uninstalled")
+class TestModulesForDistributionOverrides:
+    """Tests for the curated import-name override table.
+
+    For distributions whose import name differs from the distribution name
+    (for example ``pillow`` exposes ``PIL``), the naive
+    ``name.replace("-", "_")`` heuristic produces the wrong module name when the
+    distribution is uninstalled — which is precisely when an install hint is
+    needed. A curated override table must supply the correct import name(s).
+    """
+
+    @pytest.mark.parametrize(
+        ("dist", "expected_module"),
+        [
+            ("pillow", "PIL"),
+            ("python-pptx", "pptx"),
+            ("python-docx", "docx"),
+            ("python-dotenv", "dotenv"),
+            ("pymupdf", "fitz"),
+            ("scikit-learn", "sklearn"),
+            ("google-api-python-client", "googleapiclient"),
+            ("google-cloud-storage", "google"),
+            ("snowflake-connector-python", "snowflake"),
+            ("gitpython", "git"),
+        ],
+    )
+    def test_override_used_when_uninstalled(
+        self,
+        dist: str,
+        expected_module: str,
+    ) -> None:
+        """An uninstalled name-mismatched dist resolves to its real import name."""
+        assert expected_module in modules_for_distribution(dist)
+
+    def test_extras_resolve_for_mismatched_module_when_uninstalled(self) -> None:
+        """``extras_for_module`` maps the real import name to its extras with nothing installed.
+
+        This is the end-to-end regression for the original bug: importing
+        ``mayutils.objects.colours`` without ``pillow`` produced a generic
+        "not installed" message instead of an actionable ``mayutils[...]`` hint.
+        """
+        assert extras_for_module("PIL") == frozenset({"pdf", "plotting"})
+        assert extras_for_module("pptx") == frozenset({"microsoft"})
 
 
 class TestExtrasForModule:

@@ -45,6 +45,28 @@ if TYPE_CHECKING:
 
 DISTRIBUTION_NAME = "mayutils"
 
+# Import names for distributions whose top-level module differs from the
+# ``name.replace("-", "_")`` heuristic. ``modules_for_distribution`` reads the
+# authoritative ``top_level.txt`` when a distribution is installed, but falls
+# back to the heuristic when it is not — which is exactly when an install hint
+# is needed. These overrides keep the hint actionable for the name-mismatched
+# optional dependencies declared in ``pyproject.toml``. Keys are PEP 503
+# normalised distribution names (see :func:`normalise_dist_name`).
+DIST_MODULE_OVERRIDES: dict[str, tuple[str, ...]] = {
+    "pillow": ("PIL",),
+    "python-pptx": ("pptx",),
+    "python-docx": ("docx",),
+    "python-dotenv": ("dotenv",),
+    "pymupdf": ("pymupdf", "fitz"),
+    "scikit-learn": ("sklearn",),
+    "google-api-python-client": ("googleapiclient",),
+    "google-auth": ("google",),
+    "google-cloud-storage": ("google",),
+    "snowflake-connector-python": ("snowflake",),
+    "snowflake-sqlalchemy": ("snowflake",),
+    "gitpython": ("git",),
+}
+
 
 def normalise_dist_name(
     dist: str,
@@ -106,11 +128,13 @@ def modules_for_distribution(
     Reads ``top_level.txt`` from the installed distribution's dist-info
     metadata when available, which is the authoritative source of the
     import names a distribution exposes. If the distribution is not
-    installed or has no ``top_level.txt``, a single-element tuple is
-    returned using the hyphen-to-underscore fallback. This best-effort
-    fallback is correct for most PyPI packages but can miss cases where
-    the import name differs from the distribution name (for example
+    installed or has no ``top_level.txt``, the curated
+    :data:`DIST_MODULE_OVERRIDES` table is consulted for distributions
+    whose import name differs from the distribution name (for example
     ``pillow`` exposes ``PIL`` and ``scikit-learn`` exposes ``sklearn``).
+    Distributions absent from both metadata and the override table fall
+    back to a single-element tuple built with the hyphen-to-underscore
+    heuristic, which is correct for most PyPI packages.
 
     Parameters
     ----------
@@ -160,7 +184,12 @@ def modules_for_distribution(
             if modules:
                 return modules
 
-    return (normalise_dist_name(dist).replace("-", "_"),)
+    normalised = normalise_dist_name(dist)
+    override = DIST_MODULE_OVERRIDES.get(normalised)
+    if override is not None:
+        return override
+
+    return (normalised.replace("-", "_"),)
 
 
 def parse_requires_dist_line(
