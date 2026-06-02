@@ -896,7 +896,7 @@ def set_paragraph_task(
 def process_list_item(
     *,
     text_frame: TextFrame,
-    token: dict[str, object],
+    token: dict[str, Any],
     level: int,
     numbered: bool,
     first_paragraph: bool,
@@ -981,7 +981,7 @@ def process_list_item(
     ...     text_frame=shape.text_frame,
     ... )
     """
-    children = token.get("children", [])
+    children: list[dict[str, Any]] = token.get("children", [])
 
     for child in children:
         child_type = child.get("type")
@@ -1051,7 +1051,7 @@ def process_list_item(
 def process_list(
     *,
     text_frame: TextFrame,
-    token: dict[str, object],
+    token: dict[str, Any],
     level: int,
     first_paragraph: bool,
     font_size: int | None,
@@ -1285,7 +1285,7 @@ def add_markdown_to_text_frame(  # noqa: C901, PLR0912, PLR0915
 
     # Parse markdown to AST
     parser = create_markdown_parser(renderer=None)
-    tokens = cast("list[dict[str, object]]", parser(markdown))
+    tokens = cast("list[dict[str, Any]]", parser(markdown))
 
     # Validate that markdown only contains lists when from_placeholder=True
     if from_placeholder:
@@ -1298,7 +1298,7 @@ def add_markdown_to_text_frame(  # noqa: C901, PLR0912, PLR0915
 
     # Track whether we've used the first paragraph
     first_paragraph = True
-    footnotes_content: dict[str, list[dict[str, object]]] = {}
+    footnotes_content: dict[str, list[dict[str, Any]]] = {}
 
     # Process block-level tokens
     for token in tokens:
