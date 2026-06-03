@@ -131,11 +131,20 @@ hooks = [
   },
   {
     id = "refresh-stubs",
-    name = "Refresh pyright type stubs",
+    name = "Refresh pyright + plotly type stubs",
     entry = "uv run --extra all refresh_stubs --since HEAD",
     language = "system",
     pass_filenames = false,
     files = '^(pyproject\.toml|uv\.lock)$',
+    stages = ["pre-push"]
+  },
+  {
+    id = "regenerate-plotly-stubs",
+    name = "Regenerate in-source plotly stubs",
+    entry = "uv run --extra all generate_plotly_stubs",
+    language = "system",
+    pass_filenames = false,
+    files = '^src/mayutils/visualisation/graphs/plotly/(traces|charts)/.*\.py$',
     stages = ["pre-push"]
   }
 ]

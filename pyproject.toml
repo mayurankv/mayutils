@@ -16,6 +16,7 @@ dev = [
   "numpydoc>=1.8",
   "pre-commit>=4.3.0",
   "prek>=0.3.11",
+  "pyright>=1.1.405",
   "pytest>=8.4.2",
   "ruff>=0.14.2",
   "toml-sort>=0.24",

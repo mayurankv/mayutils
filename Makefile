@@ -70,8 +70,7 @@ publish:
 
 .PHONY: stubs
 stubs:
-	PYTHONPATH=src uv run stubgen -p $(PACKAGE_NAME) --include-docstrings --output typings
-	$(MAKE) format
+	uv run --all-extras refresh_stubs
 
 .PHONY: run
 run:

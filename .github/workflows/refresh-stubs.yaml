@@ -1,13 +1,10 @@
 name: Refresh Stubs
 
 on:
-  # Weekly cadence — Monday 06:00 UTC
   schedule:
     - cron: "0 6 * * 1"
-  # Manual trigger for on-demand refreshes
   workflow_dispatch:
 
-# Minimal default permissions — jobs opt into more only when they need it.
 permissions:
   contents: read
 
@@ -15,18 +12,11 @@ env:
   PR_BRANCH: chore/refresh-stubs
   PR_TITLE: "chore: refresh pyright type stubs"
   PR_BODY: |
-    Automated refresh of third-party type stubs via `uv run refresh_stubs`.
+    Automated refresh of third-party (pyright) and in-source plotly type stubs via `uv run refresh_stubs`.
     Review the diff for any upstream API changes that may break downstream code.
   STUBS_ARTIFACT: refreshed-typings
 
 jobs:
-  # ---------------------------------------------------------------------------
-  # Runs every installed third-party package through pyright + ruff to
-  # regenerate stubs. Intentionally runs with only ``contents: read`` so that
-  # a compromised transitive dependency cannot push to the repo, open PRs or
-  # trigger other workflows. Output is exported to the publish job via an
-  # artefact rather than a direct git operation.
-  # ---------------------------------------------------------------------------
   refresh:
     runs-on: ubuntu-latest
     permissions:
@@ -51,10 +41,15 @@ jobs:
       - name: Refresh type stubs
         run: uv run refresh_stubs --verbose
 
+      - name: Validate regenerated stubs
+        run: |
+          uv run ty check src/ tests/
+          uv run pyright
+
       - name: Detect changes
         id: diff
         run: |
-          if [[ -n "$(git status --porcelain typings/)" ]]; then
+          if [[ -n "$(git status --porcelain typings/ src/mayutils/visualisation/graphs/plotly/)" ]]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -65,16 +60,12 @@ jobs:
         uses: actions/upload-artifact@main
         with:
           name: ${{ env.STUBS_ARTIFACT }}
-          path: typings/
+          path: |
+            typings/
+            src/mayutils/visualisation/graphs/plotly/
           include-hidden-files: true
           retention-days: 1
 
-  # ---------------------------------------------------------------------------
-  # Runs only when ``refresh`` reported drift. Does no third-party package
-  # execution — only a clean checkout, artefact download, git + gh shell
-  # commands — so the write tokens it holds are exposed to a minimal,
-  # auditable surface.
-  # ---------------------------------------------------------------------------
   publish:
     runs-on: ubuntu-latest
     needs: refresh
@@ -90,14 +81,13 @@ jobs:
         uses: actions/download-artifact@main
         with:
           name: ${{ env.STUBS_ARTIFACT }}
-          path: typings/
 
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B "${PR_BRANCH}"
-          git add typings/
+          git add typings/ src/mayutils/visualisation/graphs/plotly/
           git commit -m "${PR_TITLE}"
           git push --force-with-lease origin "${PR_BRANCH}"
 

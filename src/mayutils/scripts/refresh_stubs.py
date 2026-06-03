@@ -873,6 +873,48 @@ def run_pyright(
     )
 
 
+def apply_plotly_overlay(
+    *,
+    dry_run: bool = False,
+) -> None:
+    """
+    Re-apply the bespoke plotly stub overrides on top of the pyright baseline.
+
+    ``pyright --createstub plotly`` regenerates ``typings/plotly/`` from the
+    live package, overwriting the hand-curated overrides, so this overlay
+    step runs the plotly generator afterwards to restore them and rewrite
+    the in-source trace and chart stubs. The plotly generator is imported
+    lazily so :func:`refresh` stays usable without the ``plotting`` extra,
+    and a missing ``plotly-stubs`` distribution is reported and skipped
+    rather than raised.
+
+    Parameters
+    ----------
+    dry_run
+        If ``True``, preview the overlay without writing any files.
+
+    See Also
+    --------
+    refresh : Orchestrator that invokes this after refreshing ``plotly``.
+    mayutils.scripts.generate_plotly_stubs.generate_stubs : Generator run here.
+
+    Examples
+    --------
+    >>> apply_plotly_overlay(dry_run=True)  # doctest: +SKIP
+    """
+    from mayutils.scripts.generate_plotly_stubs import generate_stubs  # noqa: PLC0415
+
+    CONSOLE.print("\n[bold]Applying plotly stub overrides...[/bold]")
+    try:
+        count = generate_stubs(dry_run=dry_run)
+    except FileNotFoundError as error:
+        CONSOLE.print(f"[yellow]Skipped plotly overlay: {error}[/yellow]")
+        return
+
+    if not dry_run and count == 0:
+        CONSOLE.print("[yellow]plotly overlay produced 0 stubs — check plotly-stubs.[/yellow]")
+
+
 @app.command()
 def refresh(  # noqa: C901, PLR0912, PLR0915
     typings: Path = Argument(  # noqa: B008
@@ -1063,6 +1105,8 @@ def refresh(  # noqa: C901, PLR0912, PLR0915
     CONSOLE.print(f"[cyan]{action} {len(refreshable)} package(s):[/cyan] {', '.join(refreshable)}")
 
     if dry_run:
+        if "plotly" in refreshable:
+            apply_plotly_overlay(dry_run=True)
         raise Exit
 
     failures: list[tuple[str, str]] = []
@@ -1114,6 +1158,9 @@ def refresh(  # noqa: C901, PLR0912, PLR0915
         raise Exit(code=1)
 
     CONSOLE.print(f"[green]:white_check_mark: Refreshed {len(refreshed)} package(s) in {typings}.[/green]")
+
+    if "plotly" in refreshed:
+        apply_plotly_overlay()
 
 
 if __name__ == "__main__":

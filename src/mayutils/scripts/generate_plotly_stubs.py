@@ -2593,6 +2593,99 @@ def generate_subcomponent_stubs(
 ## Main command
 
 
+def generate_stubs(
+    *,
+    traces_dir: Path = TRACES_DIR,
+    dry_run: bool = False,
+) -> int:
+    """
+    Generate all plotly-related type stubs and report the count.
+
+    Writes the dev-only ``typings/plotly/`` overrides (basedatatypes with
+    ``Self`` returns, the ``Mesh3d``/``Icicle`` bases, and missing
+    sub-components) **before** the in-source trace and chart stubs,
+    because trace generation reads those override files back. Running the
+    overrides first keeps the output correct even after
+    ``pyright --createstub`` has replaced ``typings/plotly/`` with vanilla
+    output, then ``ruff`` fixes and formats the in-source stubs.
+
+    Parameters
+    ----------
+    traces_dir
+        Directory containing the trace ``.py`` modules.
+    dry_run
+        If ``True``, list stubs that would be generated without writing
+        any files or running ``ruff``.
+
+    Returns
+    -------
+        Number of stubs generated (or that would be generated in
+        dry-run mode).
+
+    See Also
+    --------
+    generate : Typer command that wraps this function.
+    generate_basedatatypes_stub : Dev-only override generation step.
+    generate_trace_stubs : Trace stub generation step.
+
+    Examples
+    --------
+    >>> generate_stubs(dry_run=True)  # doctest: +SKIP
+    """
+    stubs_root = find_stubs_root()
+    CONSOLE.print(f"[blue]Using plotly-stubs from {stubs_root}[/blue]")
+
+    check_upstream(stubs_root)
+
+    CONSOLE.print("\n[bold]Generating dev-only stubs (typings/plotly/)...[/bold]")
+    basedatatypes_ok = generate_basedatatypes_stub(
+        stubs_root=stubs_root,
+        typings_dir=TYPINGS_DIR,
+        dry_run=dry_run,
+    )
+    template_results = generate_template_stubs(
+        TYPINGS_DIR,
+        dry_run=dry_run,
+    )
+    subcomponent_results = generate_subcomponent_stubs(
+        stubs_root=stubs_root,
+        typings_dir=TYPINGS_DIR,
+        dry_run=dry_run,
+    )
+
+    CONSOLE.print("\n[bold]Generating trace stubs...[/bold]")
+    trace_results = generate_trace_stubs(
+        stubs_root=stubs_root,
+        traces_dir=traces_dir,
+        dry_run=dry_run,
+    )
+
+    CONSOLE.print("\n[bold]Generating chart stubs...[/bold]")
+    chart_results = generate_chart_stubs(
+        stubs_root=stubs_root,
+        charts_dir=CHARTS_DIR,
+        dry_run=dry_run,
+    )
+
+    total = len(trace_results) + len(chart_results) + (1 if basedatatypes_ok else 0) + len(template_results) + len(subcomponent_results)
+    verb = "would be " if dry_run else ""
+    CONSOLE.print(f"\n[green]Done: {total} stub(s) {verb}generated.[/green]")
+
+    if not dry_run and total > 0:
+        fmt_targets = [str(TRACES_DIR), str(CHARTS_DIR)]
+        CONSOLE.print("\n[bold]Running ruff check --fix and format...[/bold]")
+        subprocess.run(  # noqa: S603
+            ["ruff", "check", "--fix", "--silent", *fmt_targets],  # noqa: S607
+            check=False,
+        )
+        subprocess.run(  # noqa: S603
+            ["ruff", "format", "--silent", *fmt_targets],  # noqa: S607
+            check=False,
+        )
+
+    return total
+
+
 @app.command()
 def generate(
     traces_dir: Path = Argument(  # noqa: B008
@@ -2616,9 +2709,8 @@ def generate(
     """
     Generate all plotly-related type stubs.
 
-    Orchestrates trace, chart, basedatatypes, template, and
-    sub-component stub generation, then runs ``ruff`` to fix and
-    format the output.
+    Thin Typer wrapper around :func:`generate_stubs` that exits early
+    when there is nothing to generate.
 
     Parameters
     ----------
@@ -2636,67 +2728,14 @@ def generate(
 
     See Also
     --------
-    generate_trace_stubs : Trace stub generation step.
-    generate_chart_stubs : Chart stub generation step.
-    generate_basedatatypes_stub : Basedatatypes stub generation step.
+    generate_stubs : The orchestration core invoked here.
 
     Examples
     --------
     >>> generate()  # doctest: +SKIP
     """
-    stubs_root = find_stubs_root()
-    CONSOLE.print(f"[blue]Using plotly-stubs from {stubs_root}[/blue]")
-
-    check_upstream(stubs_root)
-
-    CONSOLE.print("\n[bold]Generating trace stubs...[/bold]")
-    trace_results = generate_trace_stubs(
-        stubs_root=stubs_root,
-        traces_dir=traces_dir,
-        dry_run=dry_run,
-    )
-
-    CONSOLE.print("\n[bold]Generating chart stubs...[/bold]")
-    chart_results = generate_chart_stubs(
-        stubs_root=stubs_root,
-        charts_dir=CHARTS_DIR,
-        dry_run=dry_run,
-    )
-
-    CONSOLE.print("\n[bold]Generating dev-only stubs (typings/plotly/)...[/bold]")
-    basedatatypes_ok = generate_basedatatypes_stub(
-        stubs_root=stubs_root,
-        typings_dir=TYPINGS_DIR,
-        dry_run=dry_run,
-    )
-    template_results = generate_template_stubs(
-        TYPINGS_DIR,
-        dry_run=dry_run,
-    )
-    subcomponent_results = generate_subcomponent_stubs(
-        stubs_root=stubs_root,
-        typings_dir=TYPINGS_DIR,
-        dry_run=dry_run,
-    )
-
-    total = len(trace_results) + len(chart_results) + (1 if basedatatypes_ok else 0) + len(template_results) + len(subcomponent_results)
-    verb = "would be " if dry_run else ""
-    CONSOLE.print(f"\n[green]Done: {total} stub(s) {verb}generated.[/green]")
-
-    if total == 0:
+    if generate_stubs(traces_dir=traces_dir, dry_run=dry_run) == 0:
         raise Exit
-
-    if not dry_run:
-        fmt_targets = [str(TRACES_DIR), str(CHARTS_DIR)]
-        CONSOLE.print("\n[bold]Running ruff check --fix and format...[/bold]")
-        subprocess.run(  # noqa: S603
-            ["ruff", "check", "--fix", "--silent", *fmt_targets],  # noqa: S607
-            check=False,
-        )
-        subprocess.run(  # noqa: S603
-            ["ruff", "format", "--silent", *fmt_targets],  # noqa: S607
-            check=False,
-        )
 
 
 if __name__ == "__main__":
