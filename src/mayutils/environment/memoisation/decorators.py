@@ -308,6 +308,10 @@ class lru_cache:  # noqa: N801
         >>> square(3, cache=False)
         9
         """
+        use_cache = kwargs.pop("cache", True)
+        if not use_cache:
+            return self.bypass_cache(*args, **kwargs)
+
         return self._cached(*args, **kwargs)
 
 
@@ -896,7 +900,7 @@ class cache[CacheObjectType]:  # noqa: N801
         9
         """
         key = self.func_key(*args, **kwargs)
-        result = self.bypass_cache(*args, refresh=True, **kwargs)
+        result = self.bypass_cache(*args, **kwargs)
         self.store.put(key, value=result)
 
         if isinstance(self.store, MemoryStore) and self.persist_path is not None:

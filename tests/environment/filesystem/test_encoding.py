@@ -21,14 +21,14 @@ class TestEncodePath:
     @pytest.mark.parametrize(
         ("raw", "expected"),
         [
-            ("data/raw/file.csv", "data%23raw%23file.csv"),
-            ("logs/2026-04-22.log", "logs%232026-04-22.log"),
+            ("data/raw/file.csv", "data#raw#file.csv"),
+            ("logs/2026-04-22.log", "logs#2026-04-22.log"),
             ("plain.txt", "plain.txt"),
-            ("a/b/c.txt", "a%23b%23c.txt"),
+            ("a/b/c.txt", "a#b#c.txt"),
         ],
     )
     def test_known_tokens(self, raw: str, expected: str) -> None:
-        """Separators map to ``#`` (percent-encoded) and non-separated names pass through."""
+        """Separators map to ``#`` and non-separated names pass through."""
         assert encode_path(raw) == expected
 
     def test_no_raw_slash_in_output(self) -> None:
@@ -62,8 +62,8 @@ class TestDecodePath:
     @pytest.mark.parametrize(
         ("token", "expected"),
         [
-            ("data%23raw%23file.csv", Path("data/raw/file.csv")),
-            ("logs%232026-04-22.log", Path("logs/2026-04-22.log")),
+            ("data#raw#file.csv", Path("data/raw/file.csv")),
+            ("logs#2026-04-22.log", Path("logs/2026-04-22.log")),
             ("plain.txt", Path("plain.txt")),
             ("my%20file.txt", Path("my file.txt")),
         ],
@@ -94,14 +94,11 @@ class TestRoundTrip:
             "weird/100%/path.txt",
             "a/b/c/d/e/f.parquet",
             "café/naïve.txt",
+            "dir/with#hash/file.txt",
         ],
     )
     def test_string_round_trip(self, raw: str) -> None:
-        """Encoding then decoding a separator-only path yields the equivalent path.
-
-        Inputs here deliberately contain no literal ``#`` (see
-        :meth:`TestRoundTrip.test_literal_hash_in_source_is_lossy` for why).
-        """
+        """Encoding then decoding a path yields the equivalent path."""
         assert decode_path(encode_path(raw)) == Path(raw)
 
     @pytest.mark.parametrize(
@@ -116,15 +113,12 @@ class TestRoundTrip:
         """The round-trip preserves the original string representation."""
         assert str(decode_path(encode_path(raw))) == raw
 
-    def test_literal_hash_in_source_is_lossy(self) -> None:
-        """A literal ``#`` in the source path does *not* round-trip (current behaviour).
+    def test_literal_hash_in_source_round_trips(self) -> None:
+        """A literal ``#`` in the source path round-trips losslessly.
 
-        :func:`encode_path` remaps ``/`` to a literal ``#`` *before*
-        URL-quoting, and :func:`urllib.parse.quote` also escapes a literal
-        ``#`` to ``%23`` — the same token the separator becomes. On decode
-        both are unquoted to ``#`` and then mapped back to ``/``, so a source
-        ``#`` is indistinguishable from a separator and surfaces as ``/``.
-        This documents the round-trip's known limitation rather than
-        asserting a desirable property.
+        Separators are percent-encoded (``/`` → ``%2F``) and only then
+        rewritten to ``#`` for readability, while a literal ``#`` is quoted
+        to ``%23``. The two tokens are distinct, so decoding restores the
+        original ``#`` instead of collapsing it to ``/``.
         """
-        assert decode_path(encode_path("dir/a#b.txt")) == Path("dir/a/b.txt")
+        assert decode_path(encode_path("dir/a#b.txt")) == Path("dir/a#b.txt")

@@ -154,26 +154,31 @@ class TestLruCacheMemoisation:
         assert "Return the value unchanged." in decorated.__doc__
 
 
-class TestLruCacheBypassKeywordBug:
-    """Pins the broken ``cache=False`` bypass keyword on :class:`lru_cache`."""
+class TestLruCacheBypassKeyword:
+    """The ``cache=False`` per-call bypass keyword on :class:`lru_cache`."""
 
-    def test_cache_false_keyword_raises_typeerror(self) -> None:
-        """KNOWN BUG: ``cache=False`` is forwarded to the wrapped function.
+    def test_cache_false_keyword_bypasses_lru(self) -> None:
+        """``f(..., cache=False)`` recomputes and leaves the LRU untouched.
 
-        The docstring (and its un-collected doctest) advertise
-        ``f(..., cache=False)`` as a per-call bypass, but ``__call__``
-        forwards the keyword straight into ``functools.lru_cache``'s
-        wrapper, which passes it on to the wrapped function. Functions
-        without a ``cache`` parameter therefore raise ``TypeError``. This
-        test pins the current (buggy) behaviour rather than fixing it.
+        The keyword is consumed by ``__call__`` (not forwarded to the
+        wrapped function) and routes the call through ``bypass_cache``, so
+        the function runs again while the cache's hit/miss counters stay
+        exactly as they were.
         """
+        counter = _Counter()
 
         @lru_cache
         def double(value: int) -> int:
-            return value * 2
+            return counter.double(value)
 
-        with pytest.raises(expected_exception=TypeError, match="cache"):
-            double(3, cache=False)
+        assert double(3) == 6  # noqa: PLR2004 -- miss → compute + cache
+        assert double(3) == 6  # noqa: PLR2004 -- hit → no recompute
+        assert counter.calls == 1
+        info_before = double.cache_info()
+
+        assert double(3, cache=False) == 6  # noqa: PLR2004 -- bypass → recompute
+        assert counter.calls == 2  # noqa: PLR2004 -- the function ran again
+        assert double.cache_info() == info_before  # LRU was untouched
 
 
 class TestCacheMemoryBackend:
@@ -487,27 +492,27 @@ class TestCacheTTL:
         assert counter.calls == 1
 
 
-class TestCacheRefreshBug:
-    """Pins the broken ``refresh`` method on :class:`cache`."""
+class TestCacheRefresh:
+    """The ``refresh`` method on :class:`cache` recomputes and updates the entry."""
 
-    def test_refresh_raises_typeerror(self) -> None:
-        """KNOWN BUG: ``refresh`` forwards ``refresh=True`` to the wrapped function.
+    def test_refresh_recomputes_and_updates_store(self) -> None:
+        """``refresh`` re-runs the function, stores the new value, and returns it.
 
-        ``refresh`` calls ``self.bypass_cache(*args, refresh=True, **kwargs)``,
-        which passes the ``refresh`` keyword straight to the wrapped
-        callable. Functions without a ``refresh`` parameter raise
-        ``TypeError``. This test pins the current behaviour; the
-        accompanying doctest is never collected because ``flexwrap`` turns
-        ``cache`` into a plain function, hiding the method docstrings from
-        the doctest finder.
+        ``bypass_cache`` is called without the spurious ``refresh=True``
+        keyword (which previously leaked into the wrapped callable), so a
+        function with no ``refresh`` parameter recomputes cleanly and the
+        cached entry is overwritten with the fresh result.
         """
+        outputs = iter([10, 20])
 
         @cache
-        def square(value: int) -> int:
-            return value * value
+        def fetch(_key: int) -> int:
+            return next(outputs)
 
-        with pytest.raises(expected_exception=TypeError, match="refresh"):
-            square.refresh(3)
+        assert fetch(1) == 10  # noqa: PLR2004 -- miss → stores 10
+        assert fetch(1) == 10  # noqa: PLR2004 -- hit → cached, no recompute
+        assert fetch.refresh(1) == 20  # noqa: PLR2004 -- recompute → stores 20
+        assert fetch(1) == 20  # noqa: PLR2004 -- cache now serves the refreshed value
 
 
 class TestDecoratorFactories:

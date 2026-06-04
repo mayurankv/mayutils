@@ -34,6 +34,7 @@ Examples
 """
 
 import inspect
+import sys
 from collections.abc import Callable
 from functools import WRAPPER_UPDATES, update_wrapper
 from inspect import Signature
@@ -575,5 +576,14 @@ def flexwrap[
 
     final_decorator = cast("FlexibleDecorator[Decorating, Decorated, Params]", flexible_decorator)
     final_decorator.__signature__ = signature
+
+    if isinstance(decorator, type):
+        # Replacing a decorator *class* with ``flexible_decorator`` (a function) hides the class's method docstrings from
+        # ``doctest.DocTestFinder``, which only recurses into classes. Register the original class in its module's ``__test__``
+        # mapping — the canonical doctest discovery hook — so ``--doctest-modules`` still collects the method-level examples.
+        host_module = sys.modules.get(decorator.__module__)
+        if host_module is not None:
+            doctest_targets = host_module.__dict__.setdefault("__test__", {})
+            doctest_targets[decorator.__name__] = decorator
 
     return final_decorator

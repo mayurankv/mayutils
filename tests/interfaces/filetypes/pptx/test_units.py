@@ -107,6 +107,11 @@ class TestFromInches:
         # 1.0000005 * 914400 == 914400.457... -> floor -> 914400
         assert Length.from_inches(1.0000005).emu == EMUS_PER_INCH
 
+    def test_floors_negative_product_toward_negative_infinity(self) -> None:
+        """A negative fractional product floors away from zero, not toward it."""
+        # -0.0000005 * 914400 == -0.457... -> floor -> -1 (truncation would give 0)
+        assert Length.from_inches(-0.0000005).emu == -1
+
     def test_round_trip_inches(self) -> None:
         """Converting inches to EMU and back is close to the original value."""
         assert np.isclose(Length.from_inches(13.333).inches, 13.333)
@@ -138,6 +143,11 @@ class TestFromCms:
         """A centimetre value whose EMU product is sub-unit is floored to zero."""
         # 0.0000001 * 360000 == 0.036 -> floor -> 0
         assert Length.from_cms(0.0000001).emu == 0
+
+    def test_floors_negative_product_toward_negative_infinity(self) -> None:
+        """A negative fractional product floors away from zero, not toward it."""
+        # -0.0000001 * 360000 == -0.036 -> floor -> -1 (truncation would give 0)
+        assert Length.from_cms(-0.0000001).emu == -1
 
     def test_round_trip_cms(self) -> None:
         """Converting centimetres to EMU and back is close to the original value."""

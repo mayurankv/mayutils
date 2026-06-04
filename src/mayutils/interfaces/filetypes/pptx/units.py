@@ -143,7 +143,7 @@ class Length(BaseLength):
         ----------
         inches
             Length in inches to convert; fractional values are accepted
-            and truncated toward zero EMU after multiplication.
+            and floored toward negative infinity after multiplication.
 
         Returns
         -------
@@ -191,7 +191,8 @@ class Length(BaseLength):
         ----------
         cms
             Length in centimetres to convert; fractional values are
-            accepted and truncated toward zero EMU after multiplication.
+            accepted and floored toward negative infinity after
+            multiplication.
 
         Returns
         -------

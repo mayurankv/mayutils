@@ -98,6 +98,9 @@ def combine_figures(
     NotImplementedError
         Raised when ``filetype`` is anything other than ``"pdf"``, since
         no alternative rasterisation backend has been implemented.
+    ValueError
+        Raised when no ``files`` are supplied, since the canvas size is
+        derived from the first rasterised page.
 
     See Also
     --------
@@ -143,6 +146,10 @@ def combine_figures(
     if filetype != "pdf":
         msg = "Other conversions are not supported yet"
         raise NotImplementedError(msg)
+
+    if not files:
+        msg = "combine_figures requires at least one figure file"
+        raise ValueError(msg)
 
     images: list[Image.Image] = []
     for file in files:

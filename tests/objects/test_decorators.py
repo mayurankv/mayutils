@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import doctest
+import sys
+import types
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -46,6 +49,60 @@ class TestFlexwrap:
                 return "done"
 
         assert register(Worker) is Worker
+
+    def test_class_method_doctests_are_discoverable(self) -> None:
+        """A flexwrap-decorated class exposes its method doctests to ``doctest`` discovery (#7)."""
+        module = types.ModuleType("flexwrap_doctest_probe")
+        sys.modules[module.__name__] = module
+        try:
+
+            class Probe:
+                """Probe decorator-class."""
+
+                def __init__(self, func: Callable[..., object], /) -> None:
+                    self._func = func
+
+                def __call__(self, *args: object, **kwargs: object) -> object:
+                    """Invoke the wrapped callable.
+
+                    Parameters
+                    ----------
+                    *args
+                        Positional arguments forwarded to the wrapped callable.
+                    **kwargs
+                        Keyword arguments forwarded to the wrapped callable.
+
+                    Returns
+                    -------
+                        The wrapped callable's return value.
+                    """
+                    return self._func(*args, **kwargs)
+
+                def ping(self) -> str:
+                    """Return a pong.
+
+                    Returns
+                    -------
+                        The literal string ``"pong"``.
+
+                    Examples
+                    --------
+                    >>> 6 * 7
+                    42
+                    """
+                    return "pong"
+
+            # Simulate definition inside the probe module so doctest's
+            # ``_from_module`` filter accepts the recursed methods.
+            Probe.__module__ = module.__name__
+            Probe.ping.__module__ = module.__name__
+
+            flexwrap(Probe)
+
+            found = {test.name for test in doctest.DocTestFinder().find(module, module.__name__) if test.examples}
+            assert any(name.endswith("Probe.ping") for name in found), sorted(found)
+        finally:
+            del sys.modules[module.__name__]
 
     def test_bare_form(self) -> None:
         """``@deco`` (no call) wraps the function with defaults."""

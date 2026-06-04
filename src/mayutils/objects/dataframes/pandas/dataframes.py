@@ -925,7 +925,7 @@ class DataframeUtilsAccessor:
         >>> sliced["v"].tolist()
         [1, 2]
         """
-        if self.df.index.inferred_type == "datetime":
+        if self.df.index.inferred_type in ("datetime", "datetime64"):
             return self.df.loc[interval.to_datetime_interval().as_slice]
         if self.df.index.inferred_type == "date":
             return self.df.loc[interval.to_datetime_interval().to_date_interval().as_slice]

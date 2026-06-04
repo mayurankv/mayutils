@@ -40,8 +40,8 @@ def datetime_index(*days: int) -> pd.Index:
     """Return an object-dtype index of ``datetime.datetime`` values in Jan 2024.
 
     An object dtype is used so ``inferred_type`` reports ``"datetime"`` (a
-    native ``DatetimeIndex`` would report ``"datetime64"``, which the accessor
-    does not dispatch on).
+    native ``DatetimeIndex`` would instead report ``"datetime64"``, which the
+    accessor also dispatches on — see ``test_native_datetimeindex_slices``).
 
     Parameters
     ----------
@@ -339,13 +339,12 @@ class TestSliceInterval:
         window = Interval[DateTime](start=DateTime(2024, 1, 1), end=DateTime(2024, 1, 3))
         assert accessor.slice_interval(window)["v"].tolist() == [1, 2, 3]
 
-    def test_native_datetimeindex_raises(self) -> None:
-        """A native ``DatetimeIndex`` reports ``datetime64`` and is not dispatched."""
+    def test_native_datetimeindex_slices(self) -> None:
+        """A native ``DatetimeIndex`` (``inferred_type`` ``datetime64``) slices like a datetime index."""
         frame = pd.DataFrame({"v": [1, 2, 3]}, index=pd.date_range("2024-01-01", periods=3, freq="D"))
         accessor = DataframeUtilsAccessor(df=frame)
         window = Interval[DateTime](start=DateTime(2024, 1, 1), end=DateTime(2024, 1, 2))
-        with pytest.raises(expected_exception=TypeError, match="must be datetime or date type"):
-            accessor.slice_interval(window)
+        assert accessor.slice_interval(window)["v"].tolist() == [1, 2]
 
     def test_non_temporal_index_raises(self) -> None:
         """An integer index cannot be interval-sliced and raises ``TypeError``."""

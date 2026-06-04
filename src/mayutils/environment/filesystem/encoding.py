@@ -3,11 +3,13 @@ Provide URL-safe serialisation helpers for filesystem paths.
 
 This submodule pairs :func:`encode_path` and :func:`decode_path`,
 which round-trip a :class:`~pathlib.Path` through a filename-safe
-token. Path separators are remapped to ``#`` before URL quoting so
-that hierarchical structure survives percent-encoding without
-introducing ``/`` characters into the resulting string, producing
-values suitable for use as individual filenames on filesystems that
-forbid separators.
+token. The path is percent-encoded and its separator escapes
+(``%2F``) are then rewritten to ``#`` so that hierarchical structure
+survives without introducing ``/`` characters into the resulting
+string, producing values suitable for use as individual filenames on
+filesystems that forbid separators. A literal ``#`` in the source is
+quoted to ``%23`` and so stays distinct from a separator, allowing it
+to round-trip losslessly.
 
 See Also
 --------
@@ -38,15 +40,18 @@ def encode_path(
     """
     Encode a filesystem path as a URL-safe filename component.
 
-    Forward slashes in the string representation of ``path`` are
-    first replaced with ``#`` so that hierarchical path structure
-    survives URL quoting without introducing ``/`` characters into
-    the result. The rewritten string is then passed through
-    :func:`urllib.parse.quote`, yielding a representation suitable
-    for use as an individual filename on filesystems that forbid
-    ``/``. Symlinks are not resolved; the path is serialised as
-    given, so callers wanting a canonicalised target should resolve
-    the path before encoding.
+    The string representation of ``path`` is passed through
+    :func:`urllib.parse.quote` with an empty ``safe`` set, so every
+    reserved character — including the forward slash, which becomes
+    ``%2F`` — is percent-encoded. Those separator escapes are then
+    rewritten to ``#`` so that hierarchical structure survives without
+    introducing ``/`` characters into the result, yielding a
+    representation suitable for use as an individual filename on
+    filesystems that forbid ``/``. A literal ``#`` is quoted to
+    ``%23`` and therefore stays distinct from a separator. Symlinks
+    are not resolved; the path is serialised as given, so callers
+    wanting a canonicalised target should resolve the path before
+    encoding.
 
     Parameters
     ----------
@@ -56,8 +61,8 @@ def encode_path(
 
     Returns
     -------
-        URL-encoded representation in which path separators have
-        been remapped to ``#`` before quoting, producing an opaque
+        URL-encoded representation in which percent-encoded path
+        separators have been rewritten to ``#``, producing an opaque
         round-trippable token.
 
     See Also
@@ -74,11 +79,11 @@ def encode_path(
     >>> from pathlib import Path
     >>> from mayutils.environment.filesystem import encode_path
     >>> encode_path(Path("data/raw/file.csv"))
-    'data%23raw%23file.csv'
+    'data#raw#file.csv'
     >>> encode_path("logs/2026-04-22.log")
-    'logs%232026-04-22.log'
+    'logs#2026-04-22.log'
     """
-    return urllib.parse.quote(string=str(path).replace("/", "#"))
+    return urllib.parse.quote(string=str(path), safe="").replace("%2F", "#")
 
 
 def decode_path(
@@ -88,13 +93,14 @@ def decode_path(
     """
     Decode a token produced by :func:`encode_path` back into a path.
 
-    The input is URL-unquoted and every ``#`` is mapped back to
-    ``/``, reversing the substitution applied during encoding. This
-    is the exact inverse of :func:`encode_path` for inputs produced
-    by that function. The returned :class:`~pathlib.Path` is not
-    resolved against the filesystem, so symbolic links and missing
-    parents are not checked; the value is purely a reconstruction of
-    the original serialised string.
+    Every ``#`` separator is mapped back to its ``%2F`` escape and the
+    result is URL-unquoted, reversing the substitution applied during
+    encoding. This is the exact inverse of :func:`encode_path` for
+    inputs produced by that function, including paths that contain a
+    literal ``#`` (which was quoted to ``%23``). The returned
+    :class:`~pathlib.Path` is not resolved against the filesystem, so
+    symbolic links and missing parents are not checked; the value is
+    purely a reconstruction of the original serialised string.
 
     Parameters
     ----------
@@ -118,13 +124,13 @@ def decode_path(
     Examples
     --------
     >>> from mayutils.environment.filesystem import decode_path, encode_path
-    >>> decode_path("data%23raw%23file.csv")
+    >>> decode_path("data#raw#file.csv")
     PosixPath('data/raw/file.csv')
     >>> original = "logs/2026-04-22.log"
     >>> str(decode_path(encode_path(original))) == original
     True
     """
-    return Path(urllib.parse.unquote(string=encoded_path).replace("#", "/"))
+    return Path(urllib.parse.unquote(string=encoded_path.replace("#", "%2F")))
 
 
 __all__ = [

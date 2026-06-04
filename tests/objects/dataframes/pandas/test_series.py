@@ -93,6 +93,12 @@ class TestSliceInterval:
         assert result.iloc[0] == 1.0
         assert bool(np.isnan(result.iloc[1]))
 
+    def test_native_datetimeindex_slices(self) -> None:
+        """A native ``DatetimeIndex`` (``inferred_type`` ``datetime64``) slices like a datetime index."""
+        series = pd.Series([1.0, 2.0, 3.0], index=pd.date_range("2024-01-01", periods=3, freq="D"))
+        window = Interval[DateTime](start=DateTime(2024, 1, 1), end=DateTime(2024, 1, 2))
+        assert SeriesUtilsAccessor(series=series).slice_interval(window).tolist() == [1.0, 2.0]
+
     def test_non_temporal_index_raises(self) -> None:
         """An integer index cannot be interval-sliced and raises ``TypeError``."""
         series = pd.Series([1.0, 2.0, 3.0])

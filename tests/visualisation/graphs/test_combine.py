@@ -136,3 +136,13 @@ class TestUnsupportedFiletype:
         out = tmp_path / "mosaic.png"
         with pytest.raises(NotImplementedError, match="not supported"):
             combine_figures(tmp_path / "missing.png", title=out, cols=1, rows=1, filetype="png")
+
+
+class TestNoFiles:
+    """Tests for the empty-input guard."""
+
+    def test_no_files_raises_value_error(self, tmp_path: Path) -> None:
+        """Calling with no figure files raises ``ValueError`` rather than ``IndexError``."""
+        out = tmp_path / "mosaic.png"
+        with pytest.raises(ValueError, match="at least one figure"):
+            combine_figures(title=out, cols=1, rows=1)

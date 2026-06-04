@@ -236,7 +236,7 @@ class SeriesUtilsAccessor:
         >>> accessor.slice_interval(window).tolist()
         [1.0, 2.0]
         """
-        if self.series.index.inferred_type == "datetime":
+        if self.series.index.inferred_type in ("datetime", "datetime64"):
             return self.series.loc[interval.to_datetime_interval().as_slice]
         if self.series.index.inferred_type == "date":
             return self.series.loc[interval.to_datetime_interval().to_date_interval().as_slice]
