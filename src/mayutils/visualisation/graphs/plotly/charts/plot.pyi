@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.basedatatypes import BaseFigure, BaseLayoutHierarchyType, BaseTraceType
-from plotly.basedatatypes import BaseTraceType as Trace
 from plotly.graph_objs import (
     Layout,
     bar,
@@ -67,6 +66,7 @@ from mayutils.objects.datetime import Date, DateTime, Interval
 from mayutils.visualisation.graphs.plotly.charts import (
     AxisConfig,
     PlotConfig,
+    Trace,
 )
 
 class Plot(go.Figure):
