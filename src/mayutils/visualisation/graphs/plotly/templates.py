@@ -1,5 +1,6 @@
 """Plotly template registration and management for consistent chart styling."""
 
+import warnings
 from collections.abc import Generator, Sequence
 from contextlib import contextmanager
 from typing import cast
@@ -175,7 +176,7 @@ def get_template_layout(
     ...     get_template,
     ...     get_template_layout,
     ... )
-    >>> layout = get_template_layout(get_template())  # doctest: +SKIP
+    >>> layout = get_template_layout(get_template())
     """
     layout = getattr(template, "layout", None)
 
@@ -187,7 +188,9 @@ def get_template_layout(
 
 PLOTLY_DEFAULT_TEMPLATE_NAME = get_default_template_name()
 PLOTLY_DEFAULT_TEMPLATE = get_template(template_name=PLOTLY_DEFAULT_TEMPLATE_NAME)
-PLOTLY_DARK_TEMPLATE = get_template(template_name="plotly_dark")
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", message=".*scattermapbox.*", category=DeprecationWarning)
+    PLOTLY_DARK_TEMPLATE = get_template(template_name="plotly_dark")
 
 
 @contextmanager
@@ -215,7 +218,7 @@ def use_template(
     Examples
     --------
     >>> from mayutils.visualisation.graphs.plotly.templates import use_template
-    >>> with use_template("base"):  # doctest: +SKIP
+    >>> with use_template("base"):
     ...     pass
     """
     previous = get_default_template_name()
@@ -492,10 +495,10 @@ def register_templates() -> None:
                         }
                     ],
                     "scattergl": [{"marker": {"line": {"color": "#283442"}}, "type": "scattergl"}],
-                    "scattermapbox": [
+                    "scattermap": [
                         {
                             "marker": {"colorbar": {"outlinewidth": 0, "ticks": ""}},
-                            "type": "scattermapbox",
+                            "type": "scattermap",
                         }
                     ],
                     "scatterpolar": [
@@ -588,7 +591,7 @@ def register_templates() -> None:
                         },
                         "bgcolor": TRANSPARENT,
                     },
-                    "mapbox": {
+                    "map": {
                         "style": "dark",
                     },
                     "margin": {
@@ -794,8 +797,8 @@ def get_layout_value(
     ...     get_template,
     ...     get_template_layout,
     ... )
-    >>> layout = get_template_layout(get_template())  # doctest: +SKIP
-    >>> get_layout_value(layout, props=["xaxis", "showgrid"])  # doctest: +SKIP
+    >>> layout = get_template_layout(get_template())
+    >>> get_layout_value(layout, props=["xaxis", "showgrid"])
     True
     """
     if len(props) == 0:
@@ -838,7 +841,7 @@ def setup_plot_export(
     Examples
     --------
     >>> from mayutils.visualisation.graphs.plotly.templates import setup_plot_export
-    >>> setup_plot_export()  # doctest: +SKIP
+    >>> setup_plot_export()
     """
     set_renderer(renderer="plotly_mimetype+notebook")
 

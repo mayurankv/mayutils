@@ -59,7 +59,7 @@ class BareDecorator[
     Examples
     --------
     >>> from mayutils.objects.decorators import BareDecorator
-    >>> BareDecorator.__protocol_attrs__  # doctest: +SKIP
+    >>> BareDecorator.__protocol_attrs__
     {'__call__'}
     """
 
@@ -109,7 +109,7 @@ class GenericDecorator[
     Examples
     --------
     >>> from mayutils.objects.decorators import GenericDecorator
-    >>> GenericDecorator.__protocol_attrs__  # doctest: +SKIP
+    >>> GenericDecorator.__protocol_attrs__
     {'__call__'}
     """
 
@@ -166,8 +166,8 @@ class FlexibleDecorator[
     Examples
     --------
     >>> from mayutils.objects.decorators import FlexibleDecorator
-    >>> FlexibleDecorator.__protocol_attrs__  # doctest: +SKIP
-    {'__call__', '__signature__'}
+    >>> sorted(FlexibleDecorator.__protocol_attrs__)
+    ['__call__', '__signature__']
     """
 
     __signature__: Signature

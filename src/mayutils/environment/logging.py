@@ -1075,11 +1075,11 @@ def log_class(
     >>> _root = _logging.getLogger()
     >>> _saved_handlers = _root.handlers[:]
     >>> _root.handlers = [_logging.NullHandler()]
-    >>> class Worker:
+    >>> @log_class
+    ... class Worker:
     ...     def run(self) -> str:
     ...         return "done"
-    >>> _ = log_class(Worker)  # doctest: +SKIP
-    >>> Worker().run()  # doctest: +SKIP
+    >>> Worker().run()
     'done'
     >>> _root.handlers = _saved_handlers
     """

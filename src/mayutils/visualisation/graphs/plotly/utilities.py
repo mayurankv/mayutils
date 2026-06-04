@@ -39,8 +39,8 @@ def include_plotly_js(
     Examples
     --------
     >>> from mayutils.visualisation.graphs.plotly.utilities import include_plotly_js
-    >>> js = include_plotly_js(include_tags=False)  # doctest: +SKIP
-    >>> isinstance(js, str)  # doctest: +SKIP
+    >>> js = include_plotly_js(include_tags=False)
+    >>> isinstance(js, str)
     True
     """
     pkg_path = Path(plotly.__path__[0])

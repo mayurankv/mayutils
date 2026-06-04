@@ -600,7 +600,11 @@ class SubPlotConfig:
 
         Examples
         --------
-        >>> config.max_yaxis  # doctest: +SKIP
+        >>> import plotly.graph_objects as go
+        >>> from mayutils.visualisation.graphs.plotly.charts import SubPlotConfig, PlotConfig
+        >>> config = SubPlotConfig(plots=((PlotConfig.from_trace(go.Scatter(x=(1,), y=(2,))),),))
+        >>> config.max_yaxis
+        1
         """
         return max(
             len(plot_config.yaxes_configs) if plot_config is not None else 0
@@ -627,7 +631,10 @@ class SubPlotConfig:
 
         Examples
         --------
-        >>> config.plot_count  # doctest: +SKIP
+        >>> from mayutils.visualisation.graphs.plotly.charts import SubPlotConfig, PlotConfig
+        >>> config = SubPlotConfig(plots=((PlotConfig.empty(), PlotConfig.empty()),))
+        >>> config.plot_count
+        2
         """
         return len(self.plots) * len(self.plots[0])
 
@@ -663,7 +670,11 @@ class SubPlotConfig:
 
         Examples
         --------
-        >>> config.get_domains()  # doctest: +SKIP
+        >>> import plotly.graph_objects as go
+        >>> from mayutils.visualisation.graphs.plotly.charts import SubPlotConfig, PlotConfig
+        >>> config = SubPlotConfig(plots=((PlotConfig.from_trace(go.Scatter(x=(1,), y=(2,))),),))
+        >>> config.get_domains()
+        ([[0.0, 1.0]], [[0.0, 1.0]])
         """
         default_spacing = {
             "x": {
@@ -747,7 +758,12 @@ class SubPlotConfig:
 
         Examples
         --------
-        >>> config.infer_x_datetime()  # doctest: +SKIP
+        >>> import datetime
+        >>> import plotly.graph_objects as go
+        >>> from mayutils.visualisation.graphs.plotly.charts import SubPlotConfig, PlotConfig
+        >>> config = SubPlotConfig(plots=((PlotConfig.from_trace(go.Scatter(x=(datetime.date(2024, 1, 1),), y=(1,))),),))
+        >>> config.infer_x_datetime()
+        True
         """
         for row_configs in self.plots:
             for plot_config in row_configs:

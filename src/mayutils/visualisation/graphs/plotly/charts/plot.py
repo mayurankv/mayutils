@@ -98,7 +98,7 @@ class Plot(go.Figure):
 
     Examples
     --------
-    >>> Plot(PlotConfig.empty(), description="empty")  # doctest: +SKIP
+    >>> plot = Plot(PlotConfig.empty(), description="empty")
     """
 
     def __init__(  # noqa: C901, PLR0912
@@ -136,7 +136,7 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> Plot(PlotConfig.empty(), description="demo")  # doctest: +SKIP
+        >>> plot = Plot(PlotConfig.empty(), description="demo")
         """
         if layout is None:
             layout = Layout()
@@ -255,7 +255,9 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.description  # doctest: +SKIP
+        >>> plot = Plot.empty(description="demo")
+        >>> plot.description
+        'demo'
         """
         return self._description
 
@@ -280,7 +282,9 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.num_traces  # doctest: +SKIP
+        >>> plot = Plot.empty(description="demo")
+        >>> plot.num_traces
+        0
         """
         return len(self.data)
 
@@ -327,7 +331,8 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> Plot.from_traces(trace, description="demo")  # doctest: +SKIP
+        >>> trace = go.Scatter(x=[1, 2, 3], y=[4, 5, 6])
+        >>> plot = Plot.from_traces(trace, description="demo")
         """
         if xaxis_config is None:
             xaxis_config = {}
@@ -377,7 +382,7 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> Plot.from_figure(go.Figure(), description="wrapped")  # doctest: +SKIP
+        >>> plot = Plot.from_figure(go.Figure(), description="wrapped")
         """
         return cls(
             PlotConfig.empty(),
@@ -417,7 +422,10 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> Plot.from_existing(existing_plot, description="copy")  # doctest: +SKIP
+        >>> existing_plot = Plot.empty(description="original")
+        >>> plot = Plot.from_existing(existing_plot, description="copy")
+        >>> plot.description
+        'copy'
         """
         return cls.from_figure(
             plot,
@@ -452,7 +460,7 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> Plot.empty(description="blank")  # doctest: +SKIP
+        >>> plot = Plot.empty(description="blank")
         """
         return cls(
             PlotConfig.empty(),
@@ -490,7 +498,9 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> Plot.as_dropdown("comparison", a=plot_a, b=plot_b)  # doctest: +SKIP
+        >>> plot_a = Plot.from_traces(go.Scatter(x=[1, 2], y=[3, 4]), description="A")
+        >>> plot_b = Plot.from_traces(go.Scatter(x=[1, 2], y=[5, 6]), description="B")
+        >>> plot = Plot.as_dropdown("comparison", a=plot_a, b=plot_b)
         """
         first_plot = next(iter(plots.values()))
         layout: Layout = first_plot.layout.update(  # ty:ignore[invalid-assignment]
@@ -622,7 +632,8 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.to_figure()  # doctest: +SKIP
+        >>> plot = Plot.empty(description="demo")
+        >>> fig = plot.to_figure()
         """
         return go.Figure(data=self)
 
@@ -646,7 +657,10 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.empty_traces()  # doctest: +SKIP
+        >>> plot = Plot.from_traces(go.Scatter(x=[1, 2], y=[3, 4]), description="demo")
+        >>> plot = plot.empty_traces()
+        >>> plot.num_traces
+        0
         """
         self.data = []
 
@@ -695,7 +709,8 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.add_title("Secondary Y")  # doctest: +SKIP
+        >>> plot = Plot.empty(description="demo")
+        >>> plot = plot.add_title("Secondary Y")
         """
         annotations = _build_subplot_title_annotations(
             subplot_titles=[title],
@@ -740,7 +755,8 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.pipe(lambda p: p.update_layout(title="Hi"))  # doctest: +SKIP
+        >>> plot = Plot.empty(description="demo")
+        >>> plot = plot.pipe(lambda p: p.update_layout(title="Hi"))
         """
         func(self)
 
@@ -778,7 +794,9 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.get_layout_value(["margin", "t"])  # doctest: +SKIP
+        >>> plot = Plot.empty(description="demo").update_layout({"margin_t": 20})
+        >>> plot.get_layout_value(["margin", "t"])
+        20
         """
         current_value = get_layout_value(self.layout, props=props)
 
@@ -829,7 +847,10 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.adjust_layout(["margin", "t"], callback=lambda v: (v or 0) + 20)  # doctest: +SKIP
+        >>> plot = Plot.empty(description="demo").update_layout({"margin_t": 20})
+        >>> plot = plot.adjust_layout(["margin", "t"], callback=lambda v: (v or 0) + 20)
+        >>> plot.layout.margin.t
+        40
         """
         current_value = self.get_layout_value(
             props,
@@ -874,7 +895,8 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.shift_title(20)  # doctest: +SKIP
+        >>> plot = Plot.empty(description="demo")
+        >>> plot = plot.shift_title(20)
         """
         self.adjust_layout(
             ["title", "pad", "b"],
@@ -981,7 +1003,10 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.copy(description="variant")  # doctest: +SKIP
+        >>> plot = Plot.empty(description="original")
+        >>> new_plot = plot.copy(description="variant")
+        >>> new_plot.description
+        'variant'
         """
         return type(self).from_existing(
             self,
@@ -1079,7 +1104,11 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> list(plot)  # doctest: +SKIP
+        >>> plot = Plot.from_traces(go.Scatter(x=[1, 2], y=[3, 4]), description="demo")
+        >>> list(plot)
+        [Scatter({
+            'x': [1, 2], 'y': [3, 4], 'yaxis': 'y'
+        })]
         """
         return iter(self.data)
 
@@ -1111,7 +1140,16 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.set_bound_group_colours(fill_opacity=0.2)  # doctest: +SKIP
+        >>> import plotly.graph_objects as go
+        >>> from mayutils.visualisation.graphs.plotly.charts.plot import Plot
+        >>> plot = Plot.empty(description="demo")
+        >>> plot = plot.add_trace(go.Scatter(x=[1, 2], y=[3, 4], legendgroup="_bounds_A"))
+        >>> plot = plot.add_trace(go.Scatter(x=[1, 2, 1], y=[3, 5, 3], legendgroup="_bounds_A", fill="toself"))
+        >>> plot.trace(1).fillcolor is None
+        True
+        >>> plot = plot.set_bound_group_colours(fill_opacity=0.2)
+        >>> plot.trace(1).fillcolor
+        'rgba(171, 99, 250, 0.2)'
         """
         bound_groups: dict[str | int, tuple[tuple[str | None, int], list[Trace]]] = {}
         for idx, trace in enumerate(self):
@@ -1170,7 +1208,12 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.set_trace_colours(fill_opacity=0.15)  # doctest: +SKIP
+        >>> from mayutils.visualisation.graphs.plotly.charts.plot import Plot
+        >>> from mayutils.visualisation.graphs.plotly.traces import Line
+        >>> plot = Plot.from_traces(Line(x=[1, 2], y=[3, 4], line={"color": "red"}), description="demo")
+        >>> plot = plot.set_trace_colours()
+        >>> plot.trace(0).textfont.color
+        'red'
         """
         for idx, trace in enumerate(self):
             if isinstance(trace, go.Histogram) or trace.meta == TraceType.KDE:
@@ -1212,7 +1255,12 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.modifications(fill_opacity=0.2)  # doctest: +SKIP
+        >>> from mayutils.visualisation.graphs.plotly.charts.plot import Plot
+        >>> from mayutils.visualisation.graphs.plotly.traces import Line
+        >>> plot = Plot.from_traces(Line(x=[1, 2], y=[3, 4], line={"color": "blue"}), description="demo")
+        >>> plot = plot.modifications()
+        >>> plot.trace(0).textfont.color
+        'blue'
         """
         self.set_trace_colours(fill_opacity=fill_opacity)
         self.set_bound_group_colours(fill_opacity=fill_opacity)
@@ -1239,7 +1287,8 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.add_histogram_gaussians()  # doctest: +SKIP
+        >>> plot = Plot.from_traces(go.Histogram(x=np.random.normal(size=1000)), description="demo")
+        >>> plot = plot.add_histogram_gaussians()
         """
         for idx, trace in enumerate(self):
             if isinstance(trace, go.Histogram):
@@ -1327,7 +1376,8 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.add_rug(rug_type="violin")  # doctest: +SKIP
+        >>> plot = Plot.from_traces(go.Histogram(x=np.random.normal(size=1000)), description="demo")
+        >>> plot = plot.add_rug(rug_type="violin")
         """
         if getattr(self, "_added_rugs", False):
             return self
@@ -1564,7 +1614,11 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.trace(0)  # doctest: +SKIP
+        >>> plot = Plot.from_traces(go.Scatter(x=[1, 2], y=[3, 4]), description="demo")
+        >>> plot.trace(0)
+        Scatter({
+            'x': [1, 2], 'y': [3, 4], 'yaxis': 'y'
+        })
         """
         return self.data[idx]
 
@@ -1574,28 +1628,35 @@ class Plot(go.Figure):
         /,
     ) -> Iterator[tuple[int, Trace]]:
         """
-        Yield ``(index, trace)`` pairs matching a trace type identifier.
+            Yield ``(index, trace)`` pairs matching a trace type identifier.
 
-        Looks up the trace class in :data:`TRACE_IDENTIFIERS` and matches
-        by ``isinstance`` or by comparing the ``meta`` attribute.
+            Looks up the trace class in :data:`TRACE_IDENTIFIERS` and matches
+            by ``isinstance`` or by comparing the ``meta`` attribute.
 
         Parameters
         ----------
-        trace_type
-            String key or :class:`TraceType` value identifying the trace kind.
+            trace_type
+                String key or :class:`TraceType` value identifying the trace kind.
 
         Returns
         -------
-        Iterator[tuple[int, Trace]]
-            Pairs of ``(index, trace)`` for every matching trace.
+            Iterator[tuple[int, Trace]]
+                Pairs of ``(index, trace)`` for every matching trace.
 
         See Also
         --------
-        Plot.trace : Access a single trace by index.
+            Plot.trace : Access a single trace by index.
 
         Examples
         --------
-        >>> list(plot.get_traces_by_type("histogram"))  # doctest: +SKIP
+        >>> plot = Plot.from_traces(
+        ...     go.Histogram(x=np.random.normal(size=1000)),
+        ...     go.Scatter(x=np.random.randn(100), y=np.random.randn(100), mode="markers"),
+        ...     description="demo",
+        ... )
+        >>> histogram_traces = list(plot.get_traces_by_type("histogram"))
+        >>> len(histogram_traces)
+        1
         """
         trace_cls = TRACE_IDENTIFIERS.get(trace_type)
 
@@ -1637,7 +1698,8 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.add_button({"label": "Toggle", "method": "restyle", "args": [{"visible": True}]})  # doctest: +SKIP
+        >>> plot = Plot.empty(description="demo")
+        >>> plot = plot.add_button({"label": "Toggle", "method": "restyle", "args": [{"visible": True}]})
         """
         existing_menus: list[dict[str, Any]] = [menu.to_plotly_json() for menu in (self.layout.updatemenus or ())]
 
@@ -1685,7 +1747,11 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.add_histogram_to_2d_scatter(colour=Colour.parse("blue"))  # doctest: +SKIP
+        >>> plot = Plot.from_traces(
+        ...     go.Scatter(x=np.random.randn(100), y=np.random.randn(100), mode="markers"),
+        ...     description="demo",
+        ... )
+        >>> plot = plot.add_histogram_to_2d_scatter(colour=Colour.parse("blue"))
         """
         if colour is None:
             colour = Colour.parse("red")
@@ -1770,7 +1836,8 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.add_kde_to_histogram(opacity=0.7)  # doctest: +SKIP
+        >>> plot = Plot.from_traces(go.Histogram(x=np.random.randn(1000)), description="demo")
+        >>> plot = plot.add_kde_to_histogram(opacity=0.7)
         """
         kwargs = {
             "opacity": 0.9,
@@ -1828,7 +1895,11 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.add_heatmap_alternative_to_3d_bar()  # doctest: +SKIP
+        >>> plot = Plot.from_traces(
+        ...     Bar3d(x=[0, 1, 2], y=[0, 1, 2], z=[5, 10, 15]),
+        ...     description="demo",
+        ... )
+        >>> plot = plot.add_heatmap_alternative_to_3d_bar()
         """
         bar3d_indices = {idx for idx, _ in self.get_traces_by_type(TraceType.BAR3D)}
 
@@ -1887,7 +1958,12 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.add_default_extras()  # doctest: +SKIP
+        >>> plot = Plot.from_traces(
+        ...     go.Scatter(x=np.random.randn(100), y=np.random.randn(100), mode="markers"),
+        ...     go.Histogram(x=np.random.randn(1000)),
+        ...     description="demo",
+        ... )
+        >>> plot = plot.add_default_extras()
         """
         self.add_histogram_to_2d_scatter()
         self.add_kde_to_histogram()
@@ -1927,7 +2003,9 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.add_interval(interval)  # doctest: +SKIP
+        >>> plot = Plot.from_traces(go.Scatter(x=[datetime.date(2020, 1, 1), datetime.date(2020, 1, 2)], y=[1, 2]), description="demo")
+        >>> interval = Interval(start=datetime.date(2020, 1, 1), end=datetime.date(2020, 1, 2))
+        >>> plot = plot.add_interval(interval)
         """
         if interval is None:
             return self
@@ -1969,7 +2047,16 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.hide_traces(["Trace A", "Trace B"])  # doctest: +SKIP
+        >>> plot = Plot.from_traces(
+        ...     go.Scatter(x=[1, 2], y=[3, 4], name="Trace A"),
+        ...     go.Scatter(x=[1, 2], y=[5, 6], name="Trace B"),
+        ...     description="demo",
+        ... )
+        >>> plot = plot.hide_traces(["Trace A", "Trace B"])
+        >>> plot.trace(0).visible
+        'legendonly'
+        >>> plot.trace(1).visible
+        'legendonly'
         """
         for name in names:
             self.update_traces(
@@ -2012,7 +2099,20 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> plot.set_visible_y_range(y_padding=0.1)  # doctest: +SKIP
+        >>> plot = Plot.from_traces(
+        ...     go.Scatter(
+        ...         x=[datetime.date(2020, 1, 1), datetime.date(2020, 1, 2), datetime.date(2020, 1, 3), datetime.date(2020, 1, 4)],
+        ...         y=[10, 20, 30, 40],
+        ...     ),
+        ...     go.Scatter(
+        ...         x=[datetime.date(2020, 1, 1), datetime.date(2020, 1, 2), datetime.date(2020, 1, 3), datetime.date(2020, 1, 4)],
+        ...         y=[15, 25, 35, 45],
+        ...         yaxis="y2",
+        ...     ),
+        ...     layout={"xaxis_range": [datetime.date(2020, 1, 2), datetime.date(2020, 1, 3)]},
+        ...     description="demo",
+        ... )
+        >>> plot = plot.set_visible_y_range(y_padding=0.1)
         """
         xaxis_range: tuple[Any, Any] | None = getattr(self.layout.xaxis, "range", None)
         if xaxis_range is None:

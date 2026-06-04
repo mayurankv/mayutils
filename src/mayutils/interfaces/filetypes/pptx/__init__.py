@@ -559,7 +559,6 @@ class Presentation:
 
         Examples
         --------
-        >>> import tempfile
         >>> from pathlib import Path
         >>> from pptx import Presentation as _Init
         >>> from mayutils.interfaces.filetypes.pptx import Presentation
@@ -599,7 +598,6 @@ class Presentation:
 
         Examples
         --------
-        >>> import tempfile
         >>> from pathlib import Path
         >>> from mayutils.interfaces.filetypes.pptx import Presentation
         >>> pres = Presentation("/path/to/deck.pptx")  # doctest: +SKIP
@@ -694,7 +692,6 @@ class Presentation:
 
         Examples
         --------
-        >>> import tempfile
         >>> from pathlib import Path
         >>> from mayutils.interfaces.filetypes.pptx import Presentation
         >>> pres = Presentation("/path/to/deck.pptx")  # doctest: +SKIP
@@ -751,7 +748,6 @@ class Presentation:
 
         Examples
         --------
-        >>> import tempfile
         >>> from pathlib import Path
         >>> from mayutils.interfaces.filetypes.pptx import Presentation
         >>> pres = Presentation("/path/to/deck.pptx")  # doctest: +SKIP
@@ -2293,7 +2289,6 @@ def convert_pptx_to_pdf(
 
     Examples
     --------
-    >>> import tempfile
     >>> from pathlib import Path
     >>> from pathlib import Path
     >>> from mayutils.interfaces.filetypes.pptx import convert_pptx_to_pdf
@@ -2563,7 +2558,6 @@ class SlideView:
 
         Examples
         --------
-        >>> import tempfile
         >>> from pathlib import Path
         >>> from mayutils.interfaces.filetypes.pptx import Presentation
         >>> pres = Presentation("/path/to/deck.pptx")  # doctest: +SKIP
@@ -2603,7 +2597,6 @@ class SlideView:
 
         Examples
         --------
-        >>> import tempfile
         >>> from pathlib import Path
         >>> from mayutils.interfaces.filetypes.pptx import Presentation
         >>> pres = Presentation("/path/to/deck.pptx")  # doctest: +SKIP

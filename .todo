@@ -1,19 +1,7 @@
-- temp/temp.ipy
-- Templates
-- misc:
-	- CHANGELOG
-	- .todo
-
-
-```repo check myself
-Fix repo docs builds
-Fix repo merge gates
-Where are the noqas?
-Where are the doctest skips?
-```
-
-```documentation
-Make sure all docstrings are properly tested with doctest where possible
-Remove all type hints from docstrings
-Ensure doctest skip is only used where necessary and not overused
-```
+☐ Fix repo docs builds (is this ci or general?)
+☐ Fix repo merge gates
+☐ Where are the noqas?
+☐ Work out what to do with `temp.temp.ipy`
+☐ Fix `Templates/`
+☐ Sort out how `CHANGELOG` works
+☐ Sort out how `.todo` works

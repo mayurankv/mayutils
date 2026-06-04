@@ -92,12 +92,12 @@ def ships_py_typed(
     --------
     A package that ships ``py.typed`` (e.g. ``rich``):
 
-    >>> ships_py_typed("rich")  # doctest: +SKIP
+    >>> ships_py_typed("rich")
     True
 
     A package without ``py.typed``:
 
-    >>> ships_py_typed("snowflake")  # doctest: +SKIP
+    >>> ships_py_typed("snowflake")
     False
 
     A package that is not installed returns ``False``:
@@ -153,9 +153,9 @@ def types_package_installed(
 
     Examples
     --------
-    >>> types_package_installed("requests")  # doctest: +SKIP
+    >>> types_package_installed("requests")
     True
-    >>> types_package_installed("numpy")  # doctest: +SKIP
+    >>> types_package_installed("numpy")
     False
     """
     target = f"types-{package.replace('_', '-')}".lower()
@@ -243,7 +243,7 @@ def is_namespace_package(
 
     A namespace package like ``google`` (if installed):
 
-    >>> is_namespace_package("google")  # doctest: +SKIP
+    >>> is_namespace_package("google")
     True
     """
     spec = importlib.util.find_spec(name=package)
@@ -790,18 +790,18 @@ def filter_by_changed(
     --------
     Only packages whose distribution changed are kept:
 
-    >>> filter_by_changed(  # doctest: +SKIP
+    >>> filter_by_changed(
     ...     ["requests", "yaml"],
     ...     changed={"requests"},
-    ... )  # doctest: +SKIP
+    ... )
     ['requests']
 
     Packages with no discoverable distribution are kept as a safe default:
 
-    >>> filter_by_changed(  # doctest: +SKIP
+    >>> filter_by_changed(
     ...     ["unknown"],
     ...     changed={"requests"},
-    ... )  # doctest: +SKIP
+    ... )
     ['unknown']
     """
     mapping = packages_distributions()
@@ -860,8 +860,8 @@ def run_pyright(
     Examples
     --------
     >>> from pathlib import Path
-    >>> result = run_pyright("requests", typings=Path("typings"))  # doctest: +SKIP
-    >>> result.returncode  # doctest: +SKIP
+    >>> result = run_pyright("requests", typings=Path("typings"))
+    >>> result.returncode
     0
     """
     return subprocess.run(

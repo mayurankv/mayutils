@@ -52,7 +52,7 @@ class Ecdf(Line):
     Examples
     --------
     >>> from mayutils.visualisation.graphs.plotly.traces.ecdf import Ecdf
-    >>> Ecdf(x=[1, 2, 3, 4])  # doctest: +SKIP
+    >>> trace = Ecdf(x=[1, 2, 3, 4])
     """
 
     trace_type: ClassVar[TraceType] = TraceType.ECDF
@@ -106,7 +106,7 @@ class Ecdf(Line):
 
         Examples
         --------
-        >>> Ecdf(x=[1, 2, 3], norm="percentage")  # doctest: +SKIP
+        >>> trace = Ecdf(x=[1, 2, 3], norm="percentage")
         """
         x_arr = np.asarray(x)
         idx = np.argsort(x_arr)

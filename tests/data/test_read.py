@@ -109,7 +109,7 @@ class TestQueryInputWarning:
 
     def test_warns_but_format_query_raises_propagates(self) -> None:
         """If the heuristic fires but format_query can't find the file, the error propagates."""
-        with pytest.raises(ValueError, match="No query"):
+        with pytest.warns(QueryInputWarning), pytest.raises(ValueError, match="No query"):
             render_query(SQL("nonexistent.sql"))
 
 

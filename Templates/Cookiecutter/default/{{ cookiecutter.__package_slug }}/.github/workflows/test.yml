@@ -17,7 +17,6 @@ jobs:
         os:
           - 'ubuntu-latest'
         python-version:
-          - '3.12'
           - '3.13'
 
     runs-on: '{% raw %}${{ matrix.os }}{% endraw %}'

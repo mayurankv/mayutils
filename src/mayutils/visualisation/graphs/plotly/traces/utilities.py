@@ -37,8 +37,8 @@ def is_trace_3d(
     Examples
     --------
     >>> from mayutils.visualisation.graphs.plotly.traces.utilities import is_trace_3d
-    >>> import plotly.graph_objects as go  # doctest: +SKIP
-    >>> is_trace_3d(go.Scatter3d())  # doctest: +SKIP
+    >>> import plotly.graph_objects as go
+    >>> is_trace_3d(go.Scatter3d())
     True
     """
     if not hasattr(trace, "type"):

@@ -37,7 +37,7 @@ class Kde(Line):
     Examples
     --------
     >>> from mayutils.visualisation.graphs.plotly.traces.kde import Kde
-    >>> Kde(x=[1, 2, 2, 3, 3, 3])  # doctest: +SKIP
+    >>> trace = Kde(x=[1, 2, 2, 3, 3, 3])
     """
 
     trace_type: ClassVar[TraceType] = TraceType.KDE
@@ -71,7 +71,7 @@ class Kde(Line):
 
         Examples
         --------
-        >>> Kde(x=[1, 2, 3], bandwidth=0.5)  # doctest: +SKIP
+        >>> trace = Kde(x=[1, 2, 3], bandwidth=0.5)
         """
         x_arr = np.asarray(x)
         kde = gaussian_kde(dataset=x_arr, bw_method=bandwidth)

@@ -42,7 +42,7 @@ class Scatter(go.Scatter):
 
     Examples
     --------
-    >>> Scatter(x=[1, 2, 3], y=[4, 5, 6])  # doctest: +SKIP
+    >>> trace = Scatter(x=[1, 2, 3], y=[4, 5, 6])
     """
 
     trace_type: ClassVar[TraceType] = TraceType.SCATTER
@@ -76,7 +76,7 @@ class Scatter(go.Scatter):
 
         Examples
         --------
-        >>> Scatter(x=[1, 2, 3], y=[4, 5, 6])  # doctest: +SKIP
+        >>> trace = Scatter(x=[1, 2, 3], y=[4, 5, 6])
         """
         if "meta" in kwargs:
             msg = "The 'meta' argument is reserved for internal use and cannot be set by the user."

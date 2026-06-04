@@ -183,7 +183,7 @@ class TraceStubConfig:
 
     Examples
     --------
-    >>> TraceStubConfig(  # doctest: +SKIP
+    >>> trace_stub_config = TraceStubConfig(
     ...     module="line",
     ...     class_name="Line",
     ...     base_stub_file="graph_objs/_scatter.pyi",
@@ -636,7 +636,7 @@ class ClassMethodStub:
 
     Examples
     --------
-    >>> ClassMethodStub(  # doctest: +SKIP
+    >>> class_method_stub = ClassMethodStub(  # doctest: +SKIP
     ...     name="from_dict",
     ...     positional_params=[],
     ...     keyword_params=[],
@@ -1272,9 +1272,10 @@ def merge_stub_contents(
 
     Examples
     --------
-    >>> merge_stub_contents(  # doctest: +SKIP
+    >>> merge_stub_contents(
     ...     ["import a\\nclass A: ...", "import b\\nclass B: ..."],
     ... )
+    'import a\\nclass A: ...\nimport b\\nclass B: ...\n\n\n\n\n'
     """
     all_imports: list[str] = []
     all_classes: list[str] = []
@@ -1309,7 +1310,7 @@ def append_module_functions(
     func_imports: list[str],
     func_stubs: list[str],
 ) -> str:
-    """
+    r"""
     Append top-level function stubs to an existing stub file text.
 
     Inserts any missing import lines into the header, then appends the
@@ -1335,11 +1336,12 @@ def append_module_functions(
 
     Examples
     --------
-    >>> append_module_functions(  # doctest: +SKIP
+    >>> append_module_functions(
     ...     stub_text="class A: ...",
     ...     func_imports=["from typing import Any"],
     ...     func_stubs=["def foo() -> None: ..."],
     ... )
+    'from typing import Any\nclass A: ...\n\ndef foo() -> None: ...\n'
     """
     lines = stub_text.splitlines()
 
@@ -1591,7 +1593,7 @@ def format_pyi_method(
 
     Examples
     --------
-    >>> format_pyi_method("def foo(self) -> None: ...")  # doctest: +SKIP
+    >>> format_pyi_method("def foo(self) -> None: ...")
     '    def foo(self) -> None: ...'
     """
     decorators: list[str] = []
@@ -1841,10 +1843,11 @@ def collect_cross_module_imports(
 
     Examples
     --------
-    >>> collect_cross_module_imports(  # doctest: +SKIP
+    >>> collect_cross_module_imports(
     ...     charts_dir=CHARTS_DIR,
     ...     module_stem="plot",
     ... )
+    {'Plot'}
     """
     needed: set[str] = set()
     module_dotted = f"mayutils.visualisation.graphs.plotly.charts.{module_stem}"

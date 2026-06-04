@@ -27,8 +27,8 @@ mayutils.core.extras.may_require_extras : Lazy-import guard used to turn
 Examples
 --------
 >>> from mayutils.interfaces.streamlit import StreamlitManager
->>> StreamlitManager.initialise(counter=0, username="guest")  # doctest: +SKIP
->>> StreamlitManager.add_style("body { background: #111; }")  # doctest: +SKIP
+>>> StreamlitManager.initialise(counter=0, username="guest")
+>>> StreamlitManager.add_style("body { background: #111; }")
 >>> StreamlitManager.add_css("style.css")  # doctest: +SKIP
 """
 

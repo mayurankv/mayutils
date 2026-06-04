@@ -51,7 +51,7 @@ class Line(go.Scatter):
     Examples
     --------
     >>> from mayutils.visualisation.graphs.plotly.traces.line import Line
-    >>> Line(x=[1, 2, 3], y=[4, 5, 6])  # doctest: +SKIP
+    >>> trace = Line(x=[1, 2, 3], y=[4, 5, 6])
     """
 
     trace_type: ClassVar[TraceType] = TraceType.LINE
@@ -89,7 +89,7 @@ class Line(go.Scatter):
 
         Examples
         --------
-        >>> Line(x=[0, 1], y=[2, 3], label_name="trend")  # doctest: +SKIP
+        >>> trace = Line(x=[0, 1], y=[2, 3], label_name="trend")
         """
         if "meta" in kwargs:
             msg = "The 'meta' argument is reserved for internal use of `mayutils` and cannot be set by the user."
@@ -143,7 +143,7 @@ class Line(go.Scatter):
         Examples
         --------
         >>> import pandas as pd
-        >>> Line.from_series(pd.Series([1, 2, 3]))  # doctest: +SKIP
+        >>> trace = Line.from_series(pd.Series([1, 2, 3]))
         """
         return cls(
             x=series.index,
@@ -203,12 +203,12 @@ class Line(go.Scatter):
 
         Examples
         --------
-        >>> Line.with_bounds(
+        >>> trace = Line.with_bounds(
         ...     x=[1, 2, 3],
         ...     y=[4, 5, 6],
         ...     y_upper=[[5, 6, 7]],
         ...     y_lower=[[3, 4, 5]],
-        ... )  # doctest: +SKIP
+        ... )
         """
         if len(y_lower) != len(y_upper):
             msg = "Asymmetric bounds provided"
@@ -322,12 +322,12 @@ class Line(go.Scatter):
         --------
         >>> import pandas as pd
         >>> df = pd.DataFrame({"y": [1, 2], "hi": [2, 3], "lo": [0, 1]})
-        >>> Line.from_bounds_dataframe(
+        >>> trace = Line.from_bounds_dataframe(
         ...     df,
         ...     y_index="y",
         ...     y_upper_indices=["hi"],
         ...     y_lower_indices=["lo"],
-        ... )  # doctest: +SKIP
+        ... )
         """
         x = df.index
         y = df.iloc[:, y_index] if isinstance(y_index, int) else df[y_index]

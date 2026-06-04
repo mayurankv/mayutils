@@ -32,9 +32,9 @@ class TraceType(StrEnum):
 
     Examples
     --------
-    >>> TraceType.LINE  # doctest: +SKIP
+    >>> TraceType.LINE
     <TraceType.LINE: 'line'>
-    >>> TraceType.LINE == "line"  # doctest: +SKIP
+    >>> TraceType.LINE == "line"
     True
     """
 

@@ -37,7 +37,7 @@ def build_icicle(
 
     Examples
     --------
-    >>> build_icicle({"a": {"b": 1, "c": 2}})  # doctest: +SKIP
+    >>> icicle_dict = build_icicle({"a": {"b": 1, "c": 2}})
     """
     node_values: dict[str, float] = {}
 
@@ -70,7 +70,7 @@ def build_icicle(
 
         Examples
         --------
-        >>> calculate_values({"a": 1, "b": 2})  # doctest: +SKIP
+        >>> output = calculate_values({"a": 1, "b": 2})
         """
         if path in node_values:
             return node_values[path]
@@ -120,7 +120,7 @@ def build_icicle(
 
         Examples
         --------
-        >>> build_lists({"a": 1})  # doctest: +SKIP
+        >>> output = build_lists({"a": 1})
         """
         for key, value in d.items():
             current_path = f"{parent_path}/{key}" if parent_path else key
@@ -163,7 +163,7 @@ class Icicle(go.Icicle):
     Examples
     --------
     >>> from mayutils.visualisation.graphs.plotly.traces.icicle import Icicle
-    >>> Icicle.from_dict({"a": {"b": 1}})  # doctest: +SKIP
+    >>> trace = Icicle.from_dict({"a": {"b": 1}})
     """
 
     @classmethod
@@ -196,7 +196,7 @@ class Icicle(go.Icicle):
 
         Examples
         --------
-        >>> Icicle.from_dict({"root": {"a": 1, "b": 2}})  # doctest: +SKIP
+        >>> trace = Icicle.from_dict({"root": {"a": 1, "b": 2}})
         """
         ids, labels, parents, values = build_icicle(icicle_dict)
 

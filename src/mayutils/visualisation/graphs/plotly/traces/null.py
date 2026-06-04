@@ -34,8 +34,8 @@ class Null(go.Scatter):
     Examples
     --------
     >>> from mayutils.visualisation.graphs.plotly.traces.null import Null
-    >>> trace = Null()  # doctest: +SKIP
-    >>> trace.showlegend  # doctest: +SKIP
+    >>> trace = Null()
+    >>> trace.showlegend
     False
     """
 
@@ -74,9 +74,9 @@ class Null(go.Scatter):
         Examples
         --------
         >>> from mayutils.visualisation.graphs.plotly.traces.null import Null
-        >>> trace = Null()  # doctest: +SKIP
-        >>> trace.meta  # doctest: +SKIP
-        'null'
+        >>> trace = Null()
+        >>> trace.meta
+        <TraceType.NULL: 'null'>
         """
         if "meta" in kwargs:
             msg = "The 'meta' argument is reserved for internal use and cannot be set by the user."

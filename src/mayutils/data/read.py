@@ -76,7 +76,7 @@ class QueryExecutor[DataFrameType: DataFrames](Protocol):
     Examples
     --------
     >>> from mayutils.data.read import QueryExecutor
-    >>> QueryExecutor  # doctest: +SKIP
+    >>> QueryExecutor
     <class 'mayutils.data.read.QueryExecutor'>
     """
 
@@ -112,7 +112,7 @@ class QueryExecutor[DataFrameType: DataFrames](Protocol):
         Examples
         --------
         >>> from mayutils.data.read import QueryExecutor
-        >>> QueryExecutor  # doctest: +SKIP
+        >>> QueryExecutor
         <class 'mayutils.data.read.QueryExecutor'>
         """
         ...
@@ -680,7 +680,7 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
         Examples
         --------
         >>> from mayutils.data.read import read_query
-        >>> read_query  # doctest: +SKIP
+        >>> read_query
         <function read_query at ...>
         """
         return reader(

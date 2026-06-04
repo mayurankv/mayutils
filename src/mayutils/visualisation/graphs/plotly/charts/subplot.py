@@ -66,8 +66,10 @@ class SubPlot(Plot):
 
     Examples
     --------
+    >>> from mayutils.visualisation.graphs.plotly.charts import SubPlotConfig, PlotConfig
     >>> from mayutils.visualisation.graphs.plotly.charts.subplot import SubPlot
-    >>> SubPlot(config, description="grid")  # doctest: +SKIP
+    >>> config = SubPlotConfig(plots=((PlotConfig.empty(),),))
+    >>> plot = SubPlot(config, description="grid")
     """
 
     def __init__(
@@ -118,7 +120,10 @@ class SubPlot(Plot):
 
         Examples
         --------
-        >>> SubPlot(config, description="grid")  # doctest: +SKIP
+        >>> from mayutils.visualisation.graphs.plotly.charts import SubPlotConfig, PlotConfig
+        >>> from mayutils.visualisation.graphs.plotly.charts.subplot import SubPlot
+        >>> config = SubPlotConfig(plots=((PlotConfig.empty(),),))
+        >>> plot = SubPlot(config, description="grid")
         """
         if layout is None:
             layout = {}

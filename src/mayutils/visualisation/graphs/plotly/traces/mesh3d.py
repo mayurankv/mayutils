@@ -53,7 +53,7 @@ class Cuboid(go.Mesh3d):
     Examples
     --------
     >>> from mayutils.visualisation.graphs.plotly.traces.mesh3d import Cuboid
-    >>> Cuboid(x=(0, 1), y=(0, 1), z=(0, 1))  # doctest: +SKIP
+    >>> trace = Cuboid(x=(0, 1), y=(0, 1), z=(0, 1))
     """
 
     def __init__(
@@ -105,7 +105,7 @@ class Cuboid(go.Mesh3d):
 
         Examples
         --------
-        >>> Cuboid(x=(0, 2), y=(0, 3), z=(0, 1))  # doctest: +SKIP
+        >>> trace = Cuboid(x=(0, 2), y=(0, 3), z=(0, 1))
         """
         x0, x1 = x
         y0, y1 = y
@@ -182,7 +182,7 @@ class Bar3d(go.Mesh3d):
     Examples
     --------
     >>> from mayutils.visualisation.graphs.plotly.traces.mesh3d import Bar3d
-    >>> Bar3d(x=[0, 1], y=[0, 1], z=[5, 10])  # doctest: +SKIP
+    >>> trace = Bar3d(x=[0, 1], y=[0, 1], z=[5, 10])
     """
 
     trace_type: ClassVar[TraceType] = TraceType.BAR3D
@@ -259,7 +259,7 @@ class Bar3d(go.Mesh3d):
 
         Examples
         --------
-        >>> Bar3d(x=[0], y=[0], z=[5])  # doctest: +SKIP
+        >>> trace = Bar3d(x=[0], y=[0], z=[5])
         """
         if "meta" in kwargs:
             msg = "The 'meta' argument is reserved for internal use and cannot be set by the user."
@@ -397,7 +397,7 @@ class Bar3d(go.Mesh3d):
         Examples
         --------
         >>> import pandas as pd
-        >>> Bar3d.from_dataframe(pd.DataFrame({"a": [1, 2]}))  # doctest: +SKIP
+        >>> trace = Bar3d.from_dataframe(pd.DataFrame({"a": [1, 2]}))
         """
         if not df.columns.is_unique:
             msg = "Dataframe columns are not unique"
@@ -449,7 +449,10 @@ def merge_cuboids(
 
     Examples
     --------
-    >>> merge_cuboids(c1, c2, c3)  # doctest: +SKIP
+    >>> c1 = Cuboid(x=(0, 1), y=(0, 1), z=(0, 1))
+    >>> c2 = Cuboid(x=(1, 2), y=(0, 1), z=(0, 1))
+    >>> c3 = Cuboid(x=(0, 1), y=(1, 2), z=(0, 1))
+    >>> merged = merge_cuboids(c1, c2, c3)
     """
     x = np.zeros(len(cuboids) * 8)
     y = np.zeros(len(cuboids) * 8)

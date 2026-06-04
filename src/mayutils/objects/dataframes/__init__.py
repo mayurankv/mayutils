@@ -51,6 +51,8 @@ with may_require_extras():
 DATA_FOLDER: Path = OUTPUT_FOLDER / "Data"
 """Default on-disk root for DataFrame artifacts."""
 
+_pandas_accessors_registered: bool = False
+
 
 def setup_pandas() -> None:
     """
@@ -85,9 +87,13 @@ def setup_pandas() -> None:
     >>> hasattr(df, "utils")
     True
     """
+    global _pandas_accessors_registered
+    if _pandas_accessors_registered:
+        return
     register_dataframe_accessor(name="utils")(DataframeUtilsAccessor)
     register_series_accessor(name="utils")(SeriesUtilsAccessor)
     register_index_accessor(name="utils")(IndexUtilsAccessor)
+    _pandas_accessors_registered = True
 
 
 __all__ = [

@@ -227,6 +227,11 @@ venvPath = "."
 [tool.pytest.ini_options]
 addopts = "-ra --doctest-modules"
 doctest_optionflags = ["ELLIPSIS", "NORMALIZE_WHITESPACE"]
+filterwarnings = [
+  "ignore:builtin type Swig.*has no __module__:DeprecationWarning",
+  "ignore:builtin type swigvarlink has no __module__:DeprecationWarning",
+  "ignore:.*scattermapbox.*:DeprecationWarning"
+]
 testpaths = ["src/mayutils", "tests"]
 
 [tool.uv]
