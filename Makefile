@@ -42,7 +42,15 @@ type:
 
 .PHONY: test
 test:
+	uv run pytest -v
+
+.PHONY: unittest
+unittest:
 	uv run pytest tests/ -v
+
+.PHONY: doctest
+doctest:
+	uv run pytest --doctest-modules src/mayutils -v
 
 .PHONY: coverage
 coverage:

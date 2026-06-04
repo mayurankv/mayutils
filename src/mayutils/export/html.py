@@ -60,7 +60,7 @@ def markdown_to_html(
 
     Parameters
     ----------
-    text : str
+    text
         Markdown source document to be rendered. Any Markdown construct
         supported by the standard :mod:`markdown` package is accepted;
         embedded newlines are promoted to explicit ``<br>`` tags in the
@@ -125,24 +125,24 @@ def html_to_image(
 
     Parameters
     ----------
-    html : str
+    html
         Complete HTML source to render. Anything valid inside the
         ``<body>`` of a minimal document is acceptable; the library
         wraps the fragment automatically.
-    path : Path | str
+    path
         Final destination for the rendered image. The directory must
         already exist and be writable; the filename extension
         determines the output format recognised by
         :class:`html2image.Html2Image` (for example ``.png``).
-    css : str | None, default None
+    css
         Inline CSS stylesheet applied alongside the HTML. When
         ``None`` the empty string is supplied so that no additional
         styling is injected beyond the HTML's own ``<style>`` blocks.
-    size : tuple[int, int] | None, default None
+    size
         Virtual viewport dimensions ``(width, height)`` in pixels used
         by the headless browser. When ``None`` the underlying
         :class:`html2image.Html2Image` default is used.
-    sleep_time : int, default 1
+    sleep_time
         Number of seconds to wait between filesystem polls while
         waiting for the browser to finish writing the output file. A
         short fixed ``0.5`` second settle is always performed first
@@ -242,30 +242,30 @@ def html_pill(
 
     Parameters
     ----------
-    text : str
+    text
         Literal text placed inside the pill. The value is not escaped,
         so any callers passing user-controlled input must sanitise it
         beforehand if the output is going to be rendered in a trust
         boundary that matters.
-    background_colour : str
+    background_colour
         Any CSS-valid colour expression (hex string, ``rgb(...)``
         function, or named colour) used as the pill's fill colour.
-    text_colour : str, default "black"
+    text_colour
         CSS-valid colour used as the ``color`` of the text, controlling
         the foreground contrast against ``background_colour``.
-    bold : bool, default True
+    bold
         When ``True`` the span is styled with ``font-weight: bold``;
         otherwise ``font-weight: normal`` is applied for a lighter
         visual weight.
-    padding : tuple[float, float], default (0.2, 0.4)
+    padding
         Vertical and horizontal padding around the text, in ``em``
         units, expressed as ``(vertical, horizontal)``. Larger values
         yield a chunkier pill.
-    relative_font_size : float, default 0.9
+    relative_font_size
         CSS ``font-size`` in ``em`` units, expressed relative to the
         surrounding text. Values below ``1`` shrink the badge below the
         inherited size.
-    rounding : float, default 5.625
+    rounding
         CSS ``border-radius`` in ``em`` units. Large values produce the
         fully-rounded pill silhouette; smaller values approach a plain
         rectangle with softened corners.

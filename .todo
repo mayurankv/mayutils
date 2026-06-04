@@ -1,29 +1,19 @@
-- markdown.py
 - temp/temp.ipy
 - Templates
 - misc:
 	- CHANGELOG
 	- .todo
-- Tie stub generation together properly and with CI
 
 
-```repo
+```repo check myself
 Fix repo docs builds
 Fix repo merge gates
 Where are the noqas?
 Where are the doctest skips?
-☐ Test out fail imports
 ```
 
 ```documentation
 Make sure all docstrings are properly tested with doctest where possible
-Check all docstrings make sense
 Remove all type hints from docstrings
 Ensure doctest skip is only used where necessary and not overused
-```
-
-```tests
-Add tests for all functions and methods, ensuring that they cover a wide range of cases and edge cases.
-Use pytest for testing and ensure that all tests pass successfully.
-Make sure all docstrings have proper examples which are tested with pytest where possible and doctest skipped only where necessary
 ```

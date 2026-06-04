@@ -48,10 +48,13 @@ class Traveller(PendulumTraveller):  # ty:ignore[unsupported-base]
     advanced, or relocated "now" value is produced as an instance of
     :class:`mayutils.objects.datetime.datetime.DateTime` rather than the
     default Pendulum ``DateTime``. The subclass keeps Pendulum's
-    context-manager semantics intact, meaning clock mocks stack when
-    nested and restore the real clock automatically as each scope exits.
-    This keeps test fixtures type-consistent with the rest of the
-    codebase, which relies on the project's extended datetime class.
+    context-manager semantics intact: entering a ``travel_to``/``travel``
+    scope pins ``now()`` for its duration and exiting it restores the real
+    clock. Reusing a single instance for *nested* scopes does not stack —
+    exiting an inner scope returns to the real clock, not the enclosing
+    frozen instant — so read the mocked ``now()`` within the innermost
+    active scope. This keeps test fixtures type-consistent with the rest of
+    the codebase, which relies on the project's extended datetime class.
 
     Parameters
     ----------
@@ -81,8 +84,9 @@ class Traveller(PendulumTraveller):  # ty:ignore[unsupported-base]
     >>> snapshot.to_iso8601_string()
     '2026-04-22T10:00:00Z'
 
-    Nest travels to model multi-step fixtures; each scope restores the
-    previous clock when it exits:
+    Nest travels to model multi-step fixtures; read the mocked ``now()``
+    inside the innermost scope (exiting a scope returns to the real clock,
+    not the enclosing frozen instant):
 
     >>> from mayutils.objects.datetime.traveller import Traveller
     >>> from mayutils.objects.datetime.datetime import DateTime

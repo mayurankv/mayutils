@@ -730,10 +730,10 @@ class Presentation:
 
         Parameters
         ----------
-        slide_numbers : Sequence[int] or None, optional
+        slide_numbers
             1-based indices of slides to render. When ``None`` every
             slide is rendered in order.
-        zoom : float, default ``1.5``
+        zoom
             Uniform scaling factor fed to
             :class:`pymupdf.Matrix` when producing each page pixmap.
 
@@ -885,7 +885,7 @@ class Presentation:
 
         Parameters
         ----------
-        value : Length
+        value
             New slide height in EMU. Applied directly to
             ``internal.slide_height`` and therefore affects every slide that
             shares the presentation's master dimensions.
@@ -928,7 +928,7 @@ class Presentation:
 
         Parameters
         ----------
-        fraction : float
+        fraction
             Proportion of the current :attr:`height` to return, expressed
             as a decimal (e.g. ``0.5`` for half-height).
 
@@ -1022,7 +1022,7 @@ class Presentation:
 
         Parameters
         ----------
-        value : Length
+        value
             New slide width in EMU. Applied directly to
             ``internal.slide_width`` and therefore affects every slide that
             shares the presentation's master dimensions.
@@ -1065,7 +1065,7 @@ class Presentation:
 
         Parameters
         ----------
-        fraction : float
+        fraction
             Proportion of the current :attr:`width` to return, expressed
             as a decimal (e.g. ``0.5`` for half-width).
 
@@ -1195,7 +1195,7 @@ class Presentation:
 
         Parameters
         ----------
-        slide_number : int
+        slide_number
             Slide index using human-friendly 1-based counting, so ``1``
             corresponds to the first slide and ``len(self.slides)`` to the
             last.
@@ -1254,7 +1254,7 @@ class Presentation:
 
         Parameters
         ----------
-        layout : SlideLayout or None, optional
+        layout
             Slide layout to base the new slide on. When ``None`` the
             presentation's :attr:`blank_layout` is used so the slide starts
             with no placeholder content.
@@ -1304,7 +1304,7 @@ class Presentation:
 
         Parameters
         ----------
-        layout : SlideLayout or None, optional
+        layout
             Layout for the new slide. When ``None``, the presentation's
             blank layout is used.
 
@@ -1405,7 +1405,7 @@ class Presentation:
 
         Parameters
         ----------
-        slide_number : int
+        slide_number
             1-based index of the slide to remove once this method is
             implemented. Retained on the public API so callers can plan for
             the eventual capability.
@@ -1464,7 +1464,7 @@ class Presentation:
 
         Parameters
         ----------
-        slide_number : int
+        slide_number
             1-based index of the slide to be duplicated once the method is
             implemented.
 
@@ -1547,10 +1547,10 @@ class Presentation:
 
         Parameters
         ----------
-        slide_number : int
+        slide_number
             1-based index of the slide to be relocated once the method is
             implemented.
-        to_position : int
+        to_position
             1-based index at which the slide should appear after the move.
 
         Returns
@@ -1607,7 +1607,7 @@ class Presentation:
 
         Parameters
         ----------
-        new_order : list of int
+        new_order
             Permutation specifying the desired order of slides expressed as
             1-based indices; the ``i``-th entry gives the original index of
             the slide that should occupy position ``i`` once the method is
@@ -1670,19 +1670,19 @@ class Presentation:
 
         Parameters
         ----------
-        height : Length or None, optional
+        height
             Desired shape height in EMU. When ``None``, the shape will size
             itself to its content; ``y_shift`` is then defaulted to a 5%
             top inset rather than centre-aligning the shape vertically.
-        width : Length or None, optional
+        width
             Desired shape width in EMU. Handled analogously to ``height``
             with respect to the horizontal axis.
-        x_shift : Length or None, optional
+        x_shift
             Distance between the left edge of the slide and the left edge
             of the shape. If ``None``, it is derived so the shape is
             horizontally centred (when ``width`` is provided) or offset by
             5% of the slide width (when ``width`` is ``None``).
-        y_shift : Length or None, optional
+        y_shift
             Distance between the top edge of the slide and the top edge of
             the shape, resolved analogously to ``x_shift``.
 
@@ -1761,19 +1761,19 @@ class Presentation:
 
         Parameters
         ----------
-        slide_number : int or None, optional
+        slide_number
             1-based index of the slide to add the text box to. When
             ``None``, the text box is added to ``self.slides[-2]`` (i.e.
             the penultimate slide index interpreted as 1-based), matching
             the existing implementation's positional convention.
-        height : Length or None, optional
+        height
             Desired text box height forwarded to :meth:`insertion_spacing`.
-        width : Length or None, optional
+        width
             Desired text box width forwarded to :meth:`insertion_spacing`.
-        x_shift : Length or None, optional
+        x_shift
             Horizontal offset from the slide's left edge, forwarded to
             :meth:`insertion_spacing`.
-        y_shift : Length or None, optional
+        y_shift
             Vertical offset from the slide's top edge, forwarded to
             :meth:`insertion_spacing`.
 
@@ -1854,37 +1854,37 @@ class Presentation:
 
         Parameters
         ----------
-        text : str
+        text
             Raw text assigned to the text box. The string is written as-is
             to the first paragraph's text frame; Markdown is not parsed by
             this method.
-        textbox : Shape
+        textbox
             Shape whose ``text_frame`` receives the text and on which
             fill/colour settings are applied.
-        bold : bool, optional
+        bold
             If ``True``, marks the first paragraph's font as bold.
-        italic : bool, optional
+        italic
             If ``True``, marks the first paragraph's font as italic.
-        underline : bool, optional
+        underline
             If ``True``, underlines the first paragraph's font.
-        strikethrough : bool, optional
+        strikethrough
             If ``True``, applies a single strikethrough by writing
             ``strike="sngStrike"`` directly onto the run's XML element.
-        font_size : int or None, optional
+        font_size
             Font size expressed in points; converted to EMU via
             :func:`pptx.util.Pt`. ``None`` leaves the inherited size
             untouched.
-        font_family : str or None, optional
+        font_family
             Name of the font family to apply. ``None`` leaves the
             inherited font name untouched.
-        colour : Colour or str or None, optional
+        colour
             Foreground text colour. Strings are parsed through
             :meth:`Colour.parse`; ``None`` leaves the inherited colour.
-        background_colour : Colour or str or None, optional
+        background_colour
             Solid fill colour applied to the text box's background.
             Strings are parsed through :meth:`Colour.parse`; ``None``
             leaves the existing fill untouched.
-        link : str or None, optional
+        link
             Hyperlink target; currently unsupported and triggers a
             :class:`NotImplementedError` when provided.
 
@@ -1992,19 +1992,19 @@ class Presentation:
 
         Parameters
         ----------
-        markdown : str
+        markdown
             Markdown source to render into the new text box.
-        slide_number : int or None, optional
+        slide_number
             1-based index of the slide to add the text box to.
             Defaults to the last slide when ``None``.
-        height : Length or None, optional
+        height
             Desired text box height forwarded to :meth:`insertion_spacing`.
-        width : Length or None, optional
+        width
             Desired text box width forwarded to :meth:`insertion_spacing`.
-        x_shift : Length or None, optional
+        x_shift
             Horizontal offset from the slide's left edge, forwarded to
             :meth:`insertion_spacing`.
-        y_shift : Length or None, optional
+        y_shift
             Vertical offset from the slide's top edge, forwarded to
             :meth:`insertion_spacing`.
 
@@ -2070,7 +2070,7 @@ class Presentation:
 
         Parameters
         ----------
-        image_path : pathlib.Path or str
+        image_path
             File-system path of the image to insert once the method is
             implemented. Retained on the public API so callers can plan
             for the eventual capability.
@@ -2130,7 +2130,7 @@ class Presentation:
 
         Parameters
         ----------
-        table : pandas.DataFrame or Styler
+        table
             Tabular data to insert once the method is implemented. A
             :class:`Styler` is unwrapped via ``table.data`` when present
             so the row count is read from the underlying DataFrame.
@@ -2194,7 +2194,7 @@ class Presentation:
 
         Parameters
         ----------
-        file_path : pathlib.Path or str
+        file_path
             Destination path. Any parent directories must already exist;
             no directory creation is attempted. Passed to
             :meth:`pptx.Presentation.save` after conversion to a string.
@@ -2252,13 +2252,13 @@ def convert_pptx_to_pdf(
 
     Parameters
     ----------
-    pptx_path : str or pathlib.Path
+    pptx_path
         Path to the source ``.pptx`` file that should be converted.
-    output_dir : str or pathlib.Path, optional
+    output_dir
         Directory in which the generated PDF is written. Created if it
         does not already exist. Defaults to the ``PDF`` folder that is a
         sibling of :data:`mayutils.export.images.IMAGES_FOLDER`.
-    soffice_path : str or None, optional
+    soffice_path
         Explicit path to the LibreOffice ``soffice`` binary. When
         ``None``, the binary is located via :func:`shutil.which`.
 
@@ -2366,10 +2366,10 @@ class SlideView:
 
     Parameters
     ----------
-    presentation : Presentation
+    presentation
         The presentation this view belongs to. The view delegates
         back to it for saving, conversion, and rasterisation.
-    slide_number : int
+    slide_number
         1-based index of the slide to render.
 
     See Also
@@ -2414,9 +2414,9 @@ class SlideView:
 
         Parameters
         ----------
-        presentation : Presentation
+        presentation
             Parent presentation.
-        slide_number : int
+        slide_number
             1-based index of the slide to render. Must be in
             ``1..len(presentation.slides)``.
 

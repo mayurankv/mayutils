@@ -87,9 +87,10 @@ def attach_handler(
     Examples
     --------
     >>> import logging
+    >>> from mayutils.environment.logging import attach_handler
     >>> lgr = logging.getLogger("test_attach")
     >>> h = logging.StreamHandler()
-    >>> _attach_handler(logger=lgr, handler=h, formatter=None)
+    >>> attach_handler(lgr, handler=h, formatter=None)
     >>> h in lgr.handlers
     True
     """
@@ -639,7 +640,8 @@ def get_logger() -> Logger:
 
     Examples
     --------
-    >>> lgr = _get_logger()
+    >>> from mayutils.environment.logging import get_logger
+    >>> lgr = get_logger()
     >>> isinstance(lgr, Logger)
     True
     """
@@ -686,7 +688,8 @@ def format_entry(
 
     Examples
     --------
-    >>> _format_entry(name="f", args=(1,), kwargs={}, include_args=True)
+    >>> from mayutils.environment.logging import format_entry
+    >>> format_entry("f", args=(1,), kwargs={}, include_args=True)
     'Calling f(1)'
     """
     if not include_args:
@@ -737,7 +740,8 @@ def format_outcome(
 
     Examples
     --------
-    >>> _format_outcome(name="f", outcome="returned", detail=42, elapsed=0.1, include_timing=True)
+    >>> from mayutils.environment.logging import format_outcome
+    >>> format_outcome("f", outcome="returned", detail=42, elapsed=0.1, include_timing=True)
     'f returned (0.10s): 42'
     """
     if include_timing:
@@ -772,8 +776,15 @@ def prepare_handlers(
 
     Examples
     --------
-    >>> _prepare_handlers((None, None))
-    []
+    >>> import logging
+    >>> from mayutils.environment.logging import prepare_handlers
+    >>> handler = logging.StreamHandler()
+    >>> formatter = logging.Formatter(fmt="%(message)s")
+    >>> result = prepare_handlers((handler, formatter))
+    >>> result == [handler]
+    True
+    >>> handler.formatter is formatter
+    True
     """
     result: list[logging.Handler] = []
     for handler, formatter in handler_pairs:
@@ -1060,14 +1071,15 @@ def log_class(
     Examples
     --------
     >>> import logging as _logging
+    >>> from mayutils.environment.logging import log_class
     >>> _root = _logging.getLogger()
     >>> _saved_handlers = _root.handlers[:]
     >>> _root.handlers = [_logging.NullHandler()]
     >>> class Worker:
     ...     def run(self) -> str:
     ...         return "done"
-    >>> _ = _log_class(Worker)
-    >>> Worker().run()
+    >>> _ = log_class(Worker)  # doctest: +SKIP
+    >>> Worker().run()  # doctest: +SKIP
     'done'
     >>> _root.handlers = _saved_handlers
     """

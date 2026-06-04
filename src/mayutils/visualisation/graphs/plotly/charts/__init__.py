@@ -79,9 +79,11 @@ class TracesConfig:
 
         Examples
         --------
+        >>> import plotly.graph_objects as go
         >>> from mayutils.visualisation.graphs.plotly.charts import TracesConfig
-        >>> config = TracesConfig.from_trace.__doc__ is not None
-        True
+        >>> config = TracesConfig.from_trace(go.Scatter(x=(1, 2), y=(3, 4)))
+        >>> len(config.traces)
+        1
         """
         if yaxis_config is None:
             yaxis_config = {}
@@ -890,7 +892,7 @@ def get_domains(
     --------
     >>> from mayutils.visualisation.graphs.plotly.charts import get_domains
     >>> get_domains(spacing=0.0, num_axes=1)
-    [[0, 1]]
+    [[0.0, 1.0]]
     """
     gap = (1 - spacing * (num_axes - 1)) / num_axes
     return [

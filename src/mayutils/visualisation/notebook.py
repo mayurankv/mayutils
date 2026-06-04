@@ -68,7 +68,7 @@ class Notebook:
 
     Attributes
     ----------
-    __slots__ : tuple
+    __slots__
         Empty slots declaration preventing per-instance attribute
         allocation, reinforcing that the class is a pure namespace and
         instances carry no state.
@@ -209,12 +209,12 @@ class Notebook:
 
         Parameters
         ----------
-        *css : str
+        *css
             CSS source strings to inject. Each positional argument is
             treated as an independent stylesheet: no wrapping or
             concatenation is performed, so callers should pass fully
             formed rule blocks.
-        method : {"js", "html"}, default "js"
+        method
             Controls whether an eager ``<style>`` block is also emitted
             through :class:`IPython.core.display.HTML` before the
             JavaScript payload runs. ``"js"`` relies solely on the
@@ -284,7 +284,7 @@ class Notebook:
 
         Parameters
         ----------
-        *args : str
+        *args
             Markdown source fragments. Each argument is displayed as an
             independent output entry, which is convenient when emitting
             a series of related but separately re-renderable blocks.
@@ -328,7 +328,7 @@ class Notebook:
 
         Parameters
         ----------
-        *args : str
+        *args
             LaTeX source strings. Each argument is displayed as its own
             math block, which allows rendering multiple equations without
             combining them into a single array environment.

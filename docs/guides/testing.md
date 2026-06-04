@@ -5,7 +5,8 @@ Tests live under `tests/` and run with pytest.
 ## Running
 
 ```zsh
-make test            # uv run pytest tests/ -v
+make test            # uv run pytest -v  (unit tests + docstring doctests)
+make doctest         # uv run pytest --doctest-modules src/mayutils -v
 uv run pytest -k name_pattern
 uv run coverage run -m pytest && uv run coverage report
 ```
@@ -34,6 +35,14 @@ import pytest
 plotly = pytest.importorskip("plotly")
 ```
 
+## Doctests
+
+Docstring `Examples` blocks are executed as part of the default pytest run: `addopts` enables `--doctest-modules` and `testpaths` includes `src/mayutils`, so `uv run pytest` (and `make test`) run the unit tests *and* every docstring example.
+
+- Write examples that actually run. Reserve `# doctest: +SKIP` for examples that need external resources (network, credentials), write files, render output, or are otherwise non-deterministic.
+- `ELLIPSIS` and `NORMALIZE_WHITESPACE` are enabled, so `...` and flexible whitespace are allowed in expected output.
+- Run only the doctests with `make doctest`.
+
 ## CI
 
-The `ci.yaml` workflow runs pre-commit, `ty check`, `pytest`, and `cz check` on every PR to `main`. See `.github/workflows/ci.yaml`.
+The `ci.yaml` workflow runs, on every PR to `main`: pre-commit, `ty check`, the unit suite (`pytest tests/` on a minimal install, keeping the `importorskip` graceful-degradation contract honest), the docstring doctests (`pytest --doctest-modules src/mayutils` on a full `--all-extras` install), and `cz check`. See `.github/workflows/ci.yaml`.

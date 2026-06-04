@@ -34,6 +34,19 @@ class TestFlexwrap:
 
         return shout
 
+    def test_decorates_a_class(self) -> None:
+        """Applying a flexwrap decorator to a class returns it without raising (no ``mappingproxy`` crash)."""
+
+        @flexwrap
+        def register[T](target: T, /) -> T:
+            return target
+
+        class Worker:
+            def run(self) -> str:
+                return "done"
+
+        assert register(Worker) is Worker
+
     def test_bare_form(self) -> None:
         """``@deco`` (no call) wraps the function with defaults."""
         shout = self._make_shout()

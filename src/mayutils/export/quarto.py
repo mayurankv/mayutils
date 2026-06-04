@@ -319,7 +319,7 @@ def list_extensions() -> tuple[dict[str, str], ...]:
 
     >>> from unittest.mock import patch, MagicMock
     >>> from mayutils.export.quarto import list_extensions
-    >>> stdout = "Id                          Version  Contributes\\nquarto-ext/fontawesome      1.0.0    shortcodes\\n"
+    >>> stdout = "\n".join(["Id                          Version  Contributes", "quarto-ext/fontawesome      1.0.0    shortcodes", ""])
     >>> bin_patcher = patch("mayutils.export.quarto.quarto_bin")
     >>> run_patcher = patch("mayutils.export.quarto.subprocess.run")
     >>> bin_ = bin_patcher.start()

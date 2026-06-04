@@ -214,8 +214,12 @@ class DataFileSerialiser[DataFrameType: DataFrames = pd.DataFrame]:
 
         Examples
         --------
-        >>> from mayutils.environment.memoisation.files import DataFileSerialiser
         >>> from pathlib import Path
+        >>> from mayutils.environment.memoisation.files import (
+        ...     DataFileSerialiser,
+        ...     register_datafile,
+        ... )
+        >>> register_datafile("parquet")
         >>> s = DataFileSerialiser()
         >>> df = s.get_datafile(Path("data.parquet"))
         >>> type(df).__name__
@@ -756,7 +760,7 @@ def make_cache_stem(
     ...     cache_extra=None,
     ...     key="abc123",
     ... )
-    'select_from_loans--abc123'
+    'select_from--abc123'
     """
     sections: list[str] = []
 

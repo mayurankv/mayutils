@@ -236,15 +236,15 @@ def plugin_underline(
 
         Parameters
         ----------
-        inline : mistune.InlineParser
+        inline
             Active inline parser used to recursively tokenise the span's
             contents so that nested emphasis, code, links, etc. are
             preserved inside the underline node.
-        m : re.Match[str]
+        m
             Match object produced by the opening ``__(?=[^\\s_])``
             pattern; its ``end()`` marks the first character of the span
             body.
-        state : mistune.InlineState
+        state
             Current inline parsing state. Tokens are appended to this
             state's token list, and ``state.src`` is searched for the
             closing delimiter.
@@ -322,7 +322,7 @@ def plugin_emoji(
 
     Parameters
     ----------
-    md : mistune.Markdown
+    md
         Parser instance whose inline lexer should be extended. The plugin
         calls :meth:`md.inline.register` in-place and does not otherwise
         mutate ``md``.
@@ -368,14 +368,14 @@ def plugin_emoji(
 
         Parameters
         ----------
-        inline : mistune.InlineParser
+        inline
             Active inline parser. Kept for signature compatibility with
             Mistune's inline rule interface; no recursive parsing is
             performed because the replacement is a literal string.
-        m : re.Match[str]
+        m
             Match object produced by the ``:([a-z_]+):`` pattern. Group 1
             is the shortcode name used as the lookup key.
-        state : mistune.InlineState
+        state
             Current inline parsing state; the emoji token is appended to
             its token list.
 
@@ -459,13 +459,13 @@ def create_markdown_parser(
 
     Parameters
     ----------
-    renderer : None, optional
+    renderer
         Renderer forwarded to :func:`mistune.create_markdown`. Passing
         ``None`` (the default) selects Mistune's built-in HTML renderer;
         supply an alternative object to emit AST, plain text, or any other
         format. Typed as ``None`` here because the call sites in this
         module rely on the default HTML output.
-    plugins : list, optional
+    plugins
         Ordered collection of Mistune plugin callables to install on the
         parser. Each entry must accept a :class:`mistune.Markdown` and
         mutate it in place. Defaults to :data:`DEFAULT_PLUGINS`, which

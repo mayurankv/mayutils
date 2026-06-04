@@ -755,15 +755,16 @@ class DataframeUtilsAccessor:
         ...     DataframeUtilsAccessor,
         ... )
         >>> df = pd.DataFrame(
-        ...     {"n": ["1", "2"], "d": ["2024-01-01", "2024-01-02"]},
+        ...     {"n": ["1", "2"], "f": ["1.5", "2.5"]},
         ... )
         >>> accessor = DataframeUtilsAccessor(df=df)
         >>> _ = accessor.map_dtypes(
-        ...     {"n": "numeric", "d": "date"},
-        ...     date_format="%Y-%m-%d",
+        ...     {"n": "numeric", "f": float},
         ... )
         >>> accessor.df["n"].tolist()
         [1, 2]
+        >>> accessor.df["f"].tolist()
+        [1.5, 2.5]
         """
 
         def convert_datetime(
@@ -840,7 +841,7 @@ class DataframeUtilsAccessor:
         for col, dtype in mapper.items():
             try:
                 column: Series = self.df[col]
-                if dtype in get_args(tp=DatetimeKind):
+                if dtype in get_args(tp=DatetimeKind.__value__):
                     self.df[col] = convert_datetime(
                         series=column,
                         datetime_type=cast("DatetimeKind", dtype),

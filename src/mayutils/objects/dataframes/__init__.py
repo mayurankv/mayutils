@@ -18,9 +18,11 @@ mayutils.objects.dataframes.polars : Polars-specific helpers.
 Examples
 --------
 >>> import pandas as pd
->>> from mayutils.objects.dataframes import infer_backend
->>> infer_backend(pd.DataFrame({"x": [1]}))
-'pandas'
+>>> from mayutils.objects.dataframes import setup_pandas
+>>> setup_pandas()
+>>> df = pd.DataFrame({"x": [1]})
+>>> hasattr(df, "utils")
+True
 """
 
 from pathlib import Path

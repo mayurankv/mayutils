@@ -66,7 +66,7 @@ def latex_to_unicode(
 
     Parameters
     ----------
-    latex : str
+    latex
         LaTeX source containing commands and symbols to be translated,
         for example ``r"\alpha + \beta"``. Only expressions recognised
         by :func:`unicodeit.replace` are translated.

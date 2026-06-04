@@ -592,7 +592,7 @@ def lock_versions(
     --------
     >>> lock_versions("")
     {}
-    >>> sample = '[[package]]\\nname = "Requests"\\nversion = "2.31.0"\\n'
+    >>> sample = "\n".join(["[[package]]", 'name = "Requests"', 'version = "2.31.0"', ""])
     >>> lock_versions(sample)
     {'requests': '2.31.0'}
     """

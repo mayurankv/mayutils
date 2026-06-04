@@ -29,11 +29,11 @@ class Line(go.Scatter):
 
     Parameters
     ----------
-    label_name : bool | str
+    label_name
         When a string, the value is rendered as a text label at the last
         point.  When ``True``, the trace ``name`` is used instead.
         ``False`` (default) disables the label.
-    **kwargs : Any
+    **kwargs
         Forwarded to :class:`plotly.graph_objects.Scatter`.
 
     Raises
@@ -71,11 +71,11 @@ class Line(go.Scatter):
 
         Parameters
         ----------
-        label_name : bool | str
+        label_name
             Text label rendered at the last data point.  A string value
             is used directly; ``True`` copies the trace ``name``;
             ``False`` (default) disables labelling.
-        **kwargs : Any
+        **kwargs
             Forwarded to :class:`plotly.graph_objects.Scatter`.
 
         Raises

@@ -141,7 +141,7 @@ class Feather[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType])
         ...     path = Path(tmp) / "demo.feather"
         ...     pd.DataFrame({"id": [1, 2], "value": [3.14, 2.72]}).to_feather(path)
         ...     handle = Feather(path)
-        ...     frame = handle._read()
+        ...     frame = handle.read()
         ...     frame.shape
         (2, 2)
         """
@@ -215,7 +215,7 @@ class Feather[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType])
         ...     path = Path(tmp) / "demo.feather"
         ...     handle = Feather(path)
         ...     frame = pd.DataFrame({"id": [1, 2], "value": [3.14, 2.72]})
-        ...     handle._write(frame)
+        ...     _ = handle.write(frame)
         ...     path.exists()
         True
         """

@@ -225,8 +225,9 @@ venv = ".venv"
 venvPath = "."
 
 [tool.pytest.ini_options]
-addopts = "-ra"
-testpaths = ["tests"]
+addopts = "-ra --doctest-modules"
+doctest_optionflags = ["ELLIPSIS", "NORMALIZE_WHITESPACE"]
+testpaths = ["src/mayutils", "tests"]
 
 [tool.uv]
 default-groups = ["dev"]

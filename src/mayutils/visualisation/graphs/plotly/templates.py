@@ -38,8 +38,10 @@ def get_default_template_name() -> str:
 
     Examples
     --------
-    >>> from mayutils.visualisation.graphs.plotly.templates import default_template_name
-    >>> isinstance(default_template_name(), str)
+    >>> from mayutils.visualisation.graphs.plotly.templates import (
+    ...     get_default_template_name,
+    ... )
+    >>> isinstance(get_default_template_name(), str)
     True
     """
     return cast("str", pio.templates.default)  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType, reportAttributeAccessIssue]
@@ -72,8 +74,8 @@ def get_template(
 
     Examples
     --------
-    >>> from mayutils.visualisation.graphs.plotly.templates import default_template
-    >>> default_template() is not None
+    >>> from mayutils.visualisation.graphs.plotly.templates import get_template
+    >>> get_template() is not None
     True
     """
     if template_name is None:
@@ -103,8 +105,11 @@ def set_template(
 
     Examples
     --------
+    >>> import plotly.io as pio
     >>> from mayutils.visualisation.graphs.plotly.templates import set_template
-    >>> set_template("base")
+    >>> set_template(template="base")
+    >>> pio.templates.default
+    'base'
     """
     pio.templates.default = template  # pyright: ignore[reportAttributeAccessIssue]
 
@@ -130,8 +135,11 @@ def set_renderer(
 
     Examples
     --------
+    >>> import plotly.io as pio
     >>> from mayutils.visualisation.graphs.plotly.templates import set_renderer
-    >>> set_renderer("vscode")
+    >>> set_renderer(renderer="vscode")
+    >>> pio.renderers.default
+    'vscode'
     """
     pio.renderers.default = renderer  # pyright: ignore[reportAttributeAccessIssue]
 

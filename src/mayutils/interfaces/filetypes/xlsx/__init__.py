@@ -31,7 +31,7 @@ Examples
 ...     path = Path(tmp) / "report.xlsx"
 ...     pd.DataFrame({"a": [1, 2, 3]}).to_excel(path, sheet_name="Summary", index=False)
 ...     workbook = Xlsx(path)
-...     names = workbook.sheet_names()
+...     names = workbook.sheet_names
 ...     sheet = XlsxSheet(path, sheet="Summary")
 ...     frame = sheet.read()
 >>> names
@@ -113,8 +113,8 @@ class Xlsx[DataFrameType: DataFrames = pd.DataFrame]:
     ...     path = Path(tmp) / "report.xlsx"
     ...     pd.DataFrame({"a": [1, 2]}).to_excel(path, sheet_name="Summary", index=False)
     ...     workbook = Xlsx(path)
-    ...     backend = workbook.backend
-    ...     names = workbook.sheet_names()
+    ...     backend = workbook.backend.name
+    ...     names = workbook.sheet_names
     >>> backend
     'pandas'
     >>> names
@@ -415,7 +415,7 @@ class Xlsx[DataFrameType: DataFrames = pd.DataFrame]:
         ...     with pd.ExcelWriter(path, engine="openpyxl") as writer:
         ...         pd.DataFrame({"a": [1]}).to_excel(writer, sheet_name="Summary", index=False)
         ...         pd.DataFrame({"b": [2]}).to_excel(writer, sheet_name="Details", index=False)
-        ...     names = Xlsx(path).sheet_names()
+        ...     names = Xlsx(path).sheet_names
         >>> sorted(names)
         ['Details', 'Summary']
         """
@@ -813,7 +813,7 @@ class XlsxSheet[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType
         ...     path = Path(tmp) / "report.xlsx"
         ...     pd.DataFrame({"a": [1, 2]}).to_excel(path, sheet_name="Summary", index=False)
         ...     sheet = XlsxSheet(path, sheet="Summary")
-        ...     frame = sheet._read()
+        ...     frame = sheet.read()
         >>> frame.shape
         (2, 1)
         >>> frame.columns.tolist()
@@ -890,7 +890,7 @@ class XlsxSheet[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType
         >>> with tempfile.TemporaryDirectory() as tmp:
         ...     path = Path(tmp) / "out.xlsx"
         ...     sheet = XlsxSheet(path, sheet="Summary")
-        ...     sheet._write(pd.DataFrame({"a": [1]}))
+        ...     _ = sheet.write(pd.DataFrame({"a": [1]}))
         ...     existed = path.is_file()
         ...     readback = sheet.read()
         >>> existed

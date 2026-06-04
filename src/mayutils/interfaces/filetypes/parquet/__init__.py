@@ -122,7 +122,7 @@ class Parquet[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType])
         >>> with tempfile.TemporaryDirectory() as tmp:
         ...     path = Path(tmp) / "demo.parquet"
         ...     pd.DataFrame({"id": [1, 2, 3], "ts": [10, 20, 30]}).to_parquet(path)
-        ...     df = Parquet(path)._read(
+        ...     df = Parquet(path).read(
         ...         columns=["id"],
         ...     )
         ...     df.shape
@@ -199,7 +199,7 @@ class Parquet[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType])
         >>> from mayutils.interfaces.filetypes.parquet import Parquet
         >>> with tempfile.TemporaryDirectory() as tmp:
         ...     path = Path(tmp) / "demo.parquet"
-        ...     Parquet(path)._write(
+        ...     _ = Parquet(path).write(
         ...         pd.DataFrame({"id": [1, 2, 3]}),
         ...         compression="zstd",
         ...     )

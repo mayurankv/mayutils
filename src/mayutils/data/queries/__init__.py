@@ -30,14 +30,22 @@ interpolate a pair of placeholders:
 >>> from mayutils.data.queries import QUERIES_FOLDERS
 >>> isinstance(QUERIES_FOLDERS, tuple)
 True
+>>> import tempfile
+>>> from pathlib import Path
 >>> from mayutils.data.queries import format_query
->>> sql = format_query(  # doctest: +SKIP
-...     "revenue",
-...     schema="analytics",
-...     start_date="2024-01-01",
-... )
->>> print(sql)  # doctest: +SKIP
-SELECT * FROM analytics.revenue WHERE dt >= '2024-01-01'
+>>> with tempfile.TemporaryDirectory() as tmp:
+...     folder = Path(tmp)
+...     _ = (folder / "revenue.sql").write_text(
+...         "SELECT * FROM {schema}.revenue WHERE dt >= '{start_date}'",
+...         encoding="utf-8",
+...     )
+...     format_query(
+...         "revenue",
+...         queries_folders=(folder,),
+...         schema="analytics",
+...         start_date="2024-01-01",
+...     )
+"SELECT * FROM analytics.revenue WHERE dt >= '2024-01-01'"
 """
 
 from pathlib import Path
@@ -164,17 +172,29 @@ def read_query(
 
     Examples
     --------
-    Load a query shipped alongside the project by bare name:
+    Load a query by bare name from an explicit search folder, with the
+    ``.sql`` suffix supplied automatically:
 
-    >>> from mayutils.data.queries import read_query
-    >>> sql = read_query("loans_summary")  # doctest: +SKIP
-    >>> print(sql)  # doctest: +SKIP
-    SELECT loan_id, amount, status FROM loans_summary
-
-    Load a query using an explicit path:
-
+    >>> import tempfile
     >>> from pathlib import Path
-    >>> sql = read_query(Path("queries/revenue.sql"))  # doctest: +SKIP
+    >>> from mayutils.data.queries import read_query
+    >>> with tempfile.TemporaryDirectory() as tmp:
+    ...     folder = Path(tmp)
+    ...     _ = (folder / "loans_summary.sql").write_text(
+    ...         "SELECT loan_id, amount, status FROM loans_summary",
+    ...         encoding="utf-8",
+    ...     )
+    ...     read_query("loans_summary", queries_folders=(folder,))
+    'SELECT loan_id, amount, status FROM loans_summary'
+
+    A query that cannot be resolved raises :class:`ValueError` naming
+    every folder that was searched:
+
+    >>> try:
+    ...     read_query("missing", queries_folders=())
+    ... except ValueError as error:
+    ...     print(error)
+    No query missing.sql found including in the query folders
     """
     path = Path(path)
 
@@ -252,23 +272,34 @@ def format_query(
 
     Examples
     --------
-    Interpolate a schema name and date bound into a bundled query:
+    Interpolate a single placeholder into a query loaded from an
+    explicit search folder:
 
+    >>> import tempfile
+    >>> from pathlib import Path
     >>> from mayutils.data.queries import format_query
-    >>> sql = format_query(  # doctest: +SKIP
-    ...     "loans_by_region",
-    ...     region="London",
-    ... )
-    >>> print(sql)  # doctest: +SKIP
-    SELECT * FROM loans WHERE region = 'London'
+    >>> with tempfile.TemporaryDirectory() as tmp:
+    ...     folder = Path(tmp)
+    ...     _ = (folder / "loans_by_region.sql").write_text(
+    ...         "SELECT * FROM loans WHERE region = '{region}'",
+    ...         encoding="utf-8",
+    ...     )
+    ...     format_query("loans_by_region", queries_folders=(folder,), region="London")
+    "SELECT * FROM loans WHERE region = 'London'"
 
-    Pass multiple substitutions:
+    A placeholder with no matching keyword propagates :class:`KeyError`:
 
-    >>> sql = format_query(  # doctest: +SKIP
-    ...     "revenue",
-    ...     schema="analytics",
-    ...     start_date="2024-01-01",
-    ... )
+    >>> with tempfile.TemporaryDirectory() as tmp:
+    ...     folder = Path(tmp)
+    ...     _ = (folder / "needs_arg.sql").write_text(
+    ...         "SELECT * FROM {schema}.t",
+    ...         encoding="utf-8",
+    ...     )
+    ...     try:
+    ...         format_query("needs_arg", queries_folders=(folder,))
+    ...     except KeyError as error:
+    ...         print(error)
+    'schema'
     """
     unformatted_query = read_query(
         path,

@@ -241,8 +241,7 @@ def choice_replacement(
 
 @njit(cache=True)  # pyright: ignore[reportUntypedFunctionDecorator]
 def np_apply_along_axis_2d(
-    func1d: Callable[[NDArray[np.float64]], float],
-    /,
+    nb_func1d: Callable[[NDArray[np.float64]], float],
     *,
     arr: NDArray[np.float64],
     axis: int,
@@ -260,11 +259,10 @@ def np_apply_along_axis_2d(
 
     Parameters
     ----------
-    func1d
+    nb_func1d
         Reduction applied to each 1-D slice of ``arr``. Must accept a
         1-D NumPy array and return a single floating-point value;
-        typical choices are :func:`numpy.mean`, :func:`numpy.std`, or
-        any Numba-compilable scalar reducer.
+        must be a Numba-compiled scalar reducer.
     arr
         Two-dimensional input whose slices are fed to ``func1d``. The
         array must be exactly 2-D; higher-rank inputs are rejected by
@@ -320,19 +318,63 @@ def np_apply_along_axis_2d(
     if axis == 0:
         result = np.empty(arr.shape[1])
         for i in range(len(result)):
-            result[i] = func1d(arr[:, i])
+            result[i] = nb_func1d(arr[:, i])
     else:
         result = np.empty(arr.shape[0])
         for i in range(len(result)):
-            result[i] = func1d(arr[i, :])
+            result[i] = nb_func1d(arr[i, :])
 
     return result
 
 
 @njit(cache=True)  # pyright: ignore[reportUntypedFunctionDecorator]
+def mean1d(
+    arr: NDArray[np.float64],
+) -> float:
+    """
+    Compute the arithmetic mean of a 1-D array inside Numba-compiled code.
+
+    Wrap :func:`numpy.mean` in an ``@njit`` kernel so that it can be
+    passed as a callable argument to other compiled functions such as
+    :func:`np_apply_along_axis_2d`. Numba requires any function passed
+    at runtime to have a known compiled type; wrapping the NumPy
+    dispatcher in this thin kernel satisfies that constraint without
+    changing the statistical contract.
+
+    Parameters
+    ----------
+    arr
+        One-dimensional array whose elements are averaged. The result
+        is cast to ``float`` to produce a scalar compatible with the
+        output buffer of :func:`np_apply_along_axis_2d`.
+
+    Returns
+    -------
+        Arithmetic mean of ``arr`` as a ``float``.
+
+    See Also
+    --------
+    numba.njit : Decorator that compiles this helper in nopython mode
+        so it can be passed as a first-class callable.
+    std1d : Sibling helper that computes the standard deviation of a
+        1-D slice.
+    mean2d : Higher-level wrapper that applies this reducer along an
+        axis of a 2-D array via :func:`np_apply_along_axis_2d`.
+    np_apply_along_axis_2d : Dispatch helper that receives this
+        function as its ``nb_func1d`` argument.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from mayutils.mathematics.numba import mean1d
+    >>> bool(np.isclose(mean1d(np.array([1.0, 2.0, 3.0, 4.0])), 2.5))
+    True
+    """
+    return float(np.mean(arr))
+
+
 def mean2d(
     arr: NDArray[np.float64],
-    /,
     *,
     axis: int,
 ) -> NDArray[np.float64]:
@@ -391,16 +433,61 @@ def mean2d(
     array([2., 5.])
     """
     return np_apply_along_axis_2d(
-        np.mean,
+        mean1d,
         arr=arr,
         axis=axis,
     )
 
 
 @njit(cache=True)  # pyright: ignore[reportUntypedFunctionDecorator]
+def std1d(
+    arr: NDArray[np.float64],
+) -> float:
+    """
+    Compute the standard deviation of a 1-D array inside Numba-compiled code.
+
+    Wrap :func:`numpy.std` in an ``@njit`` kernel so that it can be
+    passed as a callable argument to other compiled functions such as
+    :func:`np_apply_along_axis_2d`. Numba requires any function passed
+    at runtime to have a known compiled type; wrapping the NumPy
+    dispatcher in this thin kernel satisfies that constraint without
+    changing the statistical contract. The population standard
+    deviation (``ddof=0``) is used, matching NumPy's default.
+
+    Parameters
+    ----------
+    arr
+        One-dimensional array whose dispersion is measured. The result
+        is cast to ``float`` to produce a scalar compatible with the
+        output buffer of :func:`np_apply_along_axis_2d`.
+
+    Returns
+    -------
+        Population standard deviation of ``arr`` as a ``float``.
+
+    See Also
+    --------
+    numba.njit : Decorator that compiles this helper in nopython mode
+        so it can be passed as a first-class callable.
+    mean1d : Sibling helper that computes the arithmetic mean of a
+        1-D slice.
+    std2d : Higher-level wrapper that applies this reducer along an
+        axis of a 2-D array via :func:`np_apply_along_axis_2d`.
+    np_apply_along_axis_2d : Dispatch helper that receives this
+        function as its ``nb_func1d`` argument.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from mayutils.mathematics.numba import std1d
+    >>> bool(np.isclose(std1d(np.array([2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0])), 2.0))
+    True
+    """
+    return float(np.std(arr))
+
+
 def std2d(
     arr: NDArray[np.float64],
-    /,
     *,
     axis: int,
 ) -> NDArray[np.float64]:
@@ -453,13 +540,13 @@ def std2d(
     >>> import numpy as np
     >>> from mayutils.mathematics.numba import np_apply_along_axis_2d
     >>> data = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
-    >>> np_apply_along_axis_2d.py_func(np.std, arr=data, axis=0)
+    >>> std2d(data, axis=0)
     array([1.5, 1.5, 1.5])
-    >>> bool(np.allclose(np_apply_along_axis_2d.py_func(np.std, arr=data, axis=1), np.std(data, axis=1)))
+    >>> bool(np.allclose(std2d(data, axis=1), np.std(data, axis=1)))
     True
     """
     return np_apply_along_axis_2d(
-        np.std,
+        std1d,
         arr=arr,
         axis=axis,
     )

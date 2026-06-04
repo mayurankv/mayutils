@@ -27,9 +27,8 @@ pathlib.Path : Standard-library path abstraction used throughout.
 Examples
 --------
 >>> from pathlib import Path
->>> from mayutils.environment.memoisation import register_datafile
 >>> from mayutils.interfaces.filetypes import DataFile
->>> register_datafile("parquet")
+>>> from mayutils.interfaces.filetypes.parquet import Parquet
 >>> handle = DataFile.from_path(Path("sales.parquet"))
 >>> isinstance(handle.path, Path)
 True
@@ -123,9 +122,8 @@ class DataFile[DataFrameType: DataFrames = pd.DataFrame](ABC):
     Examples
     --------
     >>> from pathlib import Path
-    >>> from mayutils.environment.memoisation import register_datafile
     >>> from mayutils.interfaces.filetypes import DataFile
-    >>> register_datafile("csv")
+    >>> from mayutils.interfaces.filetypes.csv import Csv
     >>> handle = DataFile.from_path(Path("customers.csv"))
     >>> handle.path.suffix
     '.csv'
@@ -157,9 +155,8 @@ class DataFile[DataFrameType: DataFrames = pd.DataFrame](ABC):
 
         Examples
         --------
-        >>> from mayutils.environment.memoisation import register_datafile
         >>> from mayutils.interfaces.filetypes import DataFile
-        >>> register_datafile("csv")
+        >>> from mayutils.interfaces.filetypes.csv import Csv
         >>> ".csv" in DataFile.registry
         True
         """
@@ -207,9 +204,8 @@ class DataFile[DataFrameType: DataFrames = pd.DataFrame](ABC):
 
         Examples
         --------
-        >>> from mayutils.environment.memoisation import register_datafile
         >>> from mayutils.interfaces.filetypes import DataFile
-        >>> register_datafile("csv")
+        >>> from mayutils.interfaces.filetypes.csv import Csv
         >>> ".csv" in DataFile._registry
         True
         """
@@ -241,7 +237,9 @@ class DataFile[DataFrameType: DataFrames = pd.DataFrame](ABC):
         path
             Filesystem location of the target file.
         backend
-            Backend token for reads and writes. Defaults to :data:`PANDAS`.
+            Backend token for reads and writes. Defaults to the
+            backend returned by
+            :func:`mayutils.objects.dataframes.backends.default_backend`.
 
         Raises
         ------
@@ -261,8 +259,8 @@ class DataFile[DataFrameType: DataFrames = pd.DataFrame](ABC):
         >>> from pathlib import Path
         >>> from mayutils.interfaces.filetypes.csv import Csv
         >>> handle = Csv(Path("events.csv"))
-        >>> handle.backend is PANDAS
-        True
+        >>> handle.backend.name
+        'pandas'
         """
         self.path = Path(path)
         self.backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
@@ -416,7 +414,8 @@ class DataFile[DataFrameType: DataFrames = pd.DataFrame](ABC):
             subclass from :attr:`registry`.
         backend
             DataFrame backend token forwarded to the subclass
-            constructor. Defaults to :data:`PANDAS`.
+            constructor. Defaults to the backend returned by
+            :func:`mayutils.objects.dataframes.backends.default_backend`.
         **kwargs
             Extra keyword arguments forwarded to the subclass
             constructor (for example ``sheet`` for XLSX handles).
@@ -439,9 +438,8 @@ class DataFile[DataFrameType: DataFrames = pd.DataFrame](ABC):
         Examples
         --------
         >>> from pathlib import Path
-        >>> from mayutils.environment.memoisation import register_datafile
         >>> from mayutils.interfaces.filetypes import DataFile
-        >>> register_datafile("csv")
+        >>> from mayutils.interfaces.filetypes.csv import Csv
         >>> handle = DataFile.from_path(Path("events.csv"))
         >>> type(handle).__name__
         'Csv'

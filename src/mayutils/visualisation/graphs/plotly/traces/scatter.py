@@ -25,9 +25,9 @@ class Scatter(go.Scatter):
 
     Parameters
     ----------
-    mode : str | None, optional
+    mode
         Plotly drawing mode, by default ``"markers"``.
-    **kwargs : Any
+    **kwargs
         Forwarded to :class:`plotly.graph_objects.Scatter`.
 
     Raises
@@ -59,9 +59,9 @@ class Scatter(go.Scatter):
 
         Parameters
         ----------
-        mode : str | None, optional
+        mode
             Plotly drawing mode, by default ``"markers"``.
-        **kwargs : Any
+        **kwargs
             Forwarded to :class:`plotly.graph_objects.Scatter`.
 
         Raises

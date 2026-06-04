@@ -77,7 +77,7 @@ class CT_TextCharacterPropertiesExtended(CT_TextCharacterProperties):  # noqa: N
 
     Attributes
     ----------
-    baseline : OptionalAttribute
+    baseline
         Vertical baseline offset measured in 1/100000 of the font
         height, per the OOXML ``ST_Coordinate32`` simple type. Positive
         values raise the text (superscript); negative values lower it
@@ -145,7 +145,7 @@ def get_or_add_first_paragraph(
 
     Parameters
     ----------
-    text_frame : TextFrame
+    text_frame
         The PowerPoint text frame whose leading paragraph should be
         retrieved or materialised.
 
@@ -217,41 +217,41 @@ def set_run_formatting(  # noqa: C901
 
     Parameters
     ----------
-    run : _Run
+    run
         The ``python-pptx`` run whose font, highlight, hyperlink and
         baseline properties will be mutated in place.
-    bold : bool or None, default None
+    bold
         If set, toggles bold weight on the run's font.
-    italic : bool or None, default None
+    italic
         If set, toggles italic style on the run's font.
-    underline : bool or None, default None
+    underline
         If set, toggles underline decoration on the run's font.
-    strikethrough : bool or None, default None
+    strikethrough
         When truthy, writes ``strike="sngStrike"`` onto the run
         properties element to render a single-line strikethrough.
-    font_size : int or None, default None
+    font_size
         Desired font size in points, converted to EMUs via
         :func:`pptx.util.Pt`.
-    font_family : str or None, default None
+    font_family
         Typeface name applied to the run's font (for example
         ``"Calibri"`` or ``"Consolas"``).
-    font_colour : Colour or None, default None
+    font_colour
         Foreground text colour; its ``pptx_colour`` RGB representation
         is assigned to the font colour.
-    highlight_colour : Colour or None, default None
+    highlight_colour
         Background highlight applied by inserting ``a:highlight`` and
         ``a:srgbClr`` sub-elements into the run properties using the
         colour's hex representation.
-    hyperlink : str or None, default None
+    hyperlink
         URL to attach to the run. When provided the run is turned into
         a clickable link targeting this address.
-    hyperlink_colour : Colour or None, default None
+    hyperlink_colour
         Override text colour applied only when ``hyperlink`` is also
         given, allowing link text to diverge from default font colour.
-    superscript : bool, default False
+    superscript
         If ``True``, raises the run by 30% of its font height by
         writing ``baseline=30000`` on the run properties element.
-    subscript : bool, default False
+    subscript
         If ``True``, lowers the run by 25% of its font height by
         writing ``baseline=-25000`` on the run properties element.
 
@@ -340,29 +340,29 @@ def process_inline_tokens(  # noqa: C901, PLR0912, PLR0915
 
     Parameters
     ----------
-    paragraph : _Paragraph
+    paragraph
         Target paragraph to which new runs will be appended.
-    tokens : list of dict
+    tokens
         Sequence of inline tokens produced by the markdown parser.
         Each token is expected to carry a ``type`` key and optionally
         ``raw``, ``children`` and ``attrs`` entries.
-    formatting_stack : dict
+    formatting_stack
         Active formatting context inherited from outer tokens.
         Recognised keys include ``bold``, ``italic``, ``underline``,
         ``strikethrough``, ``highlight``, ``hyperlink``, ``code_font``,
         ``superscript`` and ``subscript``. The mapping is copied
         before recursion so mutations do not leak to siblings.
-    font_size : int or None, default None
+    font_size
         Base font size (in points) applied to emitted runs.
-    font_family : str or None, default None
+    font_family
         Base typeface for text runs; overridden for ``codespan``
         tokens where :data:`CODE_FONT` is always used.
-    font_colour : Colour or None, default None
+    font_colour
         Default foreground colour for text runs.
-    highlight_colour : Colour or None, default None
+    highlight_colour
         Default highlight colour used when a ``mark`` token does not
         override it.
-    hyperlink_colour : Colour or None, default None
+    hyperlink_colour
         Override colour applied when rendering link text through
         :func:`set_run_formatting`.
 
@@ -611,13 +611,13 @@ def add_bullet_subelement(
 
     Parameters
     ----------
-    parent : etree._Element
+    parent
         OOXML element to which the new sub-element should be appended.
-    tagname : str
+    tagname
         Qualified tag name (for example ``"a:buChar"``) of the child
         element to create; resolved to a fully-qualified name via
         :func:`pptx.oxml.ns.qn`.
-    **kwargs : str
+    **kwargs
         Attribute name/value pairs written onto the new element.
 
     Returns
@@ -689,31 +689,31 @@ def set_paragraph_bullet(
 
     Parameters
     ----------
-    paragraph : _Paragraph
+    paragraph
         The paragraph whose bullet formatting is being configured;
         both its ``level``/spacing properties and its underlying
         ``a:pPr`` element are mutated in place.
-    level : int, default 0
+    level
         Outline level of the paragraph; controls nesting depth and
         the left margin added on top of ``base_margin``.
-    numbered : bool, default False
+    numbered
         When ``True`` emits an ``a:buAutoNum`` element with
         ``type="arabicPeriod"`` producing ``1.`` style numbering;
         otherwise a character bullet is rendered.
-    bullet_char : str or None, default None
+    bullet_char
         Custom glyph for the unordered-list bullet. When ``None`` the
         filled bullet ``"•"`` is used. Ignored when ``numbered`` is
         ``True``.
-    space_before : int or None, default 10
+    space_before
         Space (in points) added above the paragraph. ``None`` leaves
         the existing value untouched.
-    space_after : int or None, default 0
+    space_after
         Space (in points) added below the paragraph. ``None`` leaves
         the existing value untouched.
-    bullet_size_pct : int, default 100000
+    bullet_size_pct
         Bullet glyph size expressed in thousandths of a percent of
         the text size (``100000`` = 100%).
-    from_placeholder : bool, default False
+    from_placeholder
         When ``True``, only the indent level and spacing are applied
         so that the host placeholder's own bullet styling is
         preserved; no explicit bullet XML is emitted.
@@ -831,18 +831,18 @@ def set_paragraph_task(
 
     Parameters
     ----------
-    paragraph : _Paragraph
+    paragraph
         Paragraph that will be restyled as a task-list entry.
-    checked : bool, default False
+    checked
         If ``True`` the checked-box glyph from
         :data:`EMOJI_MAP` (key ``"checkmark"``) is used; otherwise the
         empty ballot box ``"☐"`` is written.
-    level : int, default 0
+    level
         Outline level controlling the indent depth.
-    space_before : int or None, default 6
+    space_before
         Space in points before the paragraph; ``None`` skips writing
         the property.
-    space_after : int or None, default 0
+    space_after
         Space in points after the paragraph; ``None`` skips writing
         the property.
 
@@ -922,33 +922,33 @@ def process_list_item(
 
     Parameters
     ----------
-    text_frame : TextFrame
+    text_frame
         Target text frame being populated.
-    token : dict
+    token
         List-item token whose ``children`` are block-level elements
         (inline paragraphs and possibly nested lists).
-    level : int
+    level
         Indent depth of this item within the overall list hierarchy.
-    numbered : bool
+    numbered
         ``True`` if the enclosing list is ordered so numbered bullets
         are emitted; ``False`` for unordered bullet lists.
-    first_paragraph : bool
+    first_paragraph
         Whether the next paragraph written should reuse the text
         frame's existing first paragraph rather than appending a new
         one.
-    font_size : int or None
+    font_size
         Base font size in points to apply to rendered runs.
-    font_family : str or None
+    font_family
         Default typeface for rendered runs.
-    font_colour : Colour or None
+    font_colour
         Default text colour.
-    highlight_colour : Colour or None
+    highlight_colour
         Default highlight colour forwarded to inline rendering.
-    hyperlink_colour : Colour or None
+    hyperlink_colour
         Colour override applied to hyperlink runs.
-    bullet_char : str or None
+    bullet_char
         Custom bullet glyph forwarded to :func:`set_paragraph_bullet`.
-    from_placeholder : bool
+    from_placeholder
         When ``True`` the paragraph's level is set but the
         placeholder's own bullet styling is retained.
 
@@ -1075,30 +1075,30 @@ def process_list(
 
     Parameters
     ----------
-    text_frame : TextFrame
+    text_frame
         Target text frame receiving the rendered list paragraphs.
-    token : dict
+    token
         Parsed ``list`` (or ``bullet_list``/``ordered_list``) token
         whose ``children`` are individual list-item tokens.
-    level : int
+    level
         Starting outline level for items of this list; nested lists
         are emitted at ``level + 1`` and beyond.
-    first_paragraph : bool
+    first_paragraph
         Whether the first paragraph of the text frame is still
         available for reuse before any content has been written.
-    font_size : int or None
+    font_size
         Base font size in points for rendered runs.
-    font_family : str or None
+    font_family
         Default typeface for rendered runs.
-    font_colour : Colour or None
+    font_colour
         Default text colour forwarded to inline rendering.
-    highlight_colour : Colour or None
+    highlight_colour
         Default highlight colour forwarded to inline rendering.
-    hyperlink_colour : Colour or None
+    hyperlink_colour
         Colour used for hyperlink runs.
-    bullet_char : str or None
+    bullet_char
         Custom bullet glyph applied to unordered items.
-    from_placeholder : bool
+    from_placeholder
         When ``True``, defers bullet glyph styling to the placeholder
         and only sets indent levels.
 
@@ -1185,7 +1185,7 @@ def add_markdown_to_text_frame(  # noqa: C901, PLR0912, PLR0915
 
     Parameters
     ----------
-    markdown : str
+    markdown
         Source markdown document. The following syntax is honoured:
         ``**bold**``, ``*italic*``, ``__underline__``,
         ``~~strikethrough~~``, inline `` `code` ``, ``- item`` and
@@ -1194,35 +1194,35 @@ def add_markdown_to_text_frame(  # noqa: C901, PLR0912, PLR0915
         ``# Header`` through ``###### Header``, ``:emoji:`` shortcodes,
         ``==highlight==``, ``X^2^`` superscript, ``X~2~`` subscript,
         ``- [ ]``/``- [x]`` task lists and footnotes.
-    text_frame : TextFrame
+    text_frame
         Target text frame that will be populated; its existing first
         paragraph is reused for the first block-level token produced
         by the parser.
-    font_family : str or None, default None
+    font_family
         Default typeface for non-code runs (for example ``"Arial"``
         or ``"Calibri"``).
-    font_size : int or None, default None
+    font_size
         Default font size in points. Header sizes are scaled from
         this value via :data:`HEADER_SIZES`; when ``None`` a base of
         ``24`` points is used for heading scaling.
-    line_spacing : float or None, default None
+    line_spacing
         Multiplier assigned to each emitted paragraph's
         ``line_spacing`` (for example ``1.5`` for 150%).
-    text_alignment : {"left", "center", "right", "justify"} or None, default None
+    text_alignment
         Horizontal alignment applied to paragraphs and headings;
         ``None`` leaves the default alignment in place.
-    font_colour : Colour or str or None, default None
+    font_colour
         Default text colour. Strings are parsed via
         :meth:`Colour.parse`.
-    highlight_colour : Colour or str or None, default None
+    highlight_colour
         Default highlight colour used by ``==marked==`` inline
         tokens when they do not supply their own colour.
-    hyperlink_colour : Colour or str or None, default None
+    hyperlink_colour
         Override colour for hyperlink text.
-    bullet_char : str or None, default None
+    bullet_char
         Custom glyph for unordered list bullets; defaults to the
         filled bullet character when ``None``.
-    from_placeholder : bool, default False
+    from_placeholder
         When ``True`` the function assumes ``text_frame`` belongs to
         a placeholder that already carries bullet formatting and only
         applies paragraph indent levels. In this mode, the input must

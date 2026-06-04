@@ -115,7 +115,7 @@ def replace_print(
 
     Parameters
     ----------
-    print_method : Callable or None, optional
+    print_method
         The callable installed as ``builtins.print`` for the duration
         of the ``with`` block. When ``None`` the current binding is
         left untouched, producing a no-op swap that is useful for
@@ -175,18 +175,18 @@ def setup_printing(
 
     Parameters
     ----------
-    console : Console or None, optional
+    console
         Rich console routed to the installed hooks. When ``None`` the
         module-level :data:`CONSOLE` is used so every hook shares a
         consistent configuration.
-    printing : bool, default True
+    printing
         When ``True`` replace :func:`builtins.print` with
         ``console.print`` so module-level ``print`` calls are rendered
         by Rich with full markup support.
-    tracebacks : bool, default True
+    tracebacks
         When ``True`` install Rich's traceback handler so uncaught
         exceptions render with coloured source context.
-    prettify : bool, default True
+    prettify
         When ``True`` install Rich's pretty-printer hook so interactive
         results are syntactically highlighted.
 
@@ -204,10 +204,10 @@ def setup_printing(
     ...     teardown_printing,
     ... )
     >>> try:
-    ...     setup_printing(print=True, traceback=False, pretty=False)
+    ...     setup_printing(printing=True, tracebacks=False, prettify=False)
     ...     installed = _state["print"][0]
     ... finally:
-    ...     teardown_printing(print=True, traceback=False, pretty=False)
+    ...     teardown_printing(printing=True, tracebacks=False, prettify=False)
     >>> installed
     True
     >>> _state["print"][0]
@@ -247,12 +247,12 @@ def teardown_printing(
 
     Parameters
     ----------
-    printing : bool, default True
+    printing
         When ``True`` restore the :func:`builtins.print` captured by
         :func:`setup_printing`.
-    tracebacks : bool, default True
+    tracebacks
         When ``True`` restore the previous :data:`sys.excepthook`.
-    prettify : bool, default True
+    prettify
         When ``True`` restore the previous :data:`sys.displayhook`.
 
     See Also
@@ -271,9 +271,9 @@ def teardown_printing(
     ... )
     >>> original_print = builtins.print
     >>> try:
-    ...     setup_printing(print=True, traceback=False, pretty=False)
+    ...     setup_printing(printing=True, tracebacks=False, prettify=False)
     ... finally:
-    ...     teardown_printing(print=True, traceback=False, pretty=False)
+    ...     teardown_printing(printing=True, tracebacks=False, prettify=False)
     >>> _state["print"][0]
     False
     >>> builtins.print is original_print
@@ -343,7 +343,7 @@ def _restore(
 
     Parameters
     ----------
-    snapshot : tuple of (Any, Any, Any, dict of str to tuple of (bool, Any))
+    snapshot
         Snapshot previously returned by :func:`_snapshot`. The tuple
         encodes the prior ``builtins.print`` binding,
         :data:`sys.excepthook`, :data:`sys.displayhook`, and a copy of
@@ -394,14 +394,14 @@ def rich_printing(
 
     Parameters
     ----------
-    console : Console or None, optional
+    console
         Passed through to :func:`setup_printing`; falls back to the
         module-level :data:`CONSOLE` when ``None``.
-    printing : bool, default True
+    printing
         Whether to install the Rich ``print`` replacement.
-    tracebacks : bool, default True
+    tracebacks
         Whether to install the Rich traceback handler.
-    prettify : bool, default True
+    prettify
         Whether to install the Rich pretty-display hook.
 
     Yields
@@ -463,11 +463,11 @@ def plain_printing(
 
     Parameters
     ----------
-    printing : bool, default True
+    printing
         Whether to restore the built-in ``print`` while the block runs.
-    tracebacks : bool, default True
+    tracebacks
         Whether to restore the previous :data:`sys.excepthook`.
-    prettify : bool, default True
+    prettify
         Whether to restore the previous :data:`sys.displayhook`.
 
     Yields

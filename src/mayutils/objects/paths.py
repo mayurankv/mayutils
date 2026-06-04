@@ -32,10 +32,14 @@ def is_pathlike(
 
     Examples
     --------
-    >>> is_pathlike("/tmp/data.csv")  # doctest: +SKIP
+    >>> is_pathlike("/tmp/data.csv")
     True
-    >>> is_pathlike("report")  # doctest: +SKIP
+    >>> is_pathlike("report")
     False
+    >>> is_pathlike("data.csv")
+    True
+    >>> is_pathlike(".")
+    True
     """
     p = Path(path)
     return p.is_absolute() or len(p.parts) > 1 or p.suffix != "" or path in {".", ".."}
@@ -95,8 +99,16 @@ def resolve_save_path(
     Examples
     --------
     >>> from pathlib import Path
-    >>> resolve_save_path(None, default_directory=Path("/tmp"), default_name="out", default_suffix="csv")  # doctest: +SKIP
-    (PosixPath('/tmp/out'), {'csv'})
+    >>> stem, suffixes = resolve_save_path(
+    ...     None,
+    ...     default_directory=Path("reports"),
+    ...     default_name="out",
+    ...     default_suffix="csv",
+    ... )
+    >>> stem.parent.name, stem.name
+    ('reports', 'out')
+    >>> sorted(suffixes)
+    ['csv']
     """
     valid_suffixes = {suffix.lower().lstrip(".") for suffix in suffixes}
 

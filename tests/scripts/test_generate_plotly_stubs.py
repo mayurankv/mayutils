@@ -73,11 +73,12 @@ class TestGenerateCommand:
     """Tests for the Typer ``generate`` command wrapping :func:`generate_stubs`."""
 
     def test_command_forwards_dry_run_flag(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """The command delegates to the core and forwards ``--dry-run``."""
-        captured: list[bool] = []
+        """The command delegates to the core, forwarding ``traces_dir`` and ``--dry-run``."""
+        captured: dict[str, object] = {}
 
-        def _spy(*_args: object, dry_run: bool = False) -> int:
-            captured.append(dry_run)
+        def _spy(*_args: object, traces_dir: object = None, dry_run: bool = False) -> int:
+            captured["traces_dir"] = traces_dir
+            captured["dry_run"] = dry_run
             return 3
 
         monkeypatch.setattr(generate_plotly_stubs, "generate_stubs", _spy)
@@ -85,4 +86,5 @@ class TestGenerateCommand:
         result = runner.invoke(generate_plotly_stubs.app, ["--dry-run"])
 
         assert result.exit_code == 0
-        assert captured == [True]
+        assert captured["dry_run"] is True
+        assert captured["traces_dir"] is not None

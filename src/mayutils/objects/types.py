@@ -19,9 +19,9 @@ mayutils.objects.dataframes : Consumers of structurally typed payloads.
 
 Examples
 --------
->>> from mayutils.objects.types import SQL, JsonString, RecursiveDict, SupportsStr
+>>> from mayutils.objects.types import SQL, JsonString, RecursiveMapping, SupportsStr
 >>> payload = JsonString('{"a": 1}')
->>> tree: RecursiveDict[str, int] = RecursiveDict({"a": 1, "b": {"c": 2}})
+>>> tree: RecursiveMapping[str, int] = {"a": 1, "b": {"c": 2}}
 >>> def render(value: SupportsStr) -> str:
 ...     return str(value)
 """

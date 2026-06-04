@@ -432,10 +432,10 @@ def looks_like_sql_path(
 
     Examples
     --------
-    >>> from mayutils.data.read import _looks_like_path
-    >>> _looks_like_path("SELECT 1", queries_folders=()) is None
+    >>> from mayutils.data.read import looks_like_sql_path
+    >>> looks_like_sql_path("SELECT 1", queries_folders=()) is None
     True
-    >>> _looks_like_path("my_query.sql", queries_folders=()) is not None
+    >>> looks_like_sql_path("my_query.sql", queries_folders=()) is not None
     True
     """
     if value.lower().endswith(".sql"):
@@ -485,7 +485,7 @@ def render_query(
 
     Parameters
     ----------
-    query : SQL or pathlib.Path
+    query
         Either an inline SQL template wrapped in
         :data:`~mayutils.objects.types.SQL` with ``{name}``
         placeholders, or a :class:`~pathlib.Path` identifying a
@@ -493,14 +493,14 @@ def render_query(
         accepted at runtime for backwards compatibility but will be
         flagged by type checkers; if it structurally resembles a file
         path, a :class:`QueryInputWarning` is emitted.
-    queries_folders : tuple[pathlib.Path, ...], optional
+    queries_folders
         Search path forwarded to :func:`format_query` when
         resolving path-typed queries. Defaults to
         :data:`mayutils.data.queries.QUERIES_FOLDERS`.
     default_suffix
         File extension assumed when *query* is a bare filename
         without a suffix. Forwarded to :func:`format_query`.
-    **format_kwargs : SupportsStr
+    **format_kwargs
         Keyword substitutions applied to the template. Every value
         must be stringifiable; Python inserts
         ``str(value)`` at each matching ``{name}`` placeholder.
@@ -588,31 +588,31 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
 
     Parameters
     ----------
-    query : SQL or pathlib.Path
+    query
         SQL string or :class:`~pathlib.Path` to a template file.
-    reader : QueryReader[DataFrameType]
+    reader
         Callable that executes the rendered SQL and returns a DataFrame.
-    backend : Backend[DataFrameType] or None, optional
+    backend
         DataFrame backend token. Defaults to pandas when ``None``.
-    suffix : str or None, optional
+    suffix
         Cache file extension. ``None`` infers from the result type.
-    persist : bool or None, optional
+    persist
         ``None`` bypasses caching entirely, ``False`` (the default) uses
         an in-memory cache, and ``True`` persists results to disk.
-    ttl : Duration or None, optional
+    ttl
         Time-to-live for cached results.
-    cache_extra : Mapping[str, object] or None, optional
+    cache_extra
         Additional values included in the cache key.
-    cache_description : str or None, optional
+    cache_description
         Human-readable label for the cache filename.
-    cache_folder : pathlib.Path or str, optional
+    cache_folder
         Root directory for cache files. Only used when
         ``persist is True``.
-    queries_folders : tuple[pathlib.Path, ...], optional
+    queries_folders
         Directories to search when *query* is a filename.
-    default_suffix : str, optional
+    default_suffix
         File extension assumed when *query* is a bare filename.
-    **format_kwargs : SupportsStr
+    **format_kwargs
         Template substitutions forwarded to :func:`render_query`.
 
     Returns

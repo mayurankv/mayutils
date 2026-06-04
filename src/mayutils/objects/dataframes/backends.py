@@ -214,7 +214,11 @@ class BackendOperations:
     --------
     >>> import pandas as pd
     >>> from mayutils.objects.dataframes.backends import BackendOperations, Backend
-    >>> b = Backend(pd.DataFrame)  # doctest: +SKIP
+    >>> b = Backend(pd.DataFrame)
+    >>> BackendOperations.tail(pd.DataFrame({"x": [0, 1, 2, 3]}), 2, backend=b)
+       x
+    2  2
+    3  3
     """
 
     @staticmethod
@@ -250,7 +254,16 @@ class BackendOperations:
 
         Examples
         --------
-        >>> BackendOperations.concat(df1, df2, backend=b)  # doctest: +SKIP
+        >>> import pandas as pd
+        >>> from mayutils.objects.dataframes.backends import Backend, BackendOperations
+        >>> b = Backend(pd.DataFrame)
+        >>> df1 = pd.DataFrame({"x": [1, 2]})
+        >>> df2 = pd.DataFrame({"x": [3]})
+        >>> BackendOperations.concat(df1, df2, backend=b)
+           x
+        0  1
+        1  2
+        2  3
         """
         if backend.name == "pandas":
             return cast("DataFrameType", pd.concat(cast("list[pd.DataFrame]", frames), ignore_index=True))
@@ -301,7 +314,14 @@ class BackendOperations:
 
         Examples
         --------
-        >>> BackendOperations.filter_ge(df, "ts", "2024-01-01", backend=b)  # doctest: +SKIP
+        >>> import pandas as pd
+        >>> from mayutils.objects.dataframes.backends import Backend, BackendOperations
+        >>> b = Backend(pd.DataFrame)
+        >>> df = pd.DataFrame({"v": [1, 5, 3]})
+        >>> BackendOperations.filter_ge(df, "v", 3, backend=b)
+           v
+        1  5
+        2  3
         """
         if backend.name == "pandas":
             return cast("DataFrameType", cast("pd.DataFrame", frame).loc[frame[column] >= value])
@@ -349,7 +369,12 @@ class BackendOperations:
 
         Examples
         --------
-        >>> BackendOperations.max(df, "id", backend=b)  # doctest: +SKIP
+        >>> import pandas as pd
+        >>> from mayutils.objects.dataframes.backends import Backend, BackendOperations
+        >>> b = Backend(pd.DataFrame)
+        >>> df = pd.DataFrame({"id": [1, 4, 2]})
+        >>> int(BackendOperations.max(df, "id", backend=b))
+        4
         """
         if backend.name == "pandas":
             return cast("Any", frame[column].max())
@@ -397,7 +422,14 @@ class BackendOperations:
 
         Examples
         --------
-        >>> BackendOperations.tail(df, 100, backend=b)  # doctest: +SKIP
+        >>> import pandas as pd
+        >>> from mayutils.objects.dataframes.backends import Backend, BackendOperations
+        >>> b = Backend(pd.DataFrame)
+        >>> df = pd.DataFrame({"v": [0, 1, 2, 3]})
+        >>> BackendOperations.tail(df, 2, backend=b)
+           v
+        2  2
+        3  3
         """
         if backend.name in ["pandas", "polars"]:
             return cast("DataFrameType", frame.tail(n))
@@ -443,7 +475,14 @@ class BackendOperations:
 
         Examples
         --------
-        >>> BackendOperations.deduplicate(df, "id", backend=b)  # doctest: +SKIP
+        >>> import pandas as pd
+        >>> from mayutils.objects.dataframes.backends import Backend, BackendOperations
+        >>> b = Backend(pd.DataFrame)
+        >>> df = pd.DataFrame({"id": [1, 1, 2], "t": [10, 20, 30]})
+        >>> BackendOperations.deduplicate(df, "id", backend=b)
+           id   t
+        1   1  20
+        2   2  30
         """
         if backend.name == "pandas":
             return cast("DataFrameType", cast("pd.DataFrame", frame).drop_duplicates(subset=column, keep="last"))

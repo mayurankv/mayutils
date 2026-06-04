@@ -26,7 +26,7 @@ Examples
 --------
 >>> from mayutils.environment.logging import Logger
 >>> from mayutils.environment.memoisation import cache
->>> logger = Logger(name="pipeline")
+>>> logger = Logger("pipeline")
 >>> @cache
 ... def load_reference_data() -> dict[str, int]:
 ...     logger.info("Loading reference data")

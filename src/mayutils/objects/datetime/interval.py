@@ -579,9 +579,12 @@ class Interval[IntervalType: (Date, DateTime)](PendulumInterval[IntervalType]):
         >>> deepcopy(original).days
         30
         """
+        start = deepcopy(x=self.start, memo=dict(memo))
+        end = deepcopy(x=self.end, memo=dict(memo))
+
         return self.__class__(
-            start=deepcopy(x=self.start, memo=dict(memo)),
-            end=deepcopy(x=self.end, memo=dict(memo)),
+            start=start if not self._invert else end,
+            end=end if not self._invert else start,
             absolute=self._absolute,
         )
 
@@ -1128,7 +1131,7 @@ class Intervals[IntervalType: (Date, DateTime)]:
 
         Parameters
         ----------
-        key : int or slice
+        key
             Integer position selecting a single :class:`Interval` from the
             underlying sorted tuple, or a slice selecting a contiguous run
             and producing a new :class:`Intervals` wrapper around the result.
@@ -1181,17 +1184,17 @@ def get_intervals(
 
     Parameters
     ----------
-    dt : DateTime or None
+    dt
         Reference datetime marking the upper edge of the most recent
         interval. When ``None`` the function substitutes :meth:`DateTime.today`
         so callers can omit an explicit anchor.
-    num_periods : int, default 13
+    num_periods
         Number of consecutive month-long intervals to generate, counted back
         from the reference; controls the total historical span covered.
-    day : int or None, default None
+    day
         Day-of-month used to anchor each interval boundary. ``None`` falls
         back to ``dt.day`` so the window preserves the reference's own day.
-    absolute_interval : bool, default False
+    absolute_interval
         Forwarded to each :class:`Interval` constructor; when ``True`` each
         generated interval is stored in absolute (non-negative) form.
 

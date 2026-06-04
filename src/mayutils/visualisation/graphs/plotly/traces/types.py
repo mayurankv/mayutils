@@ -13,17 +13,17 @@ class TraceType(StrEnum):
 
     Attributes
     ----------
-    LINE : str
+    LINE
         Standard line trace.
-    SCATTER : str
+    SCATTER
         Scatter (marker) trace.
-    ECDF : str
+    ECDF
         Empirical cumulative distribution function trace.
-    KDE : str
+    KDE
         Kernel density estimation trace.
-    NULL : str
+    NULL
         Null / placeholder trace (no visual output).
-    BAR3D : str
+    BAR3D
         Three-dimensional bar (mesh) trace.
 
     See Also

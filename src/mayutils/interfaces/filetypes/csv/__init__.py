@@ -137,18 +137,20 @@ class Csv[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType]):
         ...     p = Path(tmp) / "demo.csv"
         ...     pd.DataFrame({"id": [1, 2], "value": [3.14, 2.72]}).to_csv(p, index=False)
         ...     csv_file = Csv(p)
-        ...     pandas_frame = csv_file._read()
+        ...     pandas_frame = csv_file.read()
         ...     pandas_frame.shape
         (2, 2)
         >>> import tempfile
         >>> import pandas as pd
+        >>> import polars as pl
         >>> from pathlib import Path
         >>> from mayutils.interfaces.filetypes.csv import Csv
+        >>> from mayutils.objects.dataframes.backends import Backend
         >>> with tempfile.TemporaryDirectory() as tmp:
         ...     p = Path(tmp) / "demo.csv"
         ...     pd.DataFrame({"id": [1, 2], "value": [3.14, 2.72]}).to_csv(p, index=False, sep=";")
-        ...     csv_file = Csv(p)
-        ...     polars_frame = csv_file._read(separator=";")
+        ...     csv_file = Csv(p, backend=Backend(pl.DataFrame))
+        ...     polars_frame = csv_file.read(separator=";")
         ...     polars_frame.shape
         (2, 2)
         """
@@ -225,18 +227,19 @@ class Csv[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType]):
         ...     p = Path(tmp) / "out.csv"
         ...     csv_file = Csv(p)
         ...     frame = pd.DataFrame({"id": [1, 2], "value": [3.14, 2.72]})
-        ...     csv_file._write(frame)
+        ...     _ = csv_file.write(frame)
         ...     p.is_file()
         True
         >>> import tempfile
         >>> import polars as pl
         >>> from pathlib import Path
         >>> from mayutils.interfaces.filetypes.csv import Csv
+        >>> from mayutils.objects.dataframes.backends import Backend
         >>> with tempfile.TemporaryDirectory() as tmp:
         ...     p = Path(tmp) / "out.csv"
-        ...     csv_file = Csv(p)
+        ...     csv_file = Csv(p, backend=Backend(pl.DataFrame))
         ...     frame = pl.DataFrame({"id": [1, 2], "value": [3.14, 2.72]})
-        ...     csv_file._write(frame, separator=";")
+        ...     _ = csv_file.write(frame, separator=";")
         ...     p.is_file()
         True
         """

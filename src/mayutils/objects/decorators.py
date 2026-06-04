@@ -35,7 +35,7 @@ Examples
 
 import inspect
 from collections.abc import Callable
-from functools import update_wrapper
+from functools import WRAPPER_UPDATES, update_wrapper
 from inspect import Signature
 from typing import Concatenate, Protocol, cast, overload
 
@@ -428,9 +428,11 @@ def flexwrap[
                 **kwargs,
             )
 
+            decorated_is_class = isinstance(implicitly_parameterised_decorated_func, type)
             update_wrapper(
                 wrapper=implicitly_parameterised_decorated_func,
                 wrapped=func,
+                updated=() if decorated_is_class else WRAPPER_UPDATES,
             )
 
             return implicitly_parameterised_decorated_func
@@ -483,9 +485,11 @@ def flexwrap[
         """
         bare_decorated_func = generic_decorator(func)
 
+        bare_is_class = isinstance(bare_decorated_func, type)
         update_wrapper(
             wrapper=bare_decorated_func,
             wrapped=func,
+            updated=() if bare_is_class else WRAPPER_UPDATES,
         )
 
         return bare_decorated_func
