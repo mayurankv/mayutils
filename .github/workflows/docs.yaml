@@ -47,7 +47,7 @@ jobs:
         run: uv python install 3.13
 
       - name: Install dependencies
-        run: uv sync --group docs
+        run: uv sync --group docs --all-extras
 
       - name: Build docs
         run: make docs-build
