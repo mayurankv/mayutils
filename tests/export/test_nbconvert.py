@@ -9,6 +9,7 @@ be installed; the module is skipped at collection time otherwise.
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -88,14 +89,16 @@ class TestListTemplates:
 class TestExport:
     """Tests for :func:`nbconvert.export`."""
 
+    _needs_pandoc = pytest.mark.skipif(shutil.which("pandoc") is None, reason="pandoc not installed")
+
     @pytest.mark.parametrize(
         ("to", "extension"),
         [
             ("html", ".html"),
             ("markdown", ".md"),
             ("notebook", ".ipynb"),
-            ("rst", ".rst"),
-            ("asciidoc", ".asciidoc"),
+            pytest.param("rst", ".rst", marks=_needs_pandoc),
+            pytest.param("asciidoc", ".asciidoc", marks=_needs_pandoc),
             ("python", ".py"),
         ],
     )
