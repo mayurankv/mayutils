@@ -1628,10 +1628,10 @@ class Plot(go.Figure):
         /,
     ) -> Iterator[tuple[int, Trace]]:
         """
-            Yield ``(index, trace)`` pairs matching a trace type identifier.
+        Yield ``(index, trace)`` pairs matching a trace type identifier.
 
-            Looks up the trace class in :data:`TRACE_IDENTIFIERS` and matches
-            by ``isinstance`` or by comparing the ``meta`` attribute.
+        Looks up the trace class in :data:`TRACE_IDENTIFIERS` and matches
+        by ``isinstance`` or by comparing the ``meta`` attribute.
 
         Parameters
         ----------
