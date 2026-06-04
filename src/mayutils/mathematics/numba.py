@@ -300,13 +300,17 @@ def np_apply_along_axis_2d(
 
     Examples
     --------
+    The reducer must itself be Numba-compiled (a raw NumPy function such
+    as ``np.sum`` cannot be typed inside ``@njit``); pass a sibling
+    kernel such as :func:`mean1d`:
+
     >>> import numpy as np
-    >>> from mayutils.mathematics.numba import np_apply_along_axis_2d
+    >>> from mayutils.mathematics.numba import np_apply_along_axis_2d, mean1d
     >>> data = np.arange(12.0).reshape(3, 4)
-    >>> np_apply_along_axis_2d(np.sum, arr=data, axis=0)
-    array([12., 15., 18., 21.])
-    >>> np_apply_along_axis_2d(np.sum, arr=data, axis=1)
-    array([ 6., 22., 38.])
+    >>> np_apply_along_axis_2d(mean1d, arr=data, axis=0)
+    array([4., 5., 6., 7.])
+    >>> np_apply_along_axis_2d(mean1d, arr=data, axis=1)
+    array([1.5, 5.5, 9.5])
     """
     if arr.ndim != 2:  # noqa: PLR2004
         msg = f"Input array must be 2-D; got shape {arr.shape}"
