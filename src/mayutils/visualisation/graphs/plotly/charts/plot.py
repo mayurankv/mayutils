@@ -1635,17 +1635,17 @@ class Plot(go.Figure):
 
         Parameters
         ----------
-            trace_type
-                String key or :class:`TraceType` value identifying the trace kind.
+        trace_type
+            String key or :class:`TraceType` value identifying the trace kind.
 
         Returns
         -------
-            Iterator[tuple[int, Trace]]
-                Pairs of ``(index, trace)`` for every matching trace.
+        Iterator[tuple[int, Trace]]
+            Pairs of ``(index, trace)`` for every matching trace.
 
         See Also
         --------
-            Plot.trace : Access a single trace by index.
+        Plot.trace : Access a single trace by index.
 
         Examples
         --------

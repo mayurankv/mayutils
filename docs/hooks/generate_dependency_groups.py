@@ -38,6 +38,9 @@ import tomllib
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import mdformat
+import mdformat.plugins
+
 if TYPE_CHECKING:
     from mkdocs.config.defaults import MkDocsConfig
 
@@ -228,6 +231,10 @@ def on_pre_build(
 
     table = _render_table(pyproject=pyproject)
     new_content = before + MARKER_START + "\n\n" + table + "\n\n" + MARKER_END + after
+    formatted_content = mdformat.text(  # pyright: ignore[reportUnknownMemberType]
+        md=new_content,
+        extensions=mdformat.plugins.PARSER_EXTENSIONS,
+    )
 
-    if new_content != content:
-        doc.write_text(new_content)
+    if formatted_content != content:
+        doc.write_text(data=formatted_content)

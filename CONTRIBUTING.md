@@ -2,7 +2,7 @@
 
 ## Setup
 
-See [Development](docs/guides/development.md) for local setup, linting, type checking, git hooks, and testing.
+See [Development](guides/development.md) for local setup, linting, type checking, git hooks, and testing.
 
 ## Conventional Commits
 

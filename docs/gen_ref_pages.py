@@ -59,6 +59,10 @@ for path in sorted(src.rglob(pattern="*.py")):
     if any(part.startswith("_") and part != "__init__" for part in parts):
         continue
 
+    # A file named index.py in a package collides with __init__.py → index.md mapping.
+    if parts[-1] == "index" and (path.parent / "__init__.py").exists():
+        continue
+
     if parts[-1] == "__init__":
         parts = parts[:-1]
         if not parts:
