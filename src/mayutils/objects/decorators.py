@@ -64,14 +64,14 @@ class BareDecorator[
     """
 
     @overload
-    def __call__(
+    def __call__(  # numpydoc ignore=GL08
         self,
         func: Decorating,
         /,
     ) -> Decorated: ...
 
     @overload
-    def __call__[T: Callable[..., object]](
+    def __call__[T: Callable[..., object]](  # numpydoc ignore=GL08
         self,
         func: T,
         /,
