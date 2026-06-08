@@ -377,7 +377,7 @@ class Colour:
             colour = ",".join([split[0].replace("a", ""), split[1], split[2] + ")"])
 
         rgb = getrgb(colour)
-        opacity = rgb[3] if len(rgb) == alpha_length else opacity  # ty:ignore[index-out-of-bounds]
+        opacity = rgb[3] if len(rgb) == alpha_length else opacity
 
         return cls(
             r=rgb[0],

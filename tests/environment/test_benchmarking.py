@@ -76,8 +76,8 @@ class TestTimingReturnValue:
         original.__doc__ = docstring
         wrapped = timing(original)
 
-        assert wrapped.__name__ == "original"
-        assert wrapped.__doc__ == docstring
+        assert getattr(wrapped, "__name__") == "original"
+        assert getattr(wrapped, "__doc__") == docstring
 
 
 class TestTimingMeasurement:

@@ -900,7 +900,7 @@ class XlsxSheet[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType
         """
         if not self.path.is_file():  # noqa: SIM102
             if self.backend.name == "polars":
-                df.write_excel(  # pyright: ignore[reportCallIssue]
+                cast("pl.DataFrame", df).write_excel(
                     workbook=self.path,
                     worksheet=self.sheet,
                     **kwargs,

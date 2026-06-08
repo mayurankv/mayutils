@@ -384,7 +384,7 @@ class DataFile[DataFrameType: DataFrames = pd.DataFrame](ABC):
             return header
         try:
             preview = self.read()
-            html: str = preview._repr_html_()  # pyright: ignore[reportUnknownVariableType, reportPrivateUsage, reportCallIssue]
+            html: str = preview._repr_html_()  # pyright: ignore[reportUnknownVariableType, reportPrivateUsage, reportCallIssue]  # ty:ignore[invalid-argument-type]
         except PREVIEW_ERRORS:
             return header
         if not html:
@@ -1017,10 +1017,10 @@ class DataFile[DataFrameType: DataFrames = pd.DataFrame](ABC):
         >>> new.backend.name
         'polars'
         """
-        new_instance = deepcopy(self)
+        new_instance: DataFile[AltDataFrameType] = cast("DataFile[AltDataFrameType]", deepcopy(self))
         new_instance.backend = backend
 
-        return cast("DataFile[AltDataFrameType]", new_instance)
+        return new_instance
 
     def to_pandas(
         self,

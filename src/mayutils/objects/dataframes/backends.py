@@ -324,9 +324,10 @@ class BackendOperations:
         2  3
         """
         if backend.name == "pandas":
-            return cast("DataFrameType", cast("pd.DataFrame", frame).loc[frame[column] >= value])
+            pandas_frame = cast("pd.DataFrame", frame)
+            return cast("DataFrameType", pandas_frame.loc[pandas_frame[column] >= value])
         if backend.name == "polars":
-            return cast("DataFrameType", frame.filter(pl.col(name=column) >= value))
+            return cast("DataFrameType", cast("pl.DataFrame", frame).filter(pl.col(name=column) >= value))
 
         msg = f"Unsupported backend: {backend.name}"
         raise ValueError(msg)
@@ -377,7 +378,7 @@ class BackendOperations:
         4
         """
         if backend.name == "pandas":
-            return cast("Any", frame[column].max())
+            return cast("pd.DataFrame", frame)[column].max()
         if backend.name == "polars":
             return cast("pl.DataFrame", frame).select(pl.col(name=column).max()).item()
 
@@ -431,8 +432,10 @@ class BackendOperations:
         2  2
         3  3
         """
-        if backend.name in ["pandas", "polars"]:
-            return cast("DataFrameType", frame.tail(n))
+        if backend.name == "pandas":
+            return cast("DataFrameType", cast("pd.DataFrame", frame).tail(n))
+        if backend.name == "polars":
+            return cast("DataFrameType", cast("pl.DataFrame", frame).tail(n))
 
         msg = f"Unsupported backend: {backend.name}"
         raise ValueError(msg)

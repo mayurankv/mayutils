@@ -101,6 +101,8 @@ def timing[Decorating: Callable[..., object]](
     'hello world'
     """
 
+    func_name: str = getattr(func, "__name__", repr(func))
+
     def wrapper(
         *args: object,
         **kwargs: object,
@@ -164,7 +166,7 @@ def timing[Decorating: Callable[..., object]](
 
         length = end - start
 
-        msg = f"{func.__name__} took {length:.4f} seconds"
+        msg = f"{func_name} took {length:.4f} seconds"
         logger.info(msg)
 
         return result
