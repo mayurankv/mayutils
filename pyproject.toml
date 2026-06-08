@@ -189,7 +189,9 @@ generate_plotly_stubs = "mayutils.scripts.generate_plotly_stubs:app"
 refresh_stubs = "mayutils.scripts.refresh_stubs:app"
 
 [tool.commitizen]
+annotated_tag = true
 changelog_file = "CHANGELOG.md"
+changelog_incremental = true
 name = "cz_conventional_commits"
 tag_format = "v$version"
 update_changelog_on_bump = true
