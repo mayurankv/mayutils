@@ -248,10 +248,10 @@ class DataframeUtilsAccessor:
             )
 
         if path.suffix == ".parquet":
-            default_kwargs = {
+            default_kwargs: dict[str, Any] = {
                 "index": True,
             }
-            joint_kwargs = default_kwargs | kwargs
+            joint_kwargs: dict[str, Any] = default_kwargs | kwargs
             self.df.to_parquet(
                 path=path,
                 **joint_kwargs,
@@ -271,7 +271,7 @@ class DataframeUtilsAccessor:
             default_kwargs = {
                 "index": True,
             }
-            joint_kwargs = default_kwargs | kwargs
+            joint_kwargs: dict[str, Any] = default_kwargs | kwargs
             self.df.to_csv(
                 path_or_buf=path,
                 **joint_kwargs,
@@ -281,7 +281,7 @@ class DataframeUtilsAccessor:
             default_kwargs = {
                 "index": True,
             }
-            joint_kwargs = default_kwargs | kwargs
+            joint_kwargs: dict[str, Any] = default_kwargs | kwargs
             with ExcelWriter(path=path) as excel_writer:  # pyright: ignore[reportUnknownVariableType]
                 self.df.to_excel(  # pyright: ignore[reportUnknownMemberType]
                     excel_writer=excel_writer,

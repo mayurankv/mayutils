@@ -63,11 +63,25 @@ class BareDecorator[
     {'__call__'}
     """
 
-    def __call__(
+    @overload
+    def __call__(  # numpydoc ignore=GL08
         self,
         func: Decorating,
         /,
-    ) -> Decorated:
+    ) -> Decorated: ...
+
+    @overload
+    def __call__[T: Callable[..., object]](  # numpydoc ignore=GL08
+        self,
+        func: T,
+        /,
+    ) -> T: ...
+
+    def __call__(
+        self,
+        func: Callable[..., object],
+        /,
+    ) -> object:
         """
         Apply the decorator to a target callable.
 
@@ -180,6 +194,13 @@ class FlexibleDecorator[
     ) -> Decorated: ...
 
     @overload
+    def __call__[T: Callable[..., object]](  # numpydoc ignore=GL08
+        self,
+        func: T,
+        /,
+    ) -> T: ...
+
+    @overload
     def __call__(  # numpydoc ignore=GL08
         self,
         *args: Params.args,
@@ -190,7 +211,7 @@ class FlexibleDecorator[
         self,
         *args: object,
         **kwargs: object,
-    ) -> Decorated | BareDecorator[Decorating, Decorated]:
+    ) -> object:
         """
         Dispatch between bare and parameterised invocation.
 
@@ -443,7 +464,7 @@ def flexwrap[
             wrapper=implicitly_parameterised_decorator,
         )
 
-        return implicitly_parameterised_decorator
+        return cast("BareDecorator[Decorating, Decorated]", implicitly_parameterised_decorator)
 
     def bare_decorator(
         func: Decorating,
