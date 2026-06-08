@@ -100,7 +100,6 @@ def timing[Decorating: Callable[..., object]](
     >>> greet("world")
     'hello world'
     """
-
     func_name: str = getattr(func, "__name__", repr(func))
 
     def wrapper(
