@@ -1,29 +1,11 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to `{{ cookiecutter.__package_slug }}` will be documented here.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and  [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/#summary), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+This project follows [Semantic Versioning](https://semver.org/) and the [Keep a Changelog](https://keepachangelog.com/) conventions. Releases are produced by [commitizen](https://commitizen-tools.github.io/commitizen/) from [Conventional Commits](https://www.conventionalcommits.org/) — `feat` bumps the minor version, `fix` bumps the patch, and a `!` or `BREAKING CHANGE:` footer bumps the major.
 
-See this project's [releases](/../../../releases).
-<!-- Create a new release using `uv version --bump patch` (or `minor` or `major`) -->
+## v{{ cookiecutter.first_version }}
 
-<!-- Types of Changes -->
-<!-- ### Added -->
-<!-- ### Changed -->
-<!-- ### Deprecated -->
-<!-- ### Removed -->
-<!-- ### Fixed -->
-<!-- ### Security -->
-<!-- ### Notes -->
-
-## [Unreleased]
-
-## [{{ cookiecutter.first_version }}] - {% now 'local', '%Y-%m-%d' %}
-
-### Notes
+### Added
 
 - Initial release.
-
-[Unreleased]: /../../compare/{{ cookiecutter.first_version }}...HEAD
-<!-- [{{ current_version }}]: /../../compare/{{ previous_version }}...{{ current_version }} -->
-[{{ cookiecutter.first_version }}]: /../../releases/tag/{{ cookiecutter.first_version }}

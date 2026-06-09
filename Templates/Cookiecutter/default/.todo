@@ -1,31 +1,22 @@
+Done:
+	✔ Add license details (MIT / BSD-3 / GNU GPL v3.0 / Apache 2.0 / None)
+	✔ Links to `docs` in `CONTRIBUTING.md` file
+	✔ Set up CHANGELOG (commitizen / keep a changelog / conventional commits / semver)
+	✔ Set up testing framework (pytest + coverage)
+	✔ Set up ty (and pyright)
+	✔ Set up docs (mkdocs-material + auto-generated API reference)
+
 Add:
-	☐ Add license details
 	☐ Required arguments for `project_name` and `project_short_description`
-	☐ Links to `docs` in `CONTRIBUTING.md` file
 	☐ Make easier for optional dependencies
-	☐ Set up CHANGELOG based on semantic versioning, keep a changelog, conventional commits and uv
-		- https://github.com/commitizen-tools/commitizen
-		- https://github.com/python-semantic-release/python-semantic-release
-		- https://github.com/googleapis/release-please
-		- https://github.com/astral-sh/uv/issues/6440
-		- https://github.com/conventional-changelog/standard-version
-		- https://github.com/semantic-release/semantic-release
 	☐ Make different versions (highly configurable) based on:
 		- streamlit
-		- conatainerisation
+		- containerisation
 		- machine learning
 	☐ Use
 		- https://cookiecutter.readthedocs.io/en/stable/advanced/templates.html
 		- https://cookiecutter.readthedocs.io/en/stable/advanced/boolean_variables.html
 		- https://cookiecutter.readthedocs.io/en/stable/advanced/dict_variables.html
-	☐ Set up testing framework
-		- pytest
-		- tox/nox
-		- coverage
-	☐ Set up ty:
-		- https://docs.astral.sh/ty/modules/
-	☐ Set up docs:
-		- mkdocs
 
 Test:
 	☐ Whole template

@@ -1,4 +1,4 @@
-FROM public.ecr.aws/docker/library/python:3.14.5-slim
+FROM public.ecr.aws/docker/library/python:{{ cookiecutter.python_version }}-slim
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
@@ -21,4 +21,4 @@ EXPOSE 8501
 
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
 
-CMD ["uv", "run", "streamlit", "run", "src/{{ cookiecutter.__package_stub }}/app/main.py", "--server.port=8501"]
+CMD ["uv", "run", "streamlit", "run", "src/{{ cookiecutter.__package_snake }}/app/main.py", "--server.port=8501"]

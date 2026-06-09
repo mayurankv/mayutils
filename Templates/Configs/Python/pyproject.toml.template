@@ -7,6 +7,7 @@ dev = [
   "commitizen>=4.13",
   "coverage>=7.11.0",
   "ipdb>=0.13.13",
+  "mayutils",
   "mdformat>=1.0.0",
   "mdformat-gfm>=1.0.0",
   "mdformat-mkdocs>=5.2.0b2",
@@ -33,28 +34,14 @@ docs = [
 testing = ["pytest>=8.4.2"]
 
 [project]
-authors = [{name = "{{ cookiecutter.full_name }}", email = "{{ cookiecutter.email }}"}]
-dependencies = [
-  # "mayutils[cli,streamlit]",
-  "rich>=14.1.0",
-  "streamlit>=1.49.0",
-  "typer"
-]
-description = "{{ cookiecutter.project_short_description }}"
+authors = [{email = "mayuran.k.v@gmail.com", name = "Mayuran Visakan"}]
+description = "TODO"
 license = {file = "LICENSE"}
-maintainers = [{name = "{{ cookiecutter.full_name }}", email = "{{ cookiecutter.email }}"}]
-name = "{{ cookiecutter.__package_slug }}"
+maintainers = [{email = "mayuran.k.v@gmail.com", name = "Mayuran Visakan"}]
+name = "TODO"
 readme = "README.md"
-requires-python = ">={{ cookiecutter.python_version.split('.')[0] }}.{{ cookiecutter.python_version.split('.')[1] }},<4.0"
-version = "{{ cookiecutter.first_version }}"
-
-[project.scripts]
-{{ cookiecutter.__package_snake }} = "{{ cookiecutter.__package_snake }}.cli.main:app"
-
-[project.urls]
-bugs = "https://github.com/{{ cookiecutter.__gh_slug }}/issues"
-changelog = "https://github.com/{{ cookiecutter.__gh_slug }}/blob/main/CHANGELOG.md"
-homepage = "https://github.com/{{ cookiecutter.__gh_slug }}"
+requires-python = ">=3.13,<4.0"
+version = "0.0.1"
 
 [tool.commitizen]
 annotated_tag = true
@@ -63,7 +50,7 @@ changelog_incremental = true
 name = "cz_conventional_commits"
 tag_format = "v$version"
 update_changelog_on_bump = true
-version = "{{ cookiecutter.first_version }}"
+version = "1.2.52"
 version_files = ["pyproject.toml:^version"]
 
 [tool.mdformat]
@@ -84,10 +71,11 @@ exclude = [
   "**/.pytest_cache",
   "**/.mypy_cache",
   "**/node_modules",
+  "Templates",
   "typings",
   "**/.*"
 ]
-pythonVersion = "{{ cookiecutter.python_version.split('.')[0] }}.{{ cookiecutter.python_version.split('.')[1] }}"
+pythonVersion = "3.13"
 stubPath = "typings"
 typeCheckingMode = "strict"
 venv = ".venv"
@@ -96,7 +84,12 @@ venvPath = "."
 [tool.pytest.ini_options]
 addopts = "-ra --doctest-modules"
 doctest_optionflags = ["ELLIPSIS", "NORMALIZE_WHITESPACE"]
-testpaths = ["src/{{ cookiecutter.__package_snake }}", "tests"]
+filterwarnings = [
+  "ignore:builtin type Swig.*has no __module__:DeprecationWarning",
+  "ignore:builtin type swigvarlink has no __module__:DeprecationWarning",
+  "ignore:.*scattermapbox.*:DeprecationWarning"
+]
+testpaths = ["src/TODO", "tests"]
 
 [tool.uv]
 default-groups = ["dev"]

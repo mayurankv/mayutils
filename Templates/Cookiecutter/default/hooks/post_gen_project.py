@@ -1,16 +1,11 @@
-import os
 from pathlib import Path
 
 
-for dir in [".secrets"]:
-    os.mkdir(path=dir)
+for directory in [".secrets"]:
+    Path(directory).mkdir(exist_ok=True)
 
-for paths in [".env", ".streamlit/secrets.toml"]:
-    with open(
-        file=paths,
-        mode="a",
-    ) as env_file:
-        pass
+for path in [".env", ".streamlit/secrets.toml"]:
+    Path(path).touch()
 
 for template_file in Path(".").rglob("*.template"):
     template_file.rename(template_file.with_suffix(""))
