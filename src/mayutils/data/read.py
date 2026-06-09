@@ -208,7 +208,7 @@ class QueryReader[DataFrameType: DataFrames = pd.DataFrame](Protocol):
         >>> reader = as_query_reader(engine.read_pandas)  # doctest: +SKIP
         >>> df = reader(  # doctest: +SKIP
         ...     "SELECT * FROM loans LIMIT 5",
-        ...     dataframe_backend="pandas",
+        ...     backend="pandas",
         ... )
         >>> df.shape  # doctest: +SKIP
         (5, 1)

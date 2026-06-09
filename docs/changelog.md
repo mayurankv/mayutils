@@ -7,8 +7,9 @@ This changelog is **auto-generated** from [Conventional Commits](https://www.con
 To generate a new release:
 
 ```zsh
-uv run cz bump           # bump version, update changelog, create tag
-uv run cz bump --dry-run # preview without changes
+uv run cz bump                    # bump version, update changelog, create tag
+uv run cz bump --increment MAJOR  # bump major version
+uv run cz bump --dry-run          # preview without changes
 ```
 
 See [Contributing](contributing.md#versioning-and-releases) for full details.
