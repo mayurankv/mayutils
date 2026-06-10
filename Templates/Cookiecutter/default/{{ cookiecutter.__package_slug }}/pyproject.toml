@@ -1,52 +1,103 @@
-[project]
-name = "{{cookiecutter.__package_slug}}"
-version = "{{ cookiecutter.first_version }}"
-description = "{{cookiecutter.project_short_description}}"
-readme = "README.md"
-authors = [
-  {name = "{{cookiecutter.full_name}}", email = "{{cookiecutter.email}}"}
-]
-maintainers = [
-  {name = "{{cookiecutter.full_name}}", email = "{{cookiecutter.email}}"}
-]
-classifiers = [
-    # TODO
-]
-license = { file = "LICENSE" }
-readme = "README.md"
-requires-python = ">=3.13,<4.0"
-dependencies = [
-	# "mayutils",
-	"typer",
-]
+[build-system]
+build-backend = "uv_build"
+requires = ["uv_build>=0.11.7,<0.12.0"]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
-    "coverage",  # testing
-    "pytest",  # testing
-    "ruff",  # linting
-    "ty", # checking types
-    "mypy", # checking types
-    "ipdb", # debugging
+  "commitizen>=4.13",
+  "coverage>=7.11.0",
+  "ipdb>=0.13.13",
+  "mdformat>=1.0.0",
+  "mdformat-gfm>=1.0.0",
+  "mdformat-mkdocs>=5.2.0b2",
+  "mdformat-pyproject>=0.1.1",
+  "mypy>=1.18.2",
+  "numpydoc>=1.8",
+  "pre-commit>=4.3.0",
+  "prek>=0.3.11",
+  "pyright>=1.1.405",
+  "pytest>=8.4.2",
+  "ruff>=0.14.2",
+  "toml-sort>=0.24",
+  "ty>=0.0.1a24"
 ]
+docs = [
+  "mkdocs>=1.6",
+  "mkdocs-autorefs>=1.4.4",
+  "mkdocs-gen-files>=0.5",
+  "mkdocs-literate-nav>=0.6",
+  "mkdocs-material>=9.6",
+  "mkdocs-section-index>=0.3",
+  "mkdocstrings[python]>=0.29"
+]
+testing = ["pytest>=8.4.2"]
 
-[project.urls]
-bugs = "https://github.com/{{cookiecutter.__gh_slug}}/issues"
-changelog = "https://github.com/{{cookiecutter.__gh_slug}}/blob/master/CHANGELOG.md"
-homepage = "https://github.com/{{cookiecutter.__gh_slug}}"
+[project]
+authors = [{name = "{{ cookiecutter.full_name }}", email = "{{ cookiecutter.email }}"}]
+dependencies = [
+  # "mayutils[cli,streamlit]",
+  "rich>=14.1.0",
+  "streamlit>=1.49.0",
+  "typer"
+]
+description = "{{ cookiecutter.project_short_description }}"
+license = {file = "LICENSE"}
+maintainers = [{name = "{{ cookiecutter.full_name }}", email = "{{ cookiecutter.email }}"}]
+name = "{{ cookiecutter.__package_slug }}"
+readme = "README.md"
+requires-python = ">={{ cookiecutter.python_version.split('.')[0] }}.{{ cookiecutter.python_version.split('.')[1] }},<4.0"
+version = "{{ cookiecutter.first_version }}"
 
 [project.scripts]
-{{cookiecutter.__package_snake}} = "{{cookiecutter.__package_snake}}.cli.main:app"
+{{ cookiecutter.__package_snake }} = "{{ cookiecutter.__package_snake }}.cli.main:app"
 
-[tool.ty]
-# All rules are enabled as "error" by default; no need to specify unless overriding.
-# Example override: relax a rule for the entire project (uncomment if needed).
-# rules.TY015 = "warn"  # For invalid-argument-type, warn instead of error.
+[project.urls]
+bugs = "https://github.com/{{ cookiecutter.__gh_slug }}/issues"
+changelog = "https://github.com/{{ cookiecutter.__gh_slug }}/blob/main/CHANGELOG.md"
+homepage = "https://github.com/{{ cookiecutter.__gh_slug }}"
 
-[tool.uv]
-package = true
-prerelease = "if-necessary-or-explicit"
+[tool.commitizen]
+annotated_tag = true
+changelog_file = "CHANGELOG.md"
+changelog_incremental = true
+name = "cz_conventional_commits"
+tag_format = "v$version"
+update_changelog_on_bump = true
+version = "{{ cookiecutter.first_version }}"
+version_files = ["pyproject.toml:^version"]
+
+[tool.mdformat]
+wrap = 1000
+
+[tool.numpydoc_validation]
+checks = [
+  "all",
+  "PR04",
+  "RT03"
+]
 
 [tool.pyright]
-venvPath = "."
+exclude = [
+  "**/__pycache__",
+  "**/.venv",
+  "**/.ruff_cache",
+  "**/.pytest_cache",
+  "**/.mypy_cache",
+  "**/node_modules",
+  "typings",
+  "**/.*"
+]
+pythonVersion = "{{ cookiecutter.python_version.split('.')[0] }}.{{ cookiecutter.python_version.split('.')[1] }}"
+stubPath = "typings"
+typeCheckingMode = "strict"
 venv = ".venv"
+venvPath = "."
+
+[tool.pytest.ini_options]
+addopts = "-ra --doctest-modules"
+doctest_optionflags = ["ELLIPSIS", "NORMALIZE_WHITESPACE"]
+testpaths = ["src/{{ cookiecutter.__package_snake }}", "tests"]
+
+[tool.uv]
+default-groups = ["dev"]
+prerelease = "if-necessary-or-explicit"

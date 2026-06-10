@@ -10,6 +10,7 @@
 	"__package_slug": "{{ cookiecutter.project_name | slugify}}",
 	"__package_snake": "{{ cookiecutter.__package_slug.replace('-', '_') }}",
 	"__gh_slug": "{{ cookiecutter.github_username }}/{{ cookiecutter.__package_slug }}",
+	"_extensions": ["jinja2_time.TimeExtension"],
 	"_stale_days": {
 		"issue_stale": 120,
 		"pr_stale": 120

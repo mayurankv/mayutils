@@ -1,0 +1,175 @@
+# Configuration file for `prek`, a git hook framework written in Rust.
+# See https://prek.j178.dev for more information.
+#:schema https://www.schemastore.org/prek.json
+
+[[repos]]
+repo = "https://github.com/astral-sh/ruff-pre-commit"
+rev = "v0.15.16"
+hooks = [
+  {
+    id = "ruff-format",
+    exclude = "^typings/"
+  }
+]
+
+[[repos]]
+repo = "https://github.com/astral-sh/uv-pre-commit"
+rev = "0.11.19"
+hooks = [
+  { id = "uv-lock" }
+]
+
+[[repos]]
+repo = "local"
+hooks = [
+  {
+    id = "sort-pyproject",
+    name = "Sort pyproject.toml",
+    entry = "toml-sort -i --sort-table-keys --sort-inline-tables",
+    language = "python",
+    files = '^pyproject\.toml$'
+  }
+]
+
+[[repos]]
+repo = "https://github.com/pre-commit/pre-commit-hooks"
+rev = "v6.0.0"
+hooks = [
+  {
+    id = "check-yaml",
+    exclude = '(^|/)mkdocs\.yml$'
+  },
+  {
+    id = "end-of-file-fixer",
+    exclude = "typings"
+  },
+  {
+    id = "trailing-whitespace",
+    exclude = "typings"
+  }
+]
+
+[[repos]]
+repo = "https://github.com/executablebooks/mdformat"
+rev = "1.0.0"
+hooks = [
+  {
+    id = "mdformat",
+    additional_dependencies = [
+      "mdformat-mkdocs[recommended]>=5.2.0b2",
+      "mdformat-pyproject"
+    ]
+  }
+]
+
+[[repos]]
+repo = "https://github.com/commitizen-tools/commitizen"
+rev = "v4.16.3"
+hooks = [
+  {
+    id = "commitizen",
+    stages = ["commit-msg"]
+  }
+]
+
+[[repos]]
+repo = "https://github.com/astral-sh/ruff-pre-commit"
+rev = "v0.15.16"
+hooks = [
+  {
+    id = "ruff-check",
+    exclude = "^typings/",
+    args = ["--fix"],
+    stages = ["pre-push"]
+  }
+]
+
+[[repos]]
+repo = "local"
+hooks = [
+  {
+    id = "ty",
+    name = "ty check",
+    entry = "uv run ty check",
+    language = "system",
+    types_or = [
+      "python",
+      "jupyter"
+    ],
+    stages = ["pre-push"]
+  },
+  {
+    id = "pyright",
+    name = "pyright check",
+    entry = "uv run pyright",
+    language = "system",
+    types_or = [
+      "python"
+    ],
+    stages = ["pre-push"]
+  },
+  {
+    id = "uv-sync",
+    name = "UV Sync Dependencies",
+    entry = "uv sync --all-extras --all-groups --locked",
+    language = "system",
+    pass_filenames = false,
+    stages = ["pre-push"]
+  }
+]
+
+[[repos]]
+repo = "https://github.com/numpy/numpydoc"
+rev = "v1.10.0"
+hooks = [
+  {
+    id = "numpydoc-validation",
+    exclude = "(^typings/|^tests/)",
+    stages = ["pre-push"]
+  }
+]
+
+[[repos]]
+repo = "https://github.com/sqlfluff/sqlfluff"
+rev = "4.2.2"
+hooks = [
+  {
+    id = "sqlfluff-fix",
+    args = [
+      "--dialect",
+      "snowflake"
+    ]
+  },
+  {
+    id = "sqlfluff-lint",
+    args = [
+      "--dialect",
+      "snowflake"
+    ],
+    stages = ["pre-push"]
+  }
+]
+
+[[repos]]
+repo = "https://github.com/renovatebot/pre-commit-hooks"
+rev = "43.216.0"
+hooks = [
+  {
+    id = "renovate-config-validator",
+    args = ["--strict"],
+    stages = ["pre-push"]
+  }
+]
+
+[[repos]]
+repo = "local"
+hooks = [
+  {
+    id = "prek-auto-update",
+    name = "Auto-update prek hook revisions",
+    entry = "uv run prek auto-update",
+    language = "system",
+    pass_filenames = false,
+    stages = ["pre-push"]
+  }
+]

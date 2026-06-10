@@ -29,16 +29,25 @@ Examples
 True
 """
 
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from typing import Any, Self, cast
 
 from mayutils.core.extras import may_require_extras
+from mayutils.data.read import QueryReader, QueryStreamer
+from mayutils.environment.logging import Logger
+from mayutils.objects.dataframes.backends import Backend, DataFrames, default_backend
 
 with may_require_extras():
-    from pandas import DataFrame, read_sql
+    import pandas as pd
+    import polars as pl
     from snowflake.sqlalchemy import URL  # pyright: ignore[reportAttributeAccessIssue, reportUnknownVariableType]
     from sqlalchemy import URL as SQLURL
     from sqlalchemy import Engine, create_engine
+
+
+logger = Logger.spawn()
+
+DEFAULT_CHUNK_SIZE = 10_000
 
 
 class EngineWrapper:
@@ -185,24 +194,26 @@ class EngineWrapper:
         >>> isinstance(wrapper, EngineWrapper)
         True
         """
-        return cls(
-            create_engine(
-                url=url,
-                **kwargs,
-            )
+        engine = create_engine(
+            url=url,
+            **kwargs,
         )
+
+        logger.info(f"Created database engine for {engine.url.render_as_string(hide_password=True)}")
+
+        return cls(engine)
 
     @classmethod
     def via_snowflake(
         cls,
-        snowflake_url_kwargs: Mapping[str, object] | None = None,
+        connection_parameters: Mapping[str, object] | None = None,
         **kwargs: object,
     ) -> Self:
         """
         Build an :class:`EngineWrapper` configured for Snowflake.
 
         Constructs a Snowflake connection URL using
-        :class:`snowflake.sqlalchemy.URL` from ``snowflake_url_kwargs``
+        :class:`snowflake.sqlalchemy.URL` from ``connection_parameters``
         and then delegates to :meth:`create` so that remaining keyword
         arguments can still tune the underlying SQLAlchemy engine. This
         split lets connection-identity parameters (account, role, etc.)
@@ -211,7 +222,7 @@ class EngineWrapper:
 
         Parameters
         ----------
-        snowflake_url_kwargs
+        connection_parameters
             Keyword arguments forwarded to :class:`snowflake.sqlalchemy.URL`
             to describe the target account and session (typical keys
             include ``account``, ``user``, ``password``, ``warehouse``,
@@ -239,7 +250,7 @@ class EngineWrapper:
         --------
         >>> from mayutils.environment.databases import EngineWrapper
         >>> wrapper = EngineWrapper.via_snowflake(  # doctest: +SKIP
-        ...     snowflake_url_kwargs={
+        ...     connection_parameters={
         ...         "account": "xy12345.eu-west-2.aws",
         ...         "user": "analyst",
         ...         "password": "***",
@@ -254,7 +265,7 @@ class EngineWrapper:
             url=cast(
                 "SQLURL",
                 URL(
-                    **(snowflake_url_kwargs or {}),
+                    **(connection_parameters or {}),
                 ),
             ),
             **kwargs,
@@ -266,8 +277,8 @@ class EngineWrapper:
         /,
         *,
         lower_case: bool = True,
-        **kwargs: Any,  # noqa: ANN401
-    ) -> DataFrame:
+        read_kwargs: Mapping[str, Any] | None = None,
+    ) -> pd.DataFrame:
         """
         Execute a SQL query and return the result as a pandas DataFrame.
 
@@ -292,14 +303,14 @@ class EngineWrapper:
             to preserve the exact casing returned by the driver (useful
             when the caller needs to match case-sensitive downstream
             schemas).
-        **kwargs
+        read_kwargs
             Additional keyword arguments forwarded to
             :func:`pandas.read_sql` (e.g. ``params``, ``parse_dates``,
             ``chunksize``, ``dtype``).
 
         Returns
         -------
-            Result set materialised as a DataFrame, with columns
+            Result set materialised as a ``pd.DataFrame``, with columns
             lower-cased unless ``lower_case`` is ``False``.
 
         See Also
@@ -323,19 +334,511 @@ class EngineWrapper:
         >>> df.columns.tolist()
         ['a']
         """
+        default_read_kwargs: dict[str, Any] = {}
+
+        logger.debug(f"Reading query ({len(query)} chars) into pandas")
+
         df = cast(
-            "DataFrame",
-            read_sql(
+            "pd.DataFrame",
+            pd.read_sql(
                 sql=query,
                 con=self.engine,
-                **kwargs,
+                **(default_read_kwargs | dict(read_kwargs or {})),
             ),
         )
 
         if lower_case:
             df.columns = df.columns.str.lower()
 
+        logger.debug(f"Query returned pandas dataframe with shape {df.shape}")
+
         return df
+
+    def read_polars(
+        self,
+        query: str,
+        /,
+        *,
+        lower_case: bool = True,
+        read_kwargs: Mapping[str, Any] | None = None,
+    ) -> pl.DataFrame:
+        """
+        Execute a SQL query and return the result as a polars DataFrame.
+
+        Wraps :func:`polars.read_database` against the stored engine and
+        optionally normalises column names to lower case so downstream
+        code can rely on a consistent casing regardless of the dialect's
+        default identifier folding (Snowflake in particular upper-cases
+        unquoted identifiers). A connection is checked out of the
+        engine's pool for the duration of the query and returned on
+        completion, so no explicit session management is required.
+
+        Parameters
+        ----------
+        query
+            SQL statement to execute. Passed as the ``query`` argument
+            to :func:`polars.read_database`; may be any string the
+            database engine understands.
+        lower_case
+            When ``True`` the returned DataFrame's columns are
+            lower-cased before being returned. Set to ``False`` to
+            preserve the exact casing returned by the driver (useful
+            when the caller needs to match case-sensitive downstream
+            schemas).
+        read_kwargs
+            Additional keyword arguments forwarded to
+            :func:`polars.read_database` (e.g. ``schema_overrides``,
+            ``infer_schema_length``, ``execute_options``).
+
+        Returns
+        -------
+            Result set materialised as a ``pl.DataFrame``, with columns
+            lower-cased unless ``lower_case`` is ``False``.
+
+        See Also
+        --------
+        polars.read_database : Underlying function used to execute the query.
+        sqlalchemy.Engine : Engine providing the connection pool used for execution.
+        EngineWrapper.read_pandas : Pandas counterpart of this helper.
+        EngineWrapper.stream_polars : Chunked streaming variant of this helper.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from sqlalchemy import create_engine
+        >>> from mayutils.environment.databases import EngineWrapper
+        >>> engine = create_engine("sqlite:///:memory:")
+        >>> _ = pd.DataFrame({"A": [1, 2, 3]}).to_sql("t", engine, index=False)
+        >>> df = EngineWrapper(engine).read_polars("SELECT * FROM t")
+        >>> df.shape
+        (3, 1)
+        >>> df.columns
+        ['a']
+        """
+        default_read_kwargs: dict[str, Any] = {}
+
+        logger.debug(f"Reading query ({len(query)} chars) into polars")
+
+        df = cast(
+            "pl.DataFrame",
+            pl.read_database(
+                query=query,
+                connection=self.engine,
+                **(default_read_kwargs | dict(read_kwargs or {})),
+            ),
+        )
+
+        if lower_case:
+            df.columns = [col.lower() for col in df.columns]
+
+        logger.debug(f"Query returned polars dataframe with shape {df.shape}")
+
+        return df
+
+    def to_reader(
+        self,
+        /,
+        *,
+        lower_case: bool = True,
+        read_kwargs: Mapping[str, Any] | None = None,
+    ) -> QueryReader:
+        """
+        Build a :class:`~mayutils.data.read.QueryReader` bound to this engine.
+
+        The returned closure captures the wrapper together with the
+        supplied reading options and dispatches to :meth:`read_pandas`
+        or :meth:`read_polars` according to the requested backend. This
+        makes the wrapper directly usable as the ``reader`` argument of
+        :func:`mayutils.data.read.read_query`.
+
+        Parameters
+        ----------
+        lower_case
+            When ``True`` result columns are lower-cased before being
+            returned. Forwarded to the backend-specific read method.
+        read_kwargs
+            Additional keyword arguments forwarded to the underlying
+            read function of the selected backend.
+
+        Returns
+        -------
+            Callable satisfying the ``QueryReader`` protocol.
+
+        See Also
+        --------
+        mayutils.data.read.QueryReader : Protocol the returned callable satisfies.
+        mayutils.data.read.read_query : Primary consumer of the returned reader.
+        EngineWrapper.read_pandas : Pandas read method the closure dispatches to.
+        EngineWrapper.read_polars : Polars read method the closure dispatches to.
+        EngineWrapper.to_streamer : Streaming counterpart of this helper.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from sqlalchemy import create_engine
+        >>> from mayutils.environment.databases import EngineWrapper
+        >>> engine = create_engine("sqlite:///:memory:")
+        >>> _ = pd.DataFrame({"A": [1]}).to_sql("t", engine, index=False)
+        >>> reader = EngineWrapper(engine).to_reader()
+        >>> reader("SELECT * FROM t").shape
+        (1, 1)
+        """
+
+        def reader[DataFrameType: DataFrames = pd.DataFrame](
+            query: str,
+            /,
+            *,
+            backend: Backend[DataFrameType] | None = None,
+        ) -> DataFrameType:
+            """
+            Execute the query against the captured engine wrapper.
+
+            Closure that dispatches to :meth:`EngineWrapper.read_pandas`
+            or :meth:`EngineWrapper.read_polars` depending on the
+            requested backend, forwarding the captured ``lower_case``
+            and ``read_kwargs`` options. It satisfies the
+            :class:`~mayutils.data.read.QueryReader` protocol.
+
+            Parameters
+            ----------
+            query
+                Fully-rendered SQL string ready for execution.
+            backend
+                DataFrame backend token. Defaults to pandas when
+                ``None``.
+
+            Returns
+            -------
+                Materialised query result in the requested DataFrame
+                flavour.
+
+            Raises
+            ------
+            ValueError
+                If the backend is neither pandas nor polars.
+
+            See Also
+            --------
+            mayutils.data.read.QueryReader : Protocol this closure satisfies.
+            EngineWrapper.to_reader : Factory that builds this closure.
+
+            Examples
+            --------
+            >>> from mayutils.environment.databases import EngineWrapper
+            >>> wrapper = EngineWrapper.create("sqlite:///:memory:")
+            >>> reader = wrapper.to_reader()
+            >>> callable(reader)
+            True
+            """
+            backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
+
+            if backend.name == "pandas":
+                df = self.read_pandas(
+                    query,
+                    lower_case=lower_case,
+                    read_kwargs=read_kwargs,
+                )
+
+            elif backend.name == "polars":
+                df = self.read_polars(
+                    query,
+                    lower_case=lower_case,
+                    read_kwargs=read_kwargs,
+                )
+
+            else:
+                msg = f"Unsupported backend: {backend.name!r}"
+                raise ValueError(msg)
+
+            return cast("DataFrameType", df)
+
+        return reader
+
+    def stream_pandas(
+        self,
+        query: str,
+        /,
+        *,
+        chunk_size: int = DEFAULT_CHUNK_SIZE,
+        lower_case: bool = True,
+        read_kwargs: Mapping[str, Any] | None = None,
+    ) -> Iterator[pd.DataFrame]:
+        """
+        Execute a SQL query and yield the result in pandas chunks.
+
+        Wraps :func:`pandas.read_sql` with ``chunksize`` set so the
+        driver materialises the result incrementally instead of all at
+        once, keeping peak memory bounded for large result sets. Column
+        names are optionally lower-cased on each chunk before it is
+        yielded, mirroring the behaviour of :meth:`read_pandas`.
+
+        Parameters
+        ----------
+        query
+            SQL statement to execute. Passed as the ``sql`` argument to
+            :func:`pandas.read_sql`; may be any string the database
+            engine understands.
+        chunk_size
+            Maximum number of rows per yielded chunk.
+        lower_case
+            When ``True`` each chunk's columns are lower-cased before
+            being yielded. Set to ``False`` to preserve the exact casing
+            returned by the driver.
+        read_kwargs
+            Additional keyword arguments forwarded to
+            :func:`pandas.read_sql` (e.g. ``params``, ``parse_dates``,
+            ``dtype``). A ``chunksize`` entry overrides ``chunk_size``.
+
+        Yields
+        ------
+            Successive ``pd.DataFrame`` chunks of the result set, with
+            columns lower-cased unless ``lower_case`` is ``False``.
+
+        See Also
+        --------
+        pandas.read_sql : Underlying function used to execute the query.
+        sqlalchemy.Engine : Engine providing the connection pool used for execution.
+        EngineWrapper.read_pandas : Eager counterpart returning a single DataFrame.
+        EngineWrapper.stream_polars : Polars counterpart of this helper.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from sqlalchemy import create_engine
+        >>> from mayutils.environment.databases import EngineWrapper
+        >>> engine = create_engine("sqlite:///:memory:")
+        >>> _ = pd.DataFrame({"A": [1, 2, 3]}).to_sql("t", engine, index=False)
+        >>> chunks = list(EngineWrapper(engine).stream_pandas("SELECT * FROM t", chunk_size=2))
+        >>> [chunk.shape for chunk in chunks]
+        [(2, 1), (1, 1)]
+        """
+        default_read_kwargs: dict[str, Any] = {
+            "chunksize": chunk_size,
+        }
+
+        logger.debug(f"Streaming query ({len(query)} chars) into pandas chunks of {chunk_size}")
+
+        dfs = cast(
+            "Iterator[pd.DataFrame]",
+            pd.read_sql(
+                sql=query,
+                con=self.engine,
+                **(default_read_kwargs | dict(read_kwargs or {})),
+            ),
+        )
+
+        for df in dfs:
+            if lower_case:
+                df.columns = df.columns.str.lower()
+
+            yield df
+
+    def stream_polars(
+        self,
+        query: str,
+        /,
+        *,
+        chunk_size: int = DEFAULT_CHUNK_SIZE,
+        lower_case: bool = True,
+        read_kwargs: Mapping[str, Any] | None = None,
+    ) -> Iterator[pl.DataFrame]:
+        """
+        Execute a SQL query and yield the result in polars chunks.
+
+        Wraps :func:`polars.read_database` with ``iter_batches`` enabled
+        so the driver materialises the result incrementally instead of
+        all at once, keeping peak memory bounded for large result sets.
+        Column names are optionally lower-cased on each chunk before it
+        is yielded, mirroring the behaviour of :meth:`read_polars`.
+
+        Parameters
+        ----------
+        query
+            SQL statement to execute. Passed as the ``query`` argument
+            to :func:`polars.read_database`; may be any string the
+            database engine understands.
+        chunk_size
+            Maximum number of rows per yielded chunk. Forwarded as
+            ``batch_size`` to :func:`polars.read_database`.
+        lower_case
+            When ``True`` each chunk's columns are lower-cased before
+            being yielded. Set to ``False`` to preserve the exact casing
+            returned by the driver.
+        read_kwargs
+            Additional keyword arguments forwarded to
+            :func:`polars.read_database` (e.g. ``schema_overrides``,
+            ``infer_schema_length``). ``iter_batches`` and
+            ``batch_size`` entries override the streaming defaults.
+
+        Yields
+        ------
+            Successive ``pl.DataFrame`` chunks of the result set, with
+            columns lower-cased unless ``lower_case`` is ``False``.
+
+        See Also
+        --------
+        polars.read_database : Underlying function used to execute the query.
+        sqlalchemy.Engine : Engine providing the connection pool used for execution.
+        EngineWrapper.read_polars : Eager counterpart returning a single DataFrame.
+        EngineWrapper.stream_pandas : Pandas counterpart of this helper.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from sqlalchemy import create_engine
+        >>> from mayutils.environment.databases import EngineWrapper
+        >>> engine = create_engine("sqlite:///:memory:")
+        >>> _ = pd.DataFrame({"A": [1, 2, 3]}).to_sql("t", engine, index=False)
+        >>> chunks = list(EngineWrapper(engine).stream_polars("SELECT * FROM t", chunk_size=2))
+        >>> [chunk.shape for chunk in chunks]
+        [(2, 1), (1, 1)]
+        """
+        default_read_kwargs: dict[str, Any] = {
+            "iter_batches": True,
+            "batch_size": chunk_size,
+        }
+
+        logger.debug(f"Streaming query ({len(query)} chars) into polars chunks of {chunk_size}")
+
+        dfs = cast(
+            "Iterator[pl.DataFrame]",
+            pl.read_database(
+                query=query,
+                connection=self.engine,
+                **(default_read_kwargs | dict(read_kwargs or {})),
+            ),
+        )
+
+        for df in dfs:
+            if lower_case:
+                df.columns = [col.lower() for col in df.columns]
+            yield df
+
+    def to_streamer(
+        self,
+        /,
+        *,
+        chunk_size: int = DEFAULT_CHUNK_SIZE,
+        lower_case: bool = True,
+        read_kwargs: Mapping[str, Any] | None = None,
+    ) -> QueryStreamer:
+        """
+        Build a :class:`~mayutils.data.read.QueryStreamer` bound to this engine.
+
+        The returned closure captures the wrapper together with the
+        supplied streaming options and dispatches to
+        :meth:`stream_pandas` or :meth:`stream_polars` according to the
+        requested backend. This makes the wrapper directly usable as the
+        ``streamer`` argument of :func:`mayutils.data.read.stream_query`.
+
+        Parameters
+        ----------
+        chunk_size
+            Maximum number of rows per yielded chunk. Forwarded to the
+            backend-specific streaming method.
+        lower_case
+            When ``True`` each chunk's columns are lower-cased before
+            being yielded. Forwarded to the backend-specific streaming
+            method.
+        read_kwargs
+            Additional keyword arguments forwarded to the underlying
+            read function of the selected backend.
+
+        Returns
+        -------
+            Callable satisfying the ``QueryStreamer`` protocol.
+
+        See Also
+        --------
+        mayutils.data.read.QueryStreamer : Protocol the returned callable satisfies.
+        mayutils.data.read.stream_query : Primary consumer of the returned streamer.
+        EngineWrapper.stream_pandas : Pandas streaming method the closure dispatches to.
+        EngineWrapper.stream_polars : Polars streaming method the closure dispatches to.
+        EngineWrapper.to_reader : Eager counterpart of this helper.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from sqlalchemy import create_engine
+        >>> from mayutils.environment.databases import EngineWrapper
+        >>> engine = create_engine("sqlite:///:memory:")
+        >>> _ = pd.DataFrame({"A": [1, 2, 3]}).to_sql("t", engine, index=False)
+        >>> streamer = EngineWrapper(engine).to_streamer(chunk_size=2)
+        >>> [chunk.shape for chunk in streamer("SELECT * FROM t")]
+        [(2, 1), (1, 1)]
+        """
+
+        def streamer[DataFrameType: DataFrames = pd.DataFrame](
+            query: str,
+            /,
+            *,
+            backend: Backend[DataFrameType] | None = None,
+        ) -> Iterator[DataFrameType]:
+            """
+            Stream the query against the captured engine wrapper.
+
+            Closure that dispatches to :meth:`EngineWrapper.stream_pandas`
+            or :meth:`EngineWrapper.stream_polars` depending on the
+            requested backend, forwarding the captured ``chunk_size``,
+            ``lower_case`` and ``read_kwargs`` options. It satisfies the
+            :class:`~mayutils.data.read.QueryStreamer` protocol.
+
+            Parameters
+            ----------
+            query
+                Fully-rendered SQL string ready for execution.
+            backend
+                DataFrame backend token. Defaults to pandas when
+                ``None``.
+
+            Yields
+            ------
+                Successive DataFrame chunks of the query result in the
+                requested DataFrame flavour.
+
+            Raises
+            ------
+            ValueError
+                If the backend is neither pandas nor polars.
+
+            See Also
+            --------
+            mayutils.data.read.QueryStreamer : Protocol this closure satisfies.
+            EngineWrapper.to_streamer : Factory that builds this closure.
+
+            Examples
+            --------
+            >>> from mayutils.environment.databases import EngineWrapper
+            >>> wrapper = EngineWrapper.create("sqlite:///:memory:")
+            >>> streamer = wrapper.to_streamer()
+            >>> callable(streamer)
+            True
+            """
+            backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
+
+            if backend.name == "pandas":
+                dfs = self.stream_pandas(
+                    query,
+                    chunk_size=chunk_size,
+                    lower_case=lower_case,
+                    read_kwargs=read_kwargs,
+                )
+
+            elif backend.name == "polars":
+                dfs = self.stream_polars(
+                    query,
+                    chunk_size=chunk_size,
+                    lower_case=lower_case,
+                    read_kwargs=read_kwargs,
+                )
+
+            else:
+                msg = f"Unsupported backend: {backend.name!r}"
+                raise ValueError(msg)
+
+            yield from cast("Iterator[DataFrameType]", dfs)
+
+        return streamer
 
     def __call__(
         self,

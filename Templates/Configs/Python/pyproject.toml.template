@@ -1,0 +1,96 @@
+[build-system]
+build-backend = "uv_build"
+requires = ["uv_build>=0.11.7,<0.12.0"]
+
+[dependency-groups]
+dev = [
+  "commitizen>=4.13",
+  "coverage>=7.11.0",
+  "ipdb>=0.13.13",
+  "mayutils",
+  "mdformat>=1.0.0",
+  "mdformat-gfm>=1.0.0",
+  "mdformat-mkdocs>=5.2.0b2",
+  "mdformat-pyproject>=0.1.1",
+  "mypy>=1.18.2",
+  "numpydoc>=1.8",
+  "pre-commit>=4.3.0",
+  "prek>=0.3.11",
+  "pyright>=1.1.405",
+  "pytest>=8.4.2",
+  "ruff>=0.14.2",
+  "toml-sort>=0.24",
+  "ty>=0.0.1a24"
+]
+docs = [
+  "mkdocs>=1.6",
+  "mkdocs-autorefs>=1.4.4",
+  "mkdocs-gen-files>=0.5",
+  "mkdocs-literate-nav>=0.6",
+  "mkdocs-material>=9.6",
+  "mkdocs-section-index>=0.3",
+  "mkdocstrings[python]>=0.29"
+]
+testing = ["pytest>=8.4.2"]
+
+[project]
+authors = [{email = "mayuran.k.v@gmail.com", name = "Mayuran Visakan"}]
+description = "TODO"
+license = {file = "LICENSE"}
+maintainers = [{email = "mayuran.k.v@gmail.com", name = "Mayuran Visakan"}]
+name = "TODO"
+readme = "README.md"
+requires-python = ">=3.13,<4.0"
+version = "0.0.1"
+
+[tool.commitizen]
+annotated_tag = true
+changelog_file = "CHANGELOG.md"
+changelog_incremental = true
+name = "cz_conventional_commits"
+tag_format = "v$version"
+update_changelog_on_bump = true
+version = "1.2.52"
+version_files = ["pyproject.toml:^version"]
+
+[tool.mdformat]
+wrap = 1000
+
+[tool.numpydoc_validation]
+checks = [
+  "all",
+  "PR04",
+  "RT03"
+]
+
+[tool.pyright]
+exclude = [
+  "**/__pycache__",
+  "**/.venv",
+  "**/.ruff_cache",
+  "**/.pytest_cache",
+  "**/.mypy_cache",
+  "**/node_modules",
+  "Templates",
+  "typings",
+  "**/.*"
+]
+pythonVersion = "3.13"
+stubPath = "typings"
+typeCheckingMode = "strict"
+venv = ".venv"
+venvPath = "."
+
+[tool.pytest.ini_options]
+addopts = "-ra --doctest-modules"
+doctest_optionflags = ["ELLIPSIS", "NORMALIZE_WHITESPACE"]
+filterwarnings = [
+  "ignore:builtin type Swig.*has no __module__:DeprecationWarning",
+  "ignore:builtin type swigvarlink has no __module__:DeprecationWarning",
+  "ignore:.*scattermapbox.*:DeprecationWarning"
+]
+testpaths = ["src/TODO", "tests"]
+
+[tool.uv]
+default-groups = ["dev"]
+prerelease = "if-necessary-or-explicit"

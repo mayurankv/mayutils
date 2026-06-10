@@ -1,0 +1,125 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@main
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@21d5da3bc3126fc3b5b182828c8772282a6b694d # main
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python
+        run: uv python install {{ cookiecutter.python_version }}
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run pre-commit hooks
+        run: uv run prek run --all-files
+
+      - name: Run pre-push hooks
+        run: uv run prek run --stage pre-push --all-files --skip ty --skip pyright --skip prek-auto-update
+
+  type-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@main
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@21d5da3bc3126fc3b5b182828c8772282a6b694d # main
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python
+        run: uv python install {{ cookiecutter.python_version }}
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Type check
+        run: uv run ty check src/ tests/ --output-format github
+
+      - name: Pyright
+        run: uv run pyright
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["{{ cookiecutter.python_version }}"]
+    steps:
+      - uses: actions/checkout@main
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@21d5da3bc3126fc3b5b182828c8772282a6b694d # main
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python {% raw %}${{ matrix.python-version }}{% endraw %}
+        run: uv python install {% raw %}${{ matrix.python-version }}{% endraw %}
+
+      - name: Install dependencies
+        run: uv sync --python {% raw %}${{ matrix.python-version }}{% endraw %} --all-extras
+
+      - name: Run tests
+        run: uv run --python {% raw %}${{ matrix.python-version }}{% endraw %} pytest tests/ -v
+
+  doctest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@main
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@21d5da3bc3126fc3b5b182828c8772282a6b694d # main
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python
+        run: uv python install {{ cookiecutter.python_version }}
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run doctests
+        run: uv run pytest --doctest-modules src/{{ cookiecutter.__package_snake }} -v
+
+  commitizen:
+    runs-on: ubuntu-latest
+    if: {% raw %}${{ github.event_name == 'pull_request' }}{% endraw %}
+    steps:
+      - uses: actions/checkout@main
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@21d5da3bc3126fc3b5b182828c8772282a6b694d # main
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Set up Python
+        run: uv python install {{ cookiecutter.python_version }}
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Check commit messages
+        run: uv run cz check --rev-range origin/main..HEAD

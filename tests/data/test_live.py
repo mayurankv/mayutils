@@ -12,7 +12,7 @@ import pytest
 from pendulum import Duration
 
 from mayutils.data.live import StreamingQuery, WindowedQuery
-from mayutils.objects.dataframes.backends import Backend
+from mayutils.objects.dataframes.backends import Backend, DataFrames
 from mayutils.objects.datetime import UTC, DateTime
 from mayutils.objects.types import SQL
 
@@ -539,12 +539,12 @@ class TestWindowedTimeFormat:
         queries: list[str] = []
         original_reader = SequentialReader(df, df)
 
-        def capturing_reader(
+        def capturing_reader[DataFrameType: DataFrames = pd.DataFrame](
             query: str,
             /,
             *,
-            backend: object = None,  # noqa: ARG001
-        ) -> pd.DataFrame:
+            backend: Backend[DataFrameType] | None = None,  # noqa: ARG001
+        ) -> DataFrameType:
             queries.append(query)
             return original_reader(query)
 

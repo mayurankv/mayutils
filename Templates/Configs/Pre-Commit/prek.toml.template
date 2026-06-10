@@ -4,7 +4,7 @@
 
 [[repos]]
 repo = "https://github.com/astral-sh/ruff-pre-commit"
-rev = "v0.15.12"
+rev = "v0.15.16"
 hooks = [
   {
     id = "ruff-format",
@@ -14,7 +14,7 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/astral-sh/uv-pre-commit"
-rev = "0.11.8"
+rev = "0.11.19"
 hooks = [
   { id = "uv-lock" }
 ]
@@ -77,7 +77,7 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/commitizen-tools/commitizen"
-rev = "v4.15.0"
+rev = "v4.16.3"
 hooks = [
   {
     id = "commitizen",
@@ -87,7 +87,7 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/astral-sh/ruff-pre-commit"
-rev = "v0.15.12"
+rev = "v0.15.16"
 hooks = [
   {
     id = "ruff-check",
@@ -117,26 +117,34 @@ hooks = [
     entry = "uv run pyright",
     language = "system",
     types_or = [
-      "python",
-      "jupyter"
+      "python"
     ],
     stages = ["pre-push"]
   },
   {
     id = "uv-sync",
     name = "UV Sync Dependencies",
-    entry = "uv sync --locked",
+    entry = "uv sync --all-extras --all-groups --locked",
     language = "system",
     pass_filenames = false,
     stages = ["pre-push"]
   },
   {
     id = "refresh-stubs",
-    name = "Refresh pyright type stubs",
+    name = "Refresh pyright + plotly type stubs",
     entry = "uv run --extra all refresh_stubs --since HEAD",
     language = "system",
     pass_filenames = false,
     files = '^(pyproject\.toml|uv\.lock)$',
+    stages = ["pre-push"]
+  },
+  {
+    id = "regenerate-plotly-stubs",
+    name = "Regenerate in-source plotly stubs",
+    entry = "uv run --extra all generate_plotly_stubs",
+    language = "system",
+    pass_filenames = false,
+    files = '^src/mayutils/visualisation/graphs/plotly/(traces|charts)/.*\.py$',
     stages = ["pre-push"]
   }
 ]
@@ -154,7 +162,7 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/sqlfluff/sqlfluff"
-rev = "4.1.0"
+rev = "4.2.2"
 hooks = [
   {
     id = "sqlfluff-lint",
@@ -168,7 +176,7 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/renovatebot/pre-commit-hooks"
-rev = "43.150.0"
+rev = "43.216.0"
 hooks = [
   {
     id = "renovate-config-validator",

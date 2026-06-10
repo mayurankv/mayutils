@@ -45,11 +45,11 @@ maintainers = [{email = "mayuran.k.v@gmail.com", name = "Mayuran Visakan"}]
 name = "mayutils"
 readme = "README.md"
 requires-python = ">=3.13,<4.0"
-version = "1.2.52"
+version = "2.0.0"
 
 [project.optional-dependencies]
 all = [
-  "mayutils[async,cli,console,dataframes,datetime,filesystem,financials,google,mathematics,microsoft,notebook,numerics,pandas,pdf,plotting,secrets,snowflake,sql,statistics,streamlit,web]"
+  "mayutils[async,cli,console,dataframes,datetime,filesystem,financials,google,mathematics,microsoft,notebook,numerics,pandas,pdf,plotting,secrets,snowflake,sql,statistics,streamlit,tui,web]"
 ]
 async = [
   "asyncer>=0.0.8"
@@ -143,6 +143,7 @@ secrets = [
 snowflake = [
   "mayutils[sql]",
   "snowflake-connector-python[secure-local-storage]>=3.17.2",
+  "snowflake-snowpark-python>=1.27",
   "snowflake-sqlalchemy>=1.7.6"
 ]
 sql = [
@@ -155,7 +156,14 @@ statistics = [
   "statsmodels"
 ]
 streamlit = [
+  "bcrypt>=4.3.0",
   "streamlit>=1.49.0"
+]
+tui = [
+  "mayutils[cli,pandas,plotting,snowflake]",
+  "pyyaml>=6.0.2",
+  "textual>=8.2.7",
+  "textual-image>=0.13.2"
 ]
 types = [
   "google-api-python-client-stubs>=1.34.0",
@@ -187,13 +195,20 @@ clear_cache = "mayutils.scripts.clear_cache:app"
 generate_encryption_key = "mayutils.environment.oauth:generate_fernet_key"
 generate_plotly_stubs = "mayutils.scripts.generate_plotly_stubs:app"
 refresh_stubs = "mayutils.scripts.refresh_stubs:app"
+tuiplot = "mayutils.interfaces.code.tui.tuiplot:app"
 
 [tool.commitizen]
+annotated_tag = true
 changelog_file = "CHANGELOG.md"
+changelog_incremental = true
 name = "cz_conventional_commits"
+pre_bump_hooks = [
+  "uv lock",
+  "git add uv.lock"
+]
 tag_format = "v$version"
 update_changelog_on_bump = true
-version = "1.2.52"
+version = "2.0.0"
 version_files = ["pyproject.toml:^version"]
 
 [tool.mdformat]

@@ -26,6 +26,7 @@ exclude = [
     "site-packages",
     "venv",
     "Templates",
+    "typings",
 ]
 line-length = 140
 indent-width = 4
@@ -33,6 +34,14 @@ target-version = "py313"
 
 [lint]
 select = ["ALL"]
+extend-select = [
+    "DOC201",
+    "DOC202",
+    "DOC402",
+    "DOC403",
+    "DOC501",
+    "DOC502",
+]
 ignore = [
     "CPY001",
     "FIX002",
@@ -43,11 +52,25 @@ ignore = [
 ]
 fixable = ["ALL"]
 unfixable = []
+preview = true
+explicit-preview-rules = true
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [lint.per-file-ignores]
 "tests/**/*.py" = [
     "S101",
+]
+"src/mayutils/visualisation/graphs/plotly/charts/**.pyi" = [
+    "ANN001",
+	"ANN401",
+	"A002",
+]
+
+[lint.pep8-naming]
+classmethod-decorators = [
+    "classmethod",
+    "classonlyproperty",
+    "readonlyclassonlyproperty",
 ]
 
 [lint.pydocstyle]

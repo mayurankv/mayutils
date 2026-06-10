@@ -155,6 +155,91 @@ def replace_print(
         builtins.print = original
 
 
+def safe_printer(
+    console: Console,
+    /,
+    *,
+    fallback: Callable[..., None] = PRINT,
+) -> Callable[..., None]:
+    """
+    Build a Rich-backed ``print`` replacement that stays standard-library safe.
+
+    Returns a callable suitable for installation as :func:`builtins.print`:
+    ordinary calls are rendered through ``console.print``, but any call that
+    supplies a ``file`` or ``flush`` keyword is delegated to ``fallback``
+    instead. :meth:`rich.console.Console.print` accepts neither keyword, so
+    routing those calls to the built-in ``print`` keeps standard-library code
+    working after the global swap — most importantly :mod:`logging`'s
+    traceback formatting, which calls ``print(..., file=...)`` and would
+    otherwise raise ``TypeError`` on every emitted record.
+
+    Parameters
+    ----------
+    console
+        Rich console used to render ordinary ``print`` calls.
+    fallback
+        Callable handling calls that pass ``file`` or ``flush``. Defaults to
+        the built-in ``print`` captured at import time in :data:`PRINT`.
+
+    Returns
+    -------
+        A ``print``-compatible callable that renders through ``console`` and
+        defers stream-directed calls to ``fallback``.
+
+    See Also
+    --------
+    setup_printing : Installs the returned callable as ``builtins.print``.
+    replace_print : Scoped swap of ``builtins.print`` to any callable.
+    rich.console.Console.print : Renderer used for ordinary calls.
+
+    Examples
+    --------
+    >>> import io
+    >>> from mayutils.visualisation.console import default_console, safe_printer
+    >>> printer = safe_printer(default_console())
+    >>> buffer = io.StringIO()
+    >>> printer("redirected", file=buffer)
+    >>> buffer.getvalue().strip()
+    'redirected'
+    """
+
+    def printer(
+        *objects: object,
+        **kwargs: Any,  # noqa: ANN401
+    ) -> None:
+        """
+        Render through the bound console or delegate stream-directed calls.
+
+        Forward ``objects`` and ``kwargs`` to ``console.print`` unless a
+        ``file`` or ``flush`` keyword is present, in which case the call is
+        handed to ``fallback`` so built-in ``print`` semantics are preserved
+        for callers that target a specific stream.
+
+        Parameters
+        ----------
+        *objects
+            Positional values to print.
+        **kwargs
+            Keyword arguments forwarded to ``console.print`` or, when
+            ``file`` or ``flush`` is present, to ``fallback``.
+
+        See Also
+        --------
+        safe_printer : Factory that produces this callable.
+
+        Examples
+        --------
+        >>> from mayutils.visualisation.console import default_console, safe_printer
+        >>> safe_printer(default_console())("hi")  # doctest: +SKIP
+        """
+        if "file" in kwargs or "flush" in kwargs:
+            fallback(*objects, **kwargs)
+        else:
+            console.print(*objects, **kwargs)
+
+    return printer
+
+
 def setup_printing(
     console: Console | None = None,
     *,
@@ -217,7 +302,7 @@ def setup_printing(
 
     if printing and not _state["print"][0]:
         _state["print"] = (True, builtins.print)
-        builtins.print = active_console.print  # ty:ignore[invalid-assignment]
+        builtins.print = safe_printer(active_console)  # ty:ignore[invalid-assignment]
 
     if tracebacks and not _state["traceback"][0]:
         _state["traceback"] = (True, sys.excepthook)

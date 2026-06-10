@@ -1,26 +1,30 @@
 """
-Provide adapters for third-party services, document formats, and runtimes.
+Group integrations with external services, formats, and frontends.
 
-Group the integration layers that connect ``mayutils`` to systems it
-does not own: filetype-specific document authoring, cloud storage
-clients, and Streamlit applications. Each submodule is guarded by an
-optional dependency extra so installing the library stays lightweight.
-The full mapping of submodule to extra is documented in
-``docs/guides/dependency-groups.md``. The ``cloud`` namespace exposes
-service facades such as Google Drive, ``filetypes`` covers ``markdown``,
-``pptx``, ``pdf``, ``sheets``, ``slides``, ``docx``, and ``xlsx``, while
-``streamlit`` provides helpers for dashboard authoring.
+This package is the integration layer of the ``mayutils`` library:
+code that talks to a system outside the Python process lives in a
+dedicated subpackage here. :mod:`mayutils.interfaces.cloud` wraps
+third-party cloud storage providers, :mod:`mayutils.interfaces.code`
+hosts coding-environment integrations such as Jupyter magics and
+Textual terminal UIs, :mod:`mayutils.interfaces.data` builds database
+readers and streamers from environment configuration,
+:mod:`mayutils.interfaces.filetypes` adapts document and tabular file
+formats, and :mod:`mayutils.interfaces.websites` provides web
+application framework helpers. Each subpackage guards its heavy
+dependencies behind optional extras so a minimal install stays
+lightweight.
 
 See Also
 --------
-mayutils.interfaces.filetypes : Filetype-dependent authoring and rendering helpers.
-mayutils.interfaces.cloud : Cloud storage service facades such as Google Drive.
-mayutils.interfaces.streamlit : Utilities for building Streamlit dashboards.
+mayutils.interfaces.cloud : Cloud storage service facades.
+mayutils.interfaces.code : Coding-environment integrations (notebooks, TUIs).
+mayutils.interfaces.data : Environment-driven database reader factories.
+mayutils.interfaces.filetypes : Filetype authoring and rendering adapters.
+mayutils.interfaces.websites : Web application framework helpers.
 
 Examples
 --------
->>> from mayutils.interfaces.filetypes.xlsx import Xlsx
->>> from mayutils.interfaces.cloud.google import Drive
->>> Xlsx.__name__, Drive.__name__
-('Xlsx', 'Drive')
+>>> from mayutils import interfaces
+>>> interfaces.__name__
+'mayutils.interfaces'
 """

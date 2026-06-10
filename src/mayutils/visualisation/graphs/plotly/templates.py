@@ -796,7 +796,9 @@ def get_layout_value(
     ...     get_layout_value,
     ...     get_template,
     ...     get_template_layout,
+    ...     set_template,
     ... )
+    >>> set_template(template="base")
     >>> layout = get_template_layout(get_template())
     >>> get_layout_value(layout, props=["xaxis", "showgrid"])
     True
