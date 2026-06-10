@@ -42,12 +42,14 @@ from __future__ import annotations
 
 import re
 import warnings
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, cast, runtime_checkable
 
 from mayutils.core.extras import may_require_extras
 from mayutils.data import CACHE_FOLDER
 from mayutils.data.queries import QUERIES_FOLDERS, format_query
+from mayutils.environment.logging import Logger
 from mayutils.environment.memoisation import cache, make_cache_stem
 from mayutils.objects.dataframes.backends import Backend, DataFrames, default_backend
 
@@ -55,10 +57,35 @@ with may_require_extras():
     import pandas as pd
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Iterator, Mapping, Sequence
 
     from mayutils.objects.datetime import Duration
     from mayutils.objects.types import SQL, SupportsStr
+
+
+logger = Logger.spawn()
+
+
+@runtime_checkable
+class QueryReader(Protocol):
+    def __call__[DataFrameType: DataFrames = pd.DataFrame](
+        self,
+        query: str,
+        /,
+        *,
+        backend: Backend[DataFrameType] | None = None,
+    ) -> DataFrameType: ...
+
+
+@runtime_checkable
+class QueryStreamer(Protocol):
+    def __call__[DataFrameType: DataFrames = pd.DataFrame](
+        self,
+        query: str,
+        /,
+        *,
+        backend: Backend[DataFrameType] | None = None,
+    ) -> Iterator[DataFrameType]: ...
 
 
 class QueryExecutor[DataFrameType: DataFrames](Protocol):
@@ -116,221 +143,6 @@ class QueryExecutor[DataFrameType: DataFrames](Protocol):
         <class 'mayutils.data.read.QueryExecutor'>
         """
         ...
-
-
-@runtime_checkable
-class QueryReader[DataFrameType: DataFrames = pd.DataFrame](Protocol):
-    """
-    Define the structural contract for executing a rendered query string.
-
-    A reader is any callable with the signature
-    ``(str, *, dataframe_backend: ?? = "pandas") ->
-    ??``. The ``dataframe_backend`` keyword lets a single
-    reader service both pandas and polars call sites, and keeps
-    :func:`read_query` honest — the cold-read branch materialises the
-    requested backend via the reader, and the warm-read branch
-    materialises the same backend via the :class:`DataFile` cache, so
-    the two paths cannot disagree. Simple single-backend callables
-    (such as today's
-    :meth:`mayutils.environment.databases.EngineWrapper.read_pandas`
-    which only returns pandas) can be lifted to the protocol via
-    :func:`as_query_reader`. Bespoke readers — an HTTP wrapper around
-    Redash, a preconfigured partial over a Snowflake connector, a
-    fixtures-backed stub for tests — implement ``__call__`` directly.
-
-    See Also
-    --------
-    as_query_reader : Lift a single-backend callable to this protocol.
-    read_query : Main consumer of :class:`QueryReader` instances.
-    mayutils.environment.databases.EngineWrapper.read_pandas : Typical
-        concrete reader satisfying the protocol.
-    pandas.read_sql : Underlying pandas primitive most readers wrap.
-
-    Examples
-    --------
-    Any callable matching the protocol signature is a valid reader:
-
-    >>> from mayutils.data.read import QueryReader
-    >>> def my_reader(query, /, *, dataframe_backend="pandas"):  # doctest: +SKIP
-    ...     return engine.read_pandas(query)
-    >>> isinstance(my_reader, QueryReader)  # doctest: +SKIP
-    True
-    """
-
-    def __call__(
-        self,
-        query: str,
-        /,
-        *,
-        backend: Backend[DataFrameType] | None = None,
-    ) -> DataFrameType:
-        """
-        Execute the rendered query and return the result as a DataFrame.
-
-        The callable is invoked by :func:`read_query` exactly once on
-        every cache miss, with the fully-rendered SQL already produced
-        by :func:`render_query`. Implementations are free to open and
-        close their own connections, apply warehouse-level session
-        parameters, or route to bespoke transports; they simply need
-        to honour the requested ``dataframe_backend`` so the warm and
-        cold code paths materialise identical types.
-
-        Parameters
-        ----------
-        query
-            Fully-rendered SQL query string ready to be dispatched to
-            the backing database, API or fixture source. Any
-            templating has already been applied by the caller.
-        backend
-            DataFrame library the result should be materialised in.
-            Implementations that support only one backend should
-            raise :class:`NotImplementedError` rather than silently
-            returning the wrong type.
-
-        Returns
-        -------
-            Materialised query result; concrete type matches
-            ``backend``.
-
-        See Also
-        --------
-        as_query_reader : Lift a single-backend callable to this
-            protocol.
-        read_query : Main consumer that calls this method on misses.
-        mayutils.environment.databases.EngineWrapper.read_pandas :
-            Reference implementation.
-        pandas.read_sql : Underlying pandas primitive most readers
-            wrap.
-
-        Examples
-        --------
-        >>> from mayutils.data.read import as_query_reader
-        >>> reader = as_query_reader(engine.read_pandas)  # doctest: +SKIP
-        >>> df = reader(  # doctest: +SKIP
-        ...     "SELECT * FROM loans LIMIT 5",
-        ...     backend="pandas",
-        ... )
-        >>> df.shape  # doctest: +SKIP
-        (5, 1)
-        """
-        ...
-
-
-def as_query_reader[DataFrameType: DataFrames = pd.DataFrame](
-    func: Callable[[str], DataFrameType],
-    /,
-    *,
-    required_backend: Backend[DataFrameType] | None = None,
-) -> QueryReader[DataFrameType]:
-    """
-    Lift a single-backend ``(str) -> DataFrame`` callable to a :class:`QueryReader`.
-
-    Convenience adapter for readers that only service one backend —
-    for example :meth:`mayutils.environment.databases.EngineWrapper.read_pandas`,
-    which always returns a pandas DataFrame — so they can be plugged
-    into :func:`read_query`. The returned wrapper accepts the
-    standard ``dataframe_backend`` keyword and raises
-    :class:`NotImplementedError` when invoked with a backend other
-    than the one ``fn`` supports, which is noisier than returning the
-    wrong type and easier to diagnose than a silent failure deep in
-    the caching layer. The adapter adds no state of its own and so is
-    safe to recreate per call or bind once at module import.
-
-    Parameters
-    ----------
-    func
-        Backend-fixed query executor taking a rendered SQL string
-        and returning a DataFrame.
-    required_backend
-        The backend ``func`` produces. The returned reader will only
-        accept this value for ``backend``.
-
-    Returns
-    -------
-        Callable satisfying :class:`QueryReader`, with
-        ``backend`` routed to ``func`` when it matches
-        ``required_backend`` and raising otherwise.
-
-    See Also
-    --------
-    QueryReader : Protocol satisfied by the returned callable.
-    read_query : Main consumer of :class:`QueryReader` instances.
-    render_query : Helper that produces the string passed to ``fn``.
-    mayutils.environment.databases.EngineWrapper.read_pandas : Typical
-        ``fn`` passed to this helper.
-    pandas.read_sql : Underlying primitive often wrapped by ``fn``.
-
-    Examples
-    --------
-    >>> from mayutils.data.read import as_query_reader, read_query
-    >>> reader = as_query_reader(engine.read_pandas)  # doctest: +SKIP
-    >>> df = read_query(  # doctest: +SKIP
-    ...     "SELECT 1 AS n",
-    ...     reader=reader,
-    ... )
-    >>> df.shape  # doctest: +SKIP
-    (1, 1)
-    """
-    required_backend = required_backend if required_backend is not None else cast("Backend[DataFrameType]", default_backend())
-
-    def reader(
-        query: str,
-        /,
-        *,
-        backend: Backend[DataFrameType] | None = None,
-    ) -> DataFrameType:
-        """
-        Dispatch ``query`` through ``fn`` when the requested backend matches.
-
-        Acts as the closure returned by :func:`as_query_reader`,
-        enforcing that ``fn`` is only invoked with the backend it
-        advertises. Any other backend value raises
-        :class:`NotImplementedError` so misconfigured call sites fail
-        loudly at the reader boundary rather than later inside
-        :class:`DataFile` deserialisation.
-
-        Parameters
-        ----------
-        query
-            Fully rendered SQL string to execute.
-        backend
-            DataFrame backend requested by :func:`read_query`. Must
-            equal the ``required_backend`` captured from the enclosing
-            :func:`as_query_reader` call.
-
-        Returns
-        -------
-            Result produced by ``func(query)``; concrete type matches
-            the single backend supported by the adapter.
-
-        Raises
-        ------
-        NotImplementedError
-            When ``dataframe_backend`` differs from the captured
-            ``backend``.
-
-        See Also
-        --------
-        as_query_reader : Factory that produces this closure.
-        QueryReader : Protocol satisfied by the returned callable.
-        pandas.read_sql : Primitive commonly wrapped by ``fn``.
-
-        Examples
-        --------
-        >>> from mayutils.data.read import as_query_reader
-        >>> reader = as_query_reader(engine.read_pandas)  # doctest: +SKIP
-        >>> df = reader("SELECT 1", dataframe_backend="pandas")  # doctest: +SKIP
-        >>> df.shape  # doctest: +SKIP
-        (1, 1)
-        """
-        backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
-        if required_backend.name != backend.name:
-            msg = f"Reader supports '{backend}' only; got '{required_backend}'"
-            raise NotImplementedError(msg)
-
-        return func(query)
-
-    return reader
 
 
 class QueryInputWarning(UserWarning):
@@ -554,12 +366,16 @@ def render_query(
         query = Path(query)
 
     if isinstance(query, Path):
+        logger.debug(f"Rendering query file {query} with arguments {sorted(format_kwargs)}")
+
         return format_query(
             query,
             queries_folders=queries_folders,
             default_suffix=default_suffix,
             **format_kwargs,
         )
+
+    logger.debug(f"Rendering inline SQL ({len(query)} chars) with arguments {sorted(format_kwargs)}")
 
     return query.format(**format_kwargs)
 
@@ -568,7 +384,7 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
     query: SQL | Path,
     /,
     *,
-    reader: QueryReader[DataFrameType],
+    reader: QueryReader,
     backend: Backend[DataFrameType] | None = None,
     suffix: str | None = None,
     persist: bool | None = False,
@@ -642,6 +458,8 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
         default_suffix=default_suffix,
         **format_kwargs,
     )
+
+    logger.debug(f"Executing query ({len(rendered_query)} chars) with backend={backend.name!r} and persist={persist!r}")
 
     if persist is None:
         return reader(
@@ -722,10 +540,83 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
     )
 
 
+def stream_query[DataFrameType: DataFrames = pd.DataFrame](
+    query: SQL | Path,
+    /,
+    *,
+    streamer: QueryStreamer,
+    backend: Backend[DataFrameType] | None = None,
+    queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
+    default_suffix: str = "sql",
+    **format_kwargs: SupportsStr,
+) -> Iterator[DataFrameType]:
+    backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
+
+    rendered_query = render_query(
+        query,
+        queries_folders=queries_folders,
+        default_suffix=default_suffix,
+        **format_kwargs,
+    )
+
+    logger.debug(f"Streaming query ({len(rendered_query)} chars) with backend={backend.name!r}")
+
+    yield from streamer(
+        rendered_query,
+        backend=backend,
+    )
+
+
+def read_queries[DataFrameType: DataFrames = pd.DataFrame](
+    queries: Sequence[SQL | Path],
+    /,
+    *,
+    reader: QueryReader,
+    backend: Backend[DataFrameType] | None = None,
+    suffix: str | None = None,
+    persist: bool | None = False,
+    ttl: Duration | None = None,
+    cache_extra: Mapping[str, object] | None = None,
+    cache_description: str | None = None,
+    cache_folder: Path | str = CACHE_FOLDER,
+    queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
+    default_suffix: str = "sql",
+    max_workers: int = 4,
+    **format_kwargs: SupportsStr,
+) -> tuple[DataFrameType, ...]:
+    logger.debug(f"Reading {len(queries)} queries with up to {max_workers} workers")
+
+    with ThreadPoolExecutor(
+        max_workers=max_workers,
+    ) as executor:
+        futures = tuple(
+            executor.submit(
+                read_query,
+                query,
+                reader=reader,
+                backend=backend,  # ty:ignore[invalid-argument-type]
+                suffix=suffix,
+                persist=persist,
+                ttl=ttl,
+                cache_extra=cache_extra,
+                cache_description=cache_description,
+                cache_folder=cache_folder,
+                queries_folders=queries_folders,
+                default_suffix=default_suffix,
+                **format_kwargs,
+            )
+            for query in queries
+        )
+
+        return tuple(future.result() for future in futures)  # ty:ignore[invalid-return-type]
+
+
 __all__ = [
     "QueryInputWarning",
     "QueryReader",
-    "as_query_reader",
+    "QueryStreamer",
+    "read_queries",
     "read_query",
     "render_query",
+    "stream_query",
 ]

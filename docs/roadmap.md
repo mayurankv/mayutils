@@ -2,6 +2,14 @@
 
 Organised by package layout (`src/mayutils/*`). Priority tags: `#critical`, `#high`, `#medium`, `#low`; difficulty tags: `#hard`.
 
+## `data`
+
+### Async reading and streaming
+
+Priority: #low
+
+- [ ] `AsyncQueryReader` and `AsyncQueryStreamer` protocols in `data/read.py` — define the interface for native-async readers (e.g. Snowflake `aio` connector, `asyncpg`) so they can slot into `async_read_query` / `async_stream_query` without thread overhead. Until a real async driver exists, callers can use `asyncio.to_thread(read_query, ...)` instead.
+
 ## `environment`
 
 ### Logging
@@ -11,6 +19,15 @@ Priority: #critical
 - [ ] Classmethod / staticmethod to change the default logging level.
 - [ ] Re-add a file handler to the logger.
 - [ ] Surface `logger.name` in the rich handler output ([rich#850](https://github.com/Textualize/rich/issues/850)).
+
+## `interfaces.data`
+
+### `dbt`
+
+Priority: #medium
+
+- [ ] Build an interface to interact with dbt programmatically.
+    - Reference: [dbt programmatic invocations (Fusion)](https://docs.getdbt.com/reference/programmatic-invocations?version=2.0&name=Fusion)
 
 ## `interfaces.filetypes`
 

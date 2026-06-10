@@ -29,16 +29,25 @@ Examples
 True
 """
 
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from typing import Any, Self, cast
 
 from mayutils.core.extras import may_require_extras
+from mayutils.data.read import QueryReader, QueryStreamer
+from mayutils.environment.logging import Logger
+from mayutils.objects.dataframes.backends import Backend, DataFrames, default_backend
 
 with may_require_extras():
-    from pandas import DataFrame, read_sql
+    import pandas as pd
+    import polars as pl
     from snowflake.sqlalchemy import URL  # pyright: ignore[reportAttributeAccessIssue, reportUnknownVariableType]
     from sqlalchemy import URL as SQLURL
     from sqlalchemy import Engine, create_engine
+
+
+logger = Logger.spawn()
+
+DEFAULT_CHUNK_SIZE = 10_000
 
 
 class EngineWrapper:
@@ -185,24 +194,26 @@ class EngineWrapper:
         >>> isinstance(wrapper, EngineWrapper)
         True
         """
-        return cls(
-            create_engine(
-                url=url,
-                **kwargs,
-            )
+        engine = create_engine(
+            url=url,
+            **kwargs,
         )
+
+        logger.info(f"Created database engine for {engine.url.render_as_string(hide_password=True)}")
+
+        return cls(engine)
 
     @classmethod
     def via_snowflake(
         cls,
-        snowflake_url_kwargs: Mapping[str, object] | None = None,
+        connection_parameters: Mapping[str, object] | None = None,
         **kwargs: object,
     ) -> Self:
         """
         Build an :class:`EngineWrapper` configured for Snowflake.
 
         Constructs a Snowflake connection URL using
-        :class:`snowflake.sqlalchemy.URL` from ``snowflake_url_kwargs``
+        :class:`snowflake.sqlalchemy.URL` from ``connection_parameters``
         and then delegates to :meth:`create` so that remaining keyword
         arguments can still tune the underlying SQLAlchemy engine. This
         split lets connection-identity parameters (account, role, etc.)
@@ -211,7 +222,7 @@ class EngineWrapper:
 
         Parameters
         ----------
-        snowflake_url_kwargs
+        connection_parameters
             Keyword arguments forwarded to :class:`snowflake.sqlalchemy.URL`
             to describe the target account and session (typical keys
             include ``account``, ``user``, ``password``, ``warehouse``,
@@ -239,7 +250,7 @@ class EngineWrapper:
         --------
         >>> from mayutils.environment.databases import EngineWrapper
         >>> wrapper = EngineWrapper.via_snowflake(  # doctest: +SKIP
-        ...     snowflake_url_kwargs={
+        ...     connection_parameters={
         ...         "account": "xy12345.eu-west-2.aws",
         ...         "user": "analyst",
         ...         "password": "***",
@@ -254,7 +265,7 @@ class EngineWrapper:
             url=cast(
                 "SQLURL",
                 URL(
-                    **(snowflake_url_kwargs or {}),
+                    **(connection_parameters or {}),
                 ),
             ),
             **kwargs,
@@ -266,8 +277,8 @@ class EngineWrapper:
         /,
         *,
         lower_case: bool = True,
-        **kwargs: Any,  # noqa: ANN401
-    ) -> DataFrame:
+        read_kwargs: Mapping[str, Any] | None = None,
+    ) -> pd.DataFrame:
         """
         Execute a SQL query and return the result as a pandas DataFrame.
 
@@ -299,7 +310,7 @@ class EngineWrapper:
 
         Returns
         -------
-            Result set materialised as a DataFrame, with columns
+            Result set materialised as a ``pd.DataFrame``, with columns
             lower-cased unless ``lower_case`` is ``False``.
 
         See Also
@@ -323,19 +334,192 @@ class EngineWrapper:
         >>> df.columns.tolist()
         ['a']
         """
+        default_read_kwargs: dict[str, Any] = {}
+
+        logger.debug(f"Reading query ({len(query)} chars) into pandas")
+
         df = cast(
-            "DataFrame",
-            read_sql(
+            "pd.DataFrame",
+            pd.read_sql(
                 sql=query,
                 con=self.engine,
-                **kwargs,
+                **(default_read_kwargs | dict(read_kwargs or {})),
             ),
         )
 
         if lower_case:
             df.columns = df.columns.str.lower()
 
+        logger.debug(f"Query returned pandas dataframe with shape {df.shape}")
+
         return df
+
+    def read_polars(
+        self,
+        query: str,
+        /,
+        *,
+        lower_case: bool = True,
+        read_kwargs: Mapping[str, Any] | None = None,
+    ) -> pl.DataFrame:
+        default_read_kwargs: dict[str, Any] = {}
+
+        logger.debug(f"Reading query ({len(query)} chars) into polars")
+
+        df = cast(
+            "pl.DataFrame",
+            pl.read_database(
+                query=query,
+                connection=self.engine,
+                **(default_read_kwargs | dict(read_kwargs or {})),
+            ),
+        )
+
+        if lower_case:
+            df.columns = [col.lower() for col in df.columns]
+
+        logger.debug(f"Query returned polars dataframe with shape {df.shape}")
+
+        return df
+
+    def to_reader(
+        self,
+        /,
+        *,
+        lower_case: bool = True,
+        read_kwargs: Mapping[str, Any] | None = None,
+    ) -> QueryReader:
+
+        def reader[DataFrameType: DataFrames = pd.DataFrame](
+            query: str,
+            /,
+            *,
+            backend: Backend[DataFrameType] | None = None,
+        ) -> DataFrameType:
+            backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
+
+            if backend.name == "pandas":
+                df = self.read_pandas(
+                    query,
+                    lower_case=lower_case,
+                    read_kwargs=read_kwargs,
+                )
+
+            elif backend.name == "polars":
+                df = self.read_polars(
+                    query,
+                    lower_case=lower_case,
+                    read_kwargs=read_kwargs,
+                )
+
+            else:
+                msg = f"Unsupported backend: {backend.name!r}"
+                raise ValueError(msg)
+
+            return cast("DataFrameType", df)
+
+        return reader
+
+    def stream_pandas(
+        self,
+        query: str,
+        /,
+        *,
+        chunk_size: int = DEFAULT_CHUNK_SIZE,
+        lower_case: bool = True,
+        read_kwargs: Mapping[str, Any] | None = None,
+    ) -> Iterator[pd.DataFrame]:
+        default_read_kwargs: dict[str, Any] = {
+            "chunksize": chunk_size,
+        }
+
+        logger.debug(f"Streaming query ({len(query)} chars) into pandas chunks of {chunk_size}")
+
+        dfs = cast(
+            "Iterator[pd.DataFrame]",
+            pd.read_sql(
+                sql=query,
+                con=self.engine,
+                **(default_read_kwargs | dict(read_kwargs or {})),
+            ),
+        )
+
+        for df in dfs:
+            if lower_case:
+                df.columns = df.columns.str.lower()
+
+            yield df
+
+    def stream_polars(
+        self,
+        query: str,
+        /,
+        *,
+        chunk_size: int = DEFAULT_CHUNK_SIZE,
+        lower_case: bool = True,
+        read_kwargs: Mapping[str, Any] | None = None,
+    ) -> Iterator[pl.DataFrame]:
+        default_read_kwargs: dict[str, Any] = {
+            "iter_batches": True,
+            "batch_size": chunk_size,
+        }
+
+        logger.debug(f"Streaming query ({len(query)} chars) into polars chunks of {chunk_size}")
+
+        dfs = cast(
+            "Iterator[pl.DataFrame]",
+            pl.read_database(
+                query=query,
+                connection=self.engine,
+                **(default_read_kwargs | dict(read_kwargs or {})),
+            ),
+        )
+
+        for df in dfs:
+            if lower_case:
+                df.columns = [col.lower() for col in df.columns]
+            yield df
+
+    def to_streamer(
+        self,
+        /,
+        *,
+        chunk_size: int = DEFAULT_CHUNK_SIZE,
+        lower_case: bool = True,
+        read_kwargs: Mapping[str, Any] | None = None,
+    ) -> QueryStreamer:
+
+        def streamer[DataFrameType: DataFrames = pd.DataFrame](
+            query: str,
+            /,
+            *,
+            backend: Backend[DataFrameType] | None = None,
+        ) -> Iterator[DataFrameType]:
+            backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
+
+            if backend.name == "pandas":
+                dfs = self.stream_pandas(
+                    query,
+                    chunk_size=chunk_size,
+                    lower_case=lower_case,
+                    read_kwargs=read_kwargs,
+                )
+
+            elif backend.name == "polars":
+                dfs = self.stream_polars(
+                    query,
+                    chunk_size=chunk_size,
+                    lower_case=lower_case,
+                    read_kwargs=read_kwargs,
+                )
+
+            else:
+                msg = f"Unsupported backend: {backend.name!r}"
+                raise ValueError(msg)
+
+            yield from cast("Iterator[DataFrameType]", dfs)
+
+        return streamer
 
     def __call__(
         self,
