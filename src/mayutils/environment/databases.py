@@ -303,7 +303,7 @@ class EngineWrapper:
             to preserve the exact casing returned by the driver (useful
             when the caller needs to match case-sensitive downstream
             schemas).
-        **kwargs
+        read_kwargs
             Additional keyword arguments forwarded to
             :func:`pandas.read_sql` (e.g. ``params``, ``parse_dates``,
             ``chunksize``, ``dtype``).
@@ -490,6 +490,46 @@ class EngineWrapper:
             *,
             backend: Backend[DataFrameType] | None = None,
         ) -> DataFrameType:
+            """
+            Execute the query against the captured engine wrapper.
+
+            Closure that dispatches to :meth:`EngineWrapper.read_pandas`
+            or :meth:`EngineWrapper.read_polars` depending on the
+            requested backend, forwarding the captured ``lower_case``
+            and ``read_kwargs`` options. It satisfies the
+            :class:`~mayutils.data.read.QueryReader` protocol.
+
+            Parameters
+            ----------
+            query
+                Fully-rendered SQL string ready for execution.
+            backend
+                DataFrame backend token. Defaults to pandas when
+                ``None``.
+
+            Returns
+            -------
+                Materialised query result in the requested DataFrame
+                flavour.
+
+            Raises
+            ------
+            ValueError
+                If the backend is neither pandas nor polars.
+
+            See Also
+            --------
+            mayutils.data.read.QueryReader : Protocol this closure satisfies.
+            EngineWrapper.to_reader : Factory that builds this closure.
+
+            Examples
+            --------
+            >>> from mayutils.environment.databases import EngineWrapper
+            >>> wrapper = EngineWrapper.create("sqlite:///:memory:")
+            >>> reader = wrapper.to_reader()
+            >>> callable(reader)
+            True
+            """
             backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
 
             if backend.name == "pandas":
@@ -734,6 +774,46 @@ class EngineWrapper:
             *,
             backend: Backend[DataFrameType] | None = None,
         ) -> Iterator[DataFrameType]:
+            """
+            Stream the query against the captured engine wrapper.
+
+            Closure that dispatches to :meth:`EngineWrapper.stream_pandas`
+            or :meth:`EngineWrapper.stream_polars` depending on the
+            requested backend, forwarding the captured ``chunk_size``,
+            ``lower_case`` and ``read_kwargs`` options. It satisfies the
+            :class:`~mayutils.data.read.QueryStreamer` protocol.
+
+            Parameters
+            ----------
+            query
+                Fully-rendered SQL string ready for execution.
+            backend
+                DataFrame backend token. Defaults to pandas when
+                ``None``.
+
+            Yields
+            ------
+                Successive DataFrame chunks of the query result in the
+                requested DataFrame flavour.
+
+            Raises
+            ------
+            ValueError
+                If the backend is neither pandas nor polars.
+
+            See Also
+            --------
+            mayutils.data.read.QueryStreamer : Protocol this closure satisfies.
+            EngineWrapper.to_streamer : Factory that builds this closure.
+
+            Examples
+            --------
+            >>> from mayutils.environment.databases import EngineWrapper
+            >>> wrapper = EngineWrapper.create("sqlite:///:memory:")
+            >>> streamer = wrapper.to_streamer()
+            >>> callable(streamer)
+            True
+            """
             backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
 
             if backend.name == "pandas":

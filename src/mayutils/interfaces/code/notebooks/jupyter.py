@@ -279,16 +279,10 @@ class MagicUtils(Magics):
     injected :class:`~mayutils.data.read.QueryReader`, and assigns the
     resulting DataFrame back into the namespace. Register the class on a
     running shell with :func:`setup_magic` or
-    ``%load_ext mayutils.interfaces.code.notebooks.jupyter``.
-
-    Parameters
-    ----------
-    shell
-        Interactive shell the magics are bound to, forwarded to
-        :class:`IPython.core.magic.Magics`.
-    **kwargs
-        Additional keyword arguments forwarded to
-        :class:`IPython.core.magic.Magics`.
+    ``%load_ext mayutils.interfaces.code.notebooks.jupyter``. The
+    constructor is inherited unchanged from
+    :class:`IPython.core.magic.Magics`, which binds the magics to the
+    interactive shell they are registered on.
 
     Attributes
     ----------

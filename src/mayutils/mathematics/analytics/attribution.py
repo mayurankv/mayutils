@@ -284,7 +284,7 @@ class AttributionResult:
     contributions; under the basic method it carries the change left
     unexplained by the one-at-a-time switches.
 
-    Parameters
+    Attributes
     ----------
     contributions
         Mapping from factor name to its attributed share of the metric

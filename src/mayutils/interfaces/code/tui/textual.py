@@ -306,7 +306,26 @@ DataTable > .datatable--header-cursor.datatable--header-hover {
 
 
 class TransparentFooterKey(FooterKey):
-    """FooterKey rendered without the stock opaque background."""
+    """
+    FooterKey rendered without the stock opaque background.
+
+    Drop-in replacement for the stock footer key widget whose
+    :meth:`render` keeps only the colour and bold attributes of the
+    ``footer-key--key`` and ``footer-key--description`` component
+    styles, discarding the opaque background baked into the stock
+    widget so the hint inherits the terminal's own background.
+
+    See Also
+    --------
+    TransparentFooter : Footer that composes these keys.
+    textual.widgets.Footer : Stock widget whose keys this replaces.
+
+    Examples
+    --------
+    >>> from mayutils.interfaces.code.tui.textual import TransparentFooterKey
+    >>> TransparentFooterKey.__name__
+    'TransparentFooterKey'
+    """
 
     def render(
         self,
@@ -314,9 +333,25 @@ class TransparentFooterKey(FooterKey):
         """
         Render the key hint without background styling.
 
+        Rebuilds the key and description text from the widget's
+        component styles, keeping only their colour and bold attributes
+        so no opaque background is painted behind the hint. Padding from
+        the component styles is preserved as literal spaces.
+
         Returns
         -------
             The assembled key and description text.
+
+        See Also
+        --------
+        TransparentFooter.compose : Yields the widgets rendered here.
+        textual.widgets.Footer : Stock widget with the opaque rendering.
+
+        Examples
+        --------
+        >>> from mayutils.interfaces.code.tui.textual import TransparentFooterKey
+        >>> key = TransparentFooterKey(key="q", key_display="q", description="Quit", action="quit")  # doctest: +SKIP
+        >>> key.render()  # doctest: +SKIP
         """
         key_style = self.get_component_rich_style("footer-key--key")
         description_style = self.get_component_rich_style("footer-key--description")
@@ -344,7 +379,29 @@ class TransparentFooterKey(FooterKey):
 
 
 class TransparentFooter(Footer):
-    """Footer that uses :class:`TransparentFooterKey` for transparent backgrounds."""
+    """
+    Footer that uses :class:`TransparentFooterKey` for transparent backgrounds.
+
+    Reimplements :meth:`textual.widgets.Footer.compose` so every key
+    hint is built from :class:`TransparentFooterKey` instead of the
+    stock ``FooterKey``, keeping the grouping, command-palette and
+    compact behaviours of the original while letting the terminal's own
+    background show through. Because it reuses
+    ``textual.widgets._footer`` internals, it is coupled to the Textual
+    version pinned in the ``tui`` extra.
+
+    See Also
+    --------
+    TransparentFooterKey : Key widget yielded by :meth:`compose`.
+    TransparentApp : App preconfigured to pair with this footer.
+    textual.widgets.Footer : Stock widget being restyled.
+
+    Examples
+    --------
+    >>> from mayutils.interfaces.code.tui.textual import TransparentFooter
+    >>> TransparentFooter.__name__
+    'TransparentFooter'
+    """
 
     if TYPE_CHECKING:
         # Re-declare with a parameterised App: the base declaration uses a bare
@@ -357,10 +414,28 @@ class TransparentFooter(Footer):
         """
         Build the footer from the screen's active bindings.
 
+        Mirrors the stock ``Footer.compose`` logic: visible bindings are
+        grouped by action, multi-binding groups are wrapped in a
+        ``KeyGroup`` followed by a group label, and the command-palette
+        key is appended when enabled — but every key hint is a
+        :class:`TransparentFooterKey` so the terminal background shows
+        through.
+
         Yields
         ------
             One :class:`TransparentFooterKey` per visible binding, with
             group labels where bindings are grouped.
+
+        See Also
+        --------
+        TransparentFooterKey : Widget type yielded for each binding.
+        textual.widgets.Footer : Stock widget whose compose this mirrors.
+
+        Examples
+        --------
+        >>> from mayutils.interfaces.code.tui.textual import TransparentFooter
+        >>> footer = TransparentFooter()  # doctest: +SKIP
+        >>> list(footer.compose())  # doctest: +SKIP
         """
         if self._bindings_ready:
             active_bindings = self.screen.active_bindings
@@ -427,6 +502,25 @@ class TransparentApp[ReturnType](App[ReturnType]):
     ``DEFAULT_CSS``, so their own ``CSS`` adds to rather than replaces
     it), run with ``ansi_color`` enabled by default, and start on
     :data:`ANSI_DARK_THEME`.
+
+    Parameters
+    ----------
+    *args
+        Positional arguments forwarded to :class:`textual.app.App`.
+    **kwargs
+        Keyword arguments forwarded to :class:`textual.app.App`, with
+        ``ansi_color`` defaulting to ``True``.
+
+    See Also
+    --------
+    textual.app.App : Base class extended here.
+    TransparentFooter : Footer widget designed for this app.
+
+    Examples
+    --------
+    >>> from mayutils.interfaces.code.tui.textual import TRANSPARENT_CSS, TransparentApp
+    >>> TransparentApp.DEFAULT_CSS == TRANSPARENT_CSS
+    True
     """
 
     DEFAULT_CSS = TRANSPARENT_CSS
@@ -436,6 +530,35 @@ class TransparentApp[ReturnType](App[ReturnType]):
         *args: Any,  # noqa: ANN401
         **kwargs: Any,  # noqa: ANN401
     ) -> None:
+        """
+        Initialise the app with the transparent ANSI defaults.
+
+        Defaults ``ansi_color`` to ``True`` before delegating to
+        :class:`textual.app.App`, then registers
+        :data:`ANSI_DARK_THEME` and selects it as the active theme so
+        the app renders with the terminal's own ANSI palette from the
+        first frame.
+
+        Parameters
+        ----------
+        *args
+            Positional arguments forwarded to :class:`textual.app.App`.
+        **kwargs
+            Keyword arguments forwarded to :class:`textual.app.App`,
+            with ``ansi_color`` defaulting to ``True``.
+
+        See Also
+        --------
+        textual.app.App : Base class receiving the forwarded arguments.
+        ANSI_DARK_THEME : Theme registered and activated here.
+
+        Examples
+        --------
+        >>> from mayutils.interfaces.code.tui.textual import TransparentApp
+        >>> class MyApp(TransparentApp[None]):
+        ...     pass
+        >>> app = MyApp()  # doctest: +SKIP
+        """
         kwargs.setdefault("ansi_color", True)
         super().__init__(*args, **kwargs)
 

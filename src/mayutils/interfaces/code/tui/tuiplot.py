@@ -103,7 +103,26 @@ DISPLAY_MODE_OPTIONS = [
 
 
 class PlotType(StrEnum):
-    """Supported chart styles for :func:`make_figure`."""
+    """
+    Supported chart styles for :func:`make_figure`.
+
+    Each member selects the trace constructor used for every y column
+    (:class:`~mayutils.visualisation.graphs.plotly.Line`,
+    :class:`plotly.graph_objects.Bar` or
+    :class:`~mayutils.visualisation.graphs.plotly.Scatter`), and the
+    string values double as the CLI ``--plot`` choices and the TUI
+    plot-type dropdown options.
+
+    See Also
+    --------
+    make_figure : Consumer that dispatches members to trace constructors.
+
+    Examples
+    --------
+    >>> from mayutils.interfaces.code.tui.tuiplot import PlotType
+    >>> PlotType("bar").value
+    'bar'
+    """
 
     line = "line"
     bar = "bar"
@@ -119,10 +138,30 @@ def die(
     """
     Print an error message to stderr and exit the CLI.
 
+    Renders the message in bold red on the module-level stderr console
+    and then terminates the typer application with the given exit code,
+    so callers never continue past a fatal condition.
+
+    Parameters
+    ----------
+    message
+        Human-readable error text printed to stderr.
+    code
+        Process exit code carried by the raised :class:`typer.Exit`.
+
     Raises
     ------
     typer.Exit
         Always, carrying the given exit code.
+
+    See Also
+    --------
+    main : CLI entry point that funnels fatal errors through this helper.
+
+    Examples
+    --------
+    >>> from mayutils.interfaces.code.tui.tuiplot import die
+    >>> die("something went wrong", code=2)  # doctest: +SKIP
     """
     console.print(f"[bold red]error:[/bold red] {message}")
 
@@ -136,6 +175,16 @@ def load_spec(
     """
     Load a YAML spec file into a mapping, or an empty one when *path* is ``None``.
 
+    The spec file provides defaults for the plotting options of
+    :func:`main` (``transform``, ``plot``, ``x``, ``width``, ``height``,
+    ``scale`` and ``reader_args``); explicit command-line flags take
+    precedence over the values loaded here.
+
+    Parameters
+    ----------
+    path
+        Location of the YAML spec file, or ``None`` to skip loading.
+
     Returns
     -------
         The parsed spec mapping.
@@ -144,6 +193,16 @@ def load_spec(
     ------
     TypeError
         If the file parses to something other than a mapping.
+
+    See Also
+    --------
+    main : CLI entry point that merges the spec with command-line flags.
+
+    Examples
+    --------
+    >>> from mayutils.interfaces.code.tui.tuiplot import load_spec
+    >>> load_spec(None)
+    {}
     """
     if path is None:
         return {}
@@ -168,6 +227,18 @@ def eval_transform(
     """
     Evaluate a user-supplied transform expression against ``df``.
 
+    The expression is evaluated with builtins stripped and only ``df``
+    (a copy of the input, so the original frame is never mutated) and
+    ``pd`` in scope. A Series result is promoted to a single-column
+    DataFrame so downstream plotting always receives a frame.
+
+    Parameters
+    ----------
+    df
+        Input DataFrame bound to the name ``df`` inside the expression.
+    expression
+        Python expression returning a DataFrame or Series.
+
     Returns
     -------
         The transformed DataFrame (a Series result is promoted to a frame).
@@ -176,6 +247,19 @@ def eval_transform(
     ------
     TypeError
         If the expression returns neither a DataFrame nor a Series.
+
+    See Also
+    --------
+    load_data : Producer of the DataFrame this transform is applied to.
+    pandas.DataFrame.eval : Vectorised expression evaluation alternative.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> from mayutils.interfaces.code.tui.tuiplot import eval_transform
+    >>> df = pd.DataFrame({"a": [1, 2, 3]})
+    >>> eval_transform(df, expression="df.head(2)")["a"].tolist()
+    [1, 2]
     """
     result = eval(expression, {"__builtins__": {}}, {"df": df.copy(), "pd": pd})  # noqa: S307
 
@@ -205,6 +289,16 @@ def load_data(
     *reader_factory*, defaulting to
     :func:`~mayutils.interfaces.data.get_env_reader`.
 
+    Parameters
+    ----------
+    sql
+        Inline SQL query string, used when no data *source* is given.
+    source
+        Path to a ``.sql`` query file or a tabular data file.
+    reader_factory
+        Zero-argument callable producing the reader that executes SQL;
+        defaults to :func:`~mayutils.interfaces.data.get_env_reader`.
+
     Returns
     -------
         The loaded DataFrame.
@@ -213,6 +307,18 @@ def load_data(
     ------
     ValueError
         If neither *sql* nor *source* is provided.
+
+    See Also
+    --------
+    mayutils.interfaces.data.get_env_reader : Default reader factory.
+    mayutils.interfaces.filetypes.DataFile : Registry handling non-SQL files.
+
+    Examples
+    --------
+    >>> from mayutils.interfaces.code.tui.tuiplot import load_data
+    >>> load_data(sql="SELECT 1 AS one")  # doctest: +SKIP
+       one
+    0    1
     """
     if source is not None and source.suffix.lower() != ".sql":
         register_datafile(source.suffix)
@@ -244,6 +350,16 @@ def make_figure(
     The x column defaults to the index when it is named (or when *x* is
     ``"index"``), and to the first column otherwise.
 
+    Parameters
+    ----------
+    data
+        DataFrame whose columns provide the x and y series.
+    plot
+        Chart style selecting the trace constructor for each y column.
+    x
+        Name of the x column, ``"index"`` to plot against the index, or
+        ``None`` to infer (named index first, then the first column).
+
     Returns
     -------
         The constructed figure.
@@ -252,6 +368,19 @@ def make_figure(
     ------
     ValueError
         If no y columns remain or the plot type is unsupported.
+
+    See Also
+    --------
+    PlotType : Supported chart styles.
+    mayutils.visualisation.graphs.plotly.Plot.from_traces : Figure constructor used here.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> from mayutils.interfaces.code.tui.tuiplot import PlotType, make_figure
+    >>> df = pd.DataFrame({"x": [1, 2], "y": [3, 4]})
+    >>> type(make_figure(df, plot=PlotType.line, x="x")).__name__
+    'Plot'
     """
     df = data.copy()
 
@@ -302,9 +431,34 @@ def render_png(
     """
     Render *figure* to PNG bytes via kaleido.
 
+    Ensures a kaleido-managed Chrome binary is available (downloading
+    it on first use) and then rasterises the figure at the requested
+    pixel dimensions, with *scale* multiplying the output resolution.
+
+    Parameters
+    ----------
+    figure
+        Plotly figure to rasterise.
+    width
+        Output image width in pixels.
+    height
+        Output image height in pixels.
+    scale
+        Resolution multiplier applied to both dimensions.
+
     Returns
     -------
         The encoded PNG image.
+
+    See Also
+    --------
+    display_png_in_kitty : Sends the rendered bytes to the terminal.
+    plotly.graph_objects.Figure.to_image : Underlying export primitive.
+
+    Examples
+    --------
+    >>> from mayutils.interfaces.code.tui.tuiplot import render_png
+    >>> png = render_png(figure, width=800, height=600, scale=2.0)  # doctest: +SKIP
     """
     kaleido.get_chrome_sync()
 
@@ -320,10 +474,23 @@ def kitty_supports_images() -> None:
     """
     Check that the terminal supports kitty's image protocol.
 
+    Runs ``kitten icat --detect-support`` as a subprocess and raises
+    when it reports failure, letting :func:`main` abort with a clear
+    message before spending time rendering a PNG it cannot display.
+
     Raises
     ------
     RuntimeError
         If ``kitten icat`` reports that image display is unavailable.
+
+    See Also
+    --------
+    display_png_in_kitty : Display step gated by this check.
+
+    Examples
+    --------
+    >>> from mayutils.interfaces.code.tui.tuiplot import kitty_supports_images
+    >>> kitty_supports_images()  # doctest: +SKIP
     """
     process = subprocess.run(
         ["kitten", "icat", "--detect-support"],  # noqa: S607
@@ -343,10 +510,29 @@ def display_png_in_kitty(
     """
     Display PNG bytes inline in the terminal via kitty's ``icat``.
 
+    Pipes the image to ``kitten icat --stdin=yes`` so the rendered plot
+    appears directly in the terminal scrollback, which is how the
+    one-shot CLI path of :func:`main` presents its output.
+
+    Parameters
+    ----------
+    png
+        Encoded PNG image bytes to display.
+
     Raises
     ------
     RuntimeError
         If ``kitten icat`` exits with a non-zero status.
+
+    See Also
+    --------
+    kitty_supports_images : Capability check run before displaying.
+    render_png : Producer of the PNG bytes displayed here.
+
+    Examples
+    --------
+    >>> from mayutils.interfaces.code.tui.tuiplot import display_png_in_kitty
+    >>> display_png_in_kitty(png)  # doctest: +SKIP
     """
     process = subprocess.run(
         ["kitten", "icat", "--stdin=yes"],  # noqa: S607
@@ -361,7 +547,39 @@ def display_png_in_kitty(
 
 
 class TuiPlotApp(TransparentApp[None]):
-    """Interactive TUI for querying, transforming and plotting tabular data."""
+    """
+    Interactive TUI for querying, transforming and plotting tabular data.
+
+    Wraps the module's load/transform/plot pipeline in a Textual app: a
+    tabbed control panel collects the SQL (or source file path),
+    transform expression, plot type, layout overrides and image
+    settings, then a worker thread executes the pipeline and displays
+    the result as an inline PNG or a populated ``DataTable``.
+
+    Parameters
+    ----------
+    *args
+        Positional arguments forwarded to :class:`TransparentApp`.
+    reader
+        Query reader used to execute SQL, or ``None`` to build one
+        lazily from the environment on first use.
+    reader_kwargs
+        Keyword overrides forwarded to
+        :func:`~mayutils.interfaces.data.get_env_reader` when building
+        the default reader.
+    **kwargs
+        Keyword arguments forwarded to :class:`TransparentApp`.
+
+    See Also
+    --------
+    tui : Convenience launcher constructing and running this app.
+    mayutils.interfaces.code.tui.textual.TransparentApp : ANSI-transparent base app.
+
+    Examples
+    --------
+    >>> from mayutils.interfaces.code.tui.tuiplot import TuiPlotApp
+    >>> TuiPlotApp(reader_kwargs={"role": "ANALYST"}).run()  # doctest: +SKIP
+    """
 
     TITLE = "TUI Plot"
 
@@ -442,6 +660,34 @@ class TuiPlotApp(TransparentApp[None]):
         reader_kwargs: Mapping[str, Any] | None = None,
         **kwargs: Any,  # noqa: ANN401
     ) -> None:
+        """
+        Initialise the app and stash the reader configuration.
+
+        Delegates widget and theme setup to :class:`TransparentApp` and
+        records the injected reader plus the keyword overrides used to
+        build an environment reader lazily on the first query.
+
+        Parameters
+        ----------
+        *args
+            Positional arguments forwarded to :class:`TransparentApp`.
+        reader
+            Query reader used to execute SQL, or ``None`` to defer to
+            :func:`~mayutils.interfaces.data.get_env_reader`.
+        reader_kwargs
+            Keyword overrides forwarded to the environment reader factory.
+        **kwargs
+            Keyword arguments forwarded to :class:`TransparentApp`.
+
+        See Also
+        --------
+        TuiPlotApp.get_reader : Lazy reader construction on first use.
+
+        Examples
+        --------
+        >>> from mayutils.interfaces.code.tui.tuiplot import TuiPlotApp
+        >>> app = TuiPlotApp(reader_kwargs={"role": "ANALYST"})  # doctest: +SKIP
+        """
         super().__init__(*args, **kwargs)
 
         self.reader = reader
@@ -453,9 +699,22 @@ class TuiPlotApp(TransparentApp[None]):
         """
         Return the injected reader, building one from the environment on first use.
 
+        The constructed reader is cached on the instance so repeated
+        queries reuse the same connection, with the ``reader_kwargs``
+        supplied at construction forwarded to the environment factory.
+
         Returns
         -------
             The reader used to execute SQL queries.
+
+        See Also
+        --------
+        mayutils.interfaces.data.get_env_reader : Environment-driven reader factory.
+
+        Examples
+        --------
+        >>> from mayutils.interfaces.code.tui.tuiplot import TuiPlotApp
+        >>> reader = TuiPlotApp().get_reader()  # doctest: +SKIP
         """
         if self.reader is None:
             self.reader = get_env_reader(**self.reader_kwargs)
@@ -468,9 +727,23 @@ class TuiPlotApp(TransparentApp[None]):
         """
         Build the widget tree.
 
+        Lays out a tabbed control panel (Query, Plotting and Settings
+        tabs) above a result panel holding the data table and inline
+        image widgets, framed by a header and a transparent footer.
+
         Yields
         ------
             The app's widgets.
+
+        See Also
+        --------
+        mayutils.interfaces.code.tui.textual.TransparentFooter : Footer widget yielded last.
+        textual.app.App.compose : Textual hook this method implements.
+
+        Examples
+        --------
+        >>> from mayutils.interfaces.code.tui.tuiplot import TuiPlotApp
+        >>> widgets = list(TuiPlotApp().compose())  # doctest: +SKIP
         """
         yield Header()
         with VerticalScroll(id="controls-panel"), Vertical(id="main-content"), TabbedContent():
@@ -526,7 +799,22 @@ class TuiPlotApp(TransparentApp[None]):
     def action_toggle_fullscreen(
         self,
     ) -> None:
-        """Toggle between the full layout and a fullscreen result panel."""
+        """
+        Toggle between the full layout and a fullscreen result panel.
+
+        Bound to ``ctrl+f``: hides the controls panel and marks the
+        result panel fullscreen, or restores the original layout when
+        the result panel is already fullscreen.
+
+        See Also
+        --------
+        TuiPlotApp.show_output : Chooses which result widget is visible.
+
+        Examples
+        --------
+        >>> from mayutils.interfaces.code.tui.tuiplot import TuiPlotApp
+        >>> TuiPlotApp().action_toggle_fullscreen()  # doctest: +SKIP
+        """
         controls = self.query_one("#controls-panel")
         result = self.query_one("#result-panel")
         if result.has_class("fullscreen"):
@@ -540,7 +828,27 @@ class TuiPlotApp(TransparentApp[None]):
         self,
         event: Switch.Changed,
     ) -> None:
-        """Swap between the inline SQL editor and the file path input."""
+        """
+        Swap between the inline SQL editor and the file path input.
+
+        Reacts to the ``file-switch`` toggle on the Query tab: when the
+        switch is on, the SQL text area is hidden in favour of the file
+        path input, and vice versa when it is turned off.
+
+        Parameters
+        ----------
+        event
+            Switch change event carrying the toggled switch and value.
+
+        See Also
+        --------
+        TuiPlotApp.action_run_query : Reads whichever input is active.
+
+        Examples
+        --------
+        >>> from mayutils.interfaces.code.tui.tuiplot import TuiPlotApp
+        >>> TuiPlotApp().on_switch_changed(event)  # doctest: +SKIP
+        """
         if event.switch.id == "file-switch":
             sql_input = self.query_one("#sql-input", TextArea)
             sql_file_input = self.query_one("#sql-file-input", Input)
@@ -557,14 +865,50 @@ class TuiPlotApp(TransparentApp[None]):
         self,
         event: Button.Pressed,
     ) -> None:
-        """Run the query when the Run button is pressed."""
+        """
+        Run the query when the Run button is pressed.
+
+        Delegates to :meth:`action_run_query` for presses of the
+        ``run-btn`` button, making the button equivalent to the
+        ``ctrl+enter`` binding.
+
+        Parameters
+        ----------
+        event
+            Button press event carrying the pressed button.
+
+        See Also
+        --------
+        TuiPlotApp.action_run_query : Action invoked for the Run button.
+
+        Examples
+        --------
+        >>> from mayutils.interfaces.code.tui.tuiplot import TuiPlotApp
+        >>> TuiPlotApp().on_button_pressed(event)  # doctest: +SKIP
+        """
         if event.button.id == "run-btn":
             self.action_run_query()
 
     def action_run_query(
         self,
     ) -> None:
-        """Collect the form state and dispatch the query worker."""
+        """
+        Collect the form state and dispatch the query worker.
+
+        Reads the SQL (or source file path), transform expression, plot
+        settings and display mode from the form widgets, validates that
+        an input was provided, and hands everything to
+        :meth:`run_worker_query` on a background thread.
+
+        See Also
+        --------
+        TuiPlotApp.run_worker_query : Worker executing the collected request.
+
+        Examples
+        --------
+        >>> from mayutils.interfaces.code.tui.tuiplot import TuiPlotApp
+        >>> TuiPlotApp().action_run_query()  # doctest: +SKIP
+        """
         use_file = self.query_one("#file-switch", Switch).value
         if use_file:
             source = self.query_one("#sql-file-input", Input).value.strip()
@@ -603,7 +947,27 @@ class TuiPlotApp(TransparentApp[None]):
         self,
         message: str,
     ) -> None:
-        """Surface a status message as a notification."""
+        """
+        Surface a status message as a notification.
+
+        Messages starting with ``"Error"`` are shown with error
+        severity; everything else is informational. The worker thread
+        routes all of its progress updates through this method.
+
+        Parameters
+        ----------
+        message
+            Status text to display in the notification toast.
+
+        See Also
+        --------
+        TuiPlotApp.run_worker_query : Worker reporting progress through this method.
+
+        Examples
+        --------
+        >>> from mayutils.interfaces.code.tui.tuiplot import TuiPlotApp
+        >>> TuiPlotApp().set_status("Ready")  # doctest: +SKIP
+        """
         severity = "error" if message.startswith("Error") else "information"
         self.notify(message, severity=severity)
 
@@ -611,7 +975,28 @@ class TuiPlotApp(TransparentApp[None]):
         self,
         mode: str,
     ) -> None:
-        """Toggle visibility of the result table and image based on *mode*."""
+        """
+        Toggle visibility of the result table and image based on *mode*.
+
+        Shows the inline image widget and hides the table for
+        ``"plot"``, and does the reverse for the DataFrame modes, so
+        only one result widget is ever visible at a time.
+
+        Parameters
+        ----------
+        mode
+            Display mode; ``"plot"`` shows the image, anything else the table.
+
+        See Also
+        --------
+        TuiPlotApp.populate_table : Fills the table shown in DataFrame modes.
+        TuiPlotApp.show_image : Sets the image shown in plot mode.
+
+        Examples
+        --------
+        >>> from mayutils.interfaces.code.tui.tuiplot import TuiPlotApp
+        >>> TuiPlotApp().show_output("plot")  # doctest: +SKIP
+        """
         table = cast("DataTable[str]", self.query_one("#result-table", DataTable))
         image = self.query_one("#result-image", Image)
         if mode == "plot":
@@ -625,7 +1010,27 @@ class TuiPlotApp(TransparentApp[None]):
         self,
         df: pd.DataFrame,
     ) -> None:
-        """Populate the result table with *df*."""
+        """
+        Populate the result table with *df*.
+
+        Clears any previous contents, resets the index so it appears as
+        a leading column, and adds every value stringified so the
+        ``DataTable`` can render arbitrary dtypes.
+
+        Parameters
+        ----------
+        df
+            DataFrame whose rows and columns fill the result table.
+
+        See Also
+        --------
+        TuiPlotApp.show_output : Makes the populated table visible.
+
+        Examples
+        --------
+        >>> from mayutils.interfaces.code.tui.tuiplot import TuiPlotApp
+        >>> TuiPlotApp().populate_table(df)  # doctest: +SKIP
+        """
         table = cast("DataTable[str]", self.query_one("#result-table", DataTable))
         table.clear(columns=True)
         show_df = df.reset_index()
@@ -638,7 +1043,28 @@ class TuiPlotApp(TransparentApp[None]):
         self,
         image: PILImage.Image,
     ) -> None:
-        """Set the inline image widget content."""
+        """
+        Set the inline image widget content.
+
+        Assigns the PIL image to the ``textual-image`` widget in the
+        result panel, which re-renders it using the terminal's best
+        available graphics protocol.
+
+        Parameters
+        ----------
+        image
+            Decoded PIL image to render inline.
+
+        See Also
+        --------
+        TuiPlotApp.show_output : Makes the image widget visible.
+        render_png : Producer of the PNG bytes decoded into this image.
+
+        Examples
+        --------
+        >>> from mayutils.interfaces.code.tui.tuiplot import TuiPlotApp
+        >>> TuiPlotApp().show_image(image)  # doctest: +SKIP
+        """
         self.query_one("#result-image", Image).image = image
 
     @work(thread=True)
@@ -655,7 +1081,47 @@ class TuiPlotApp(TransparentApp[None]):
         scale: float | None,
         display_mode: str,
     ) -> None:
-        """Load, transform and display the data on a worker thread."""
+        """
+        Load, transform and display the data on a worker thread.
+
+        Runs the full pipeline off the UI thread — load, optional
+        transform, then either table population or figure building and
+        PNG rendering — marshalling every UI update back through
+        ``call_from_thread`` and surfacing any failure as an error
+        status rather than crashing the app.
+
+        Parameters
+        ----------
+        sql
+            Inline SQL query string, or ``None`` when *source* is used.
+        source
+            Path to a ``.sql`` or data file, or ``None`` when *sql* is used.
+        transform
+            Optional Python expression applied to the loaded DataFrame.
+        plot_type
+            Chart style name coerced to :class:`PlotType`.
+        layout_str
+            Optional Python literal mapping of figure layout overrides.
+        width
+            Image width in pixels; defaults to the terminal width.
+        height
+            Image height in pixels; defaults to the terminal height.
+        scale
+            Image scale factor; defaults to ``DEFAULT_SCALE``.
+        display_mode
+            One of ``"plot"``, ``"dataframe"`` or ``"sample"``.
+
+        See Also
+        --------
+        TuiPlotApp.action_run_query : UI action dispatching this worker.
+        load_data : Data loading step executed first.
+        make_figure : Figure construction step for plot mode.
+
+        Examples
+        --------
+        >>> from mayutils.interfaces.code.tui.tuiplot import TuiPlotApp
+        >>> TuiPlotApp().action_run_query()  # doctest: +SKIP
+        """
         try:
             self.call_from_thread(self.set_status, "Loading data...")
             df = load_data(
@@ -710,7 +1176,32 @@ def tui(
     reader: QueryReader | None = None,
     reader_kwargs: Mapping[str, Any] | None = None,
 ) -> None:
-    """Launch the interactive TUI."""
+    """
+    Launch the interactive TUI.
+
+    Constructs a :class:`TuiPlotApp` with the given reader
+    configuration and runs it until the user quits. This is the path
+    taken by :func:`main` when the CLI is invoked without flags.
+
+    Parameters
+    ----------
+    reader
+        Query reader used to execute SQL, or ``None`` to build one from
+        the environment on first use.
+    reader_kwargs
+        Keyword overrides forwarded to
+        :func:`~mayutils.interfaces.data.get_env_reader`.
+
+    See Also
+    --------
+    TuiPlotApp : The Textual application launched here.
+    main : CLI entry point that falls back to this launcher.
+
+    Examples
+    --------
+    >>> from mayutils.interfaces.code.tui.tuiplot import tui
+    >>> tui()  # doctest: +SKIP
+    """
     TuiPlotApp(
         reader=reader,
         reader_kwargs=reader_kwargs,
@@ -786,7 +1277,56 @@ def main(
         help="Print column names.",
     ),
 ) -> None:
-    """Query, transform and plot data in the terminal; no flags launches the TUI."""
+    """
+    Query, transform and plot data in the terminal; no flags launches the TUI.
+
+    With flags, runs the one-shot pipeline: merge the spec file with
+    the command-line options, load the DataFrame, optionally print and
+    transform it, build the figure, render it to a PNG sized to the
+    terminal and display it via kitty's ``icat``. Fatal errors are
+    reported through :func:`die` rather than raw tracebacks.
+
+    Parameters
+    ----------
+    sql
+        Inline SQL query string, mutually exclusive with *source*.
+    source
+        Path to a ``.sql`` query file or a data file, via ``--file``.
+    spec
+        Path to a YAML spec file supplying option defaults.
+    transform
+        Python expression using ``df``, returning a DataFrame or Series.
+    plot
+        Plot type; defaults to the spec value or ``line``.
+    x
+        X column name, or ``"index"`` to plot against the index.
+    width
+        Image width in pixels; defaults to the terminal width.
+    height
+        Image height in pixels; defaults to ``DEFAULT_HEIGHT``.
+    scale
+        Image scale factor; defaults to ``DEFAULT_SCALE``.
+    env_file
+        Dotenv file used to build the environment reader.
+    reader_args
+        YAML/JSON mapping of overrides forwarded to
+        :func:`~mayutils.interfaces.data.get_env_reader`.
+    print_head
+        Whether to print ``df.head()`` after loading.
+    print_cols
+        Whether to print the column names after loading.
+
+    See Also
+    --------
+    tui : Interactive fallback used when no flags are passed.
+    load_spec : Spec file loader providing option defaults.
+    load_data : Data loading step shared with the TUI.
+
+    Examples
+    --------
+    >>> from mayutils.interfaces.code.tui.tuiplot import main
+    >>> main(sql="SELECT 1 AS one", print_head=True)  # doctest: +SKIP
+    """
     rich_traceback_install(show_locals=True, extra_lines=3)
     set_template(template="base")
 

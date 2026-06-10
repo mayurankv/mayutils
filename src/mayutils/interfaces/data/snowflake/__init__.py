@@ -746,6 +746,31 @@ class SnowflakeExtendedConnection(SnowflakeConnection):
         self,
         **kwargs: Any,  # noqa: ANN401
     ) -> None:
+        """
+        Open an extended Snowflake connection.
+
+        Records the construction keyword arguments on the instance before
+        delegating to the base
+        :class:`snowflake.connector.SnowflakeConnection` initialiser, so
+        the connection parameters can later be recovered (for example by
+        :meth:`to_config`) without inspecting the live connection.
+
+        Parameters
+        ----------
+        **kwargs
+            Connection parameters forwarded verbatim to
+            :class:`snowflake.connector.SnowflakeConnection`.
+
+        See Also
+        --------
+        SnowflakeConfig.to_connection : Preferred constructor from a configuration.
+        SnowflakeExtendedConnection.from_base : Wraps an already-open base connection.
+
+        Examples
+        --------
+        >>> from mayutils.interfaces.data.snowflake import SnowflakeExtendedConnection
+        >>> connection = SnowflakeExtendedConnection(account="...", user="...")  # doctest: +SKIP
+        """
         self._connection_kwargs = kwargs
 
         super().__init__(**kwargs)  # pyright: ignore[reportUnknownMemberType]
@@ -1179,6 +1204,45 @@ class SnowflakeExtendedConnection(SnowflakeConnection):
             *,
             backend: Backend[DataFrameType] | None = None,
         ) -> DataFrameType:
+            """
+            Execute the query against the captured connection.
+
+            Closure that dispatches to
+            :meth:`SnowflakeExtendedConnection.read_pandas` or
+            :meth:`SnowflakeExtendedConnection.read_polars` depending on
+            the requested backend, forwarding the captured reading
+            options. It satisfies the
+            :class:`~mayutils.data.read.QueryReader` protocol.
+
+            Parameters
+            ----------
+            query
+                Fully-rendered SQL string ready for execution.
+            backend
+                DataFrame backend token. Defaults to pandas when
+                ``None``.
+
+            Returns
+            -------
+                Materialised query result in the requested DataFrame
+                flavour.
+
+            Raises
+            ------
+            ValueError
+                If the backend is neither pandas nor polars.
+
+            See Also
+            --------
+            mayutils.data.read.QueryReader : Protocol this closure satisfies.
+            SnowflakeExtendedConnection.to_reader : Factory that builds this closure.
+
+            Examples
+            --------
+            >>> from mayutils.interfaces.data.snowflake import SnowflakeConfig
+            >>> reader = SnowflakeConfig.from_env().to_connection().to_reader()  # doctest: +SKIP
+            >>> df = reader("SELECT 1")  # doctest: +SKIP
+            """
             backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
 
             if backend.name == "pandas":
@@ -1483,6 +1547,46 @@ class SnowflakeExtendedConnection(SnowflakeConnection):
             *,
             backend: Backend[DataFrameType] | None = None,
         ) -> Iterator[DataFrameType]:
+            """
+            Stream the query against the captured connection.
+
+            Closure that dispatches to
+            :meth:`SnowflakeExtendedConnection.stream_pandas` or
+            :meth:`SnowflakeExtendedConnection.stream_polars` depending
+            on the requested backend, forwarding the captured streaming
+            options. It satisfies the
+            :class:`~mayutils.data.read.QueryStreamer` protocol.
+
+            Parameters
+            ----------
+            query
+                Fully-rendered SQL string ready for execution.
+            backend
+                DataFrame backend token. Defaults to pandas when
+                ``None``.
+
+            Returns
+            -------
+                Iterator over successive DataFrame chunks of the query
+                result in the requested DataFrame flavour.
+
+            Raises
+            ------
+            ValueError
+                If the backend is neither pandas nor polars.
+
+            See Also
+            --------
+            mayutils.data.read.QueryStreamer : Protocol this closure satisfies.
+            SnowflakeExtendedConnection.to_streamer : Factory that builds this closure.
+
+            Examples
+            --------
+            >>> from mayutils.interfaces.data.snowflake import SnowflakeConfig
+            >>> streamer = SnowflakeConfig.from_env().to_connection().to_streamer()  # doctest: +SKIP
+            >>> for df in streamer("SELECT 1"):  # doctest: +SKIP
+            ...     print(df.shape)
+            """
             backend = (
                 backend
                 if backend is not None

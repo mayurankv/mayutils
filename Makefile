@@ -29,7 +29,7 @@ lint:
 
 .PHONY: lint-docs
 lint-docs:
-	uv run prek run numpydoc-validation --all-files
+	uv run prek run numpydoc-validation --all-files --hook-stage pre-push
 
 .PHONY: format
 format:
