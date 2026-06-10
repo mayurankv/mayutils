@@ -78,39 +78,6 @@ logger = Logger.spawn()
 
 
 class Authentication(StrEnum):
-    """
-    Supported Snowflake authentication methods.
-
-    A string enumeration whose members select how :class:`SnowflakeConfig`
-    establishes a session. ``browser`` triggers Snowflake's
-    ``externalbrowser`` single-sign-on flow, while the two key-pair
-    members supply a private key through the connector's ``private_key``
-    argument — ``private_key`` for an encrypted, base64-encoded DER blob
-    or an encrypted PEM file, and ``private_key_pem_raw`` for an
-    unencrypted PEM key.
-
-    Attributes
-    ----------
-    browser
-        Interactive ``externalbrowser`` single-sign-on authentication.
-    private_key
-        Key-pair authentication from an encrypted DER/PEM private key.
-    private_key_pem_raw
-        Key-pair authentication from an unencrypted PEM private key.
-
-    See Also
-    --------
-    SnowflakeConfig : Settings object that consumes this enumeration.
-    SnowflakeConfig.unencrypted_private_key : Resolves the DER key for the key-pair members.
-
-    Examples
-    --------
-    >>> Authentication.browser
-    <Authentication.browser: 'browser'>
-    >>> Authentication("private_key") is Authentication.private_key
-    True
-    """
-
     browser = "browser"
     private_key_pem = "private_key_pem"
     private_key_der = "private_key_der"

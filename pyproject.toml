@@ -156,6 +156,7 @@ statistics = [
   "statsmodels"
 ]
 streamlit = [
+  "bcrypt>=4.3.0",
   "streamlit>=1.49.0"
 ]
 tui = [
