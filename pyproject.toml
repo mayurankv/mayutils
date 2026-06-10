@@ -202,6 +202,10 @@ annotated_tag = true
 changelog_file = "CHANGELOG.md"
 changelog_incremental = true
 name = "cz_conventional_commits"
+pre_bump_hooks = [
+  "uv lock",
+  "git add uv.lock"
+]
 tag_format = "v$version"
 update_changelog_on_bump = true
 version = "1.2.52"
