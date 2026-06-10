@@ -26,7 +26,7 @@ jobs:
 
 
       - name: Install uv and set the Python version
-        uses: astral-sh/setup-uv@21d5da3bc3126fc3b5b182828c8772282a6b694d # main
+        uses: astral-sh/setup-uv@ed73b5df24d31a50feea1e4d7296df2b5840941d # main
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
