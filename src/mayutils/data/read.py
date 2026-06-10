@@ -68,24 +68,122 @@ logger = Logger.spawn()
 
 @runtime_checkable
 class QueryReader(Protocol):
+    """
+    Structural contract for callables that execute SQL into a DataFrame.
+
+    Implementations accept a fully-rendered SQL string plus an optional
+    backend token and return the materialised result in the requested
+    DataFrame flavour. Engine wrappers such as
+    :meth:`mayutils.environment.databases.EngineWrapper.to_reader`
+    produce conforming callables, which :func:`read_query` consumes.
+
+    See Also
+    --------
+    read_query : Consumer that dispatches rendered SQL through a reader.
+    QueryStreamer : Streaming counterpart yielding chunked results.
+
+    Examples
+    --------
+    >>> from mayutils.data.read import QueryReader
+    >>> QueryReader
+    <class 'mayutils.data.read.QueryReader'>
+    """
+
     def __call__[DataFrameType: DataFrames = pd.DataFrame](
         self,
         query: str,
         /,
         *,
         backend: Backend[DataFrameType] | None = None,
-    ) -> DataFrameType: ...
+    ) -> DataFrameType:
+        """
+        Execute the query and return the materialised result.
+
+        Invoked by :func:`read_query` with the fully-rendered SQL string
+        and the backend token selecting the DataFrame flavour.
+
+        Parameters
+        ----------
+        query
+            Fully-rendered SQL string ready for execution.
+        backend
+            DataFrame backend token. Defaults to pandas when ``None``.
+
+        Returns
+        -------
+            Materialised query result.
+
+        See Also
+        --------
+        read_query : Consumer that invokes conforming readers.
+
+        Examples
+        --------
+        >>> from mayutils.data.read import QueryReader
+        >>> QueryReader
+        <class 'mayutils.data.read.QueryReader'>
+        """
+        ...
 
 
 @runtime_checkable
 class QueryStreamer(Protocol):
+    """
+    Structural contract for callables that stream SQL results in chunks.
+
+    Implementations accept a fully-rendered SQL string plus an optional
+    backend token and lazily yield the result as DataFrame chunks.
+    Engine wrappers such as
+    :meth:`mayutils.environment.databases.EngineWrapper.to_streamer`
+    produce conforming callables, which :func:`stream_query` consumes.
+
+    See Also
+    --------
+    stream_query : Consumer that dispatches rendered SQL through a streamer.
+    QueryReader : Eager counterpart returning a single DataFrame.
+
+    Examples
+    --------
+    >>> from mayutils.data.read import QueryStreamer
+    >>> QueryStreamer
+    <class 'mayutils.data.read.QueryStreamer'>
+    """
+
     def __call__[DataFrameType: DataFrames = pd.DataFrame](
         self,
         query: str,
         /,
         *,
         backend: Backend[DataFrameType] | None = None,
-    ) -> Iterator[DataFrameType]: ...
+    ) -> Iterator[DataFrameType]:
+        """
+        Execute the query and return an iterator over result chunks.
+
+        Invoked by :func:`stream_query` with the fully-rendered SQL
+        string and the backend token selecting the DataFrame flavour.
+
+        Parameters
+        ----------
+        query
+            Fully-rendered SQL string ready for execution.
+        backend
+            DataFrame backend token. Defaults to pandas when ``None``.
+
+        Returns
+        -------
+            Iterator over successive DataFrame chunks of the result.
+
+        See Also
+        --------
+        stream_query : Consumer that invokes conforming streamers.
+
+        Examples
+        --------
+        >>> from mayutils.data.read import QueryStreamer
+        >>> QueryStreamer
+        <class 'mayutils.data.read.QueryStreamer'>
+        """
+        ...
 
 
 class QueryExecutor[DataFrameType: DataFrames](Protocol):
@@ -550,6 +648,51 @@ def stream_query[DataFrameType: DataFrames = pd.DataFrame](
     default_suffix: str = "sql",
     **format_kwargs: SupportsStr,
 ) -> Iterator[DataFrameType]:
+    r"""
+    Stream a SQL query through *streamer* in DataFrame chunks.
+
+    Renders the query via :func:`render_query` and lazily yields the
+    chunks produced by *streamer*. No caching is applied; each chunk is
+    forwarded as soon as the underlying driver produces it, keeping
+    peak memory bounded for large result sets.
+
+    Parameters
+    ----------
+    query
+        SQL string or :class:`~pathlib.Path` to a template file.
+    streamer
+        Callable that executes the rendered SQL and yields DataFrame
+        chunks.
+    backend
+        DataFrame backend token. Defaults to pandas when ``None``.
+    queries_folders
+        Directories to search when *query* is a filename.
+    default_suffix
+        File extension assumed when *query* is a bare filename.
+    **format_kwargs
+        Template substitutions forwarded to :func:`render_query`.
+
+    Yields
+    ------
+        Successive DataFrame chunks of the query result.
+
+    See Also
+    --------
+    read_query : Eager counterpart returning a single DataFrame.
+    render_query : Template rendering used internally.
+    QueryStreamer : Protocol the *streamer* argument must satisfy.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> from mayutils.data.read import stream_query
+    >>> from mayutils.objects.types import SQL
+    >>> def streamer(query, /, *, backend=None):
+    ...     yield pd.DataFrame({"n": [1]})
+    >>> chunks = list(stream_query(SQL("SELECT 1 AS n"), streamer=streamer))
+    >>> chunks[0].shape
+    (1, 1)
+    """
     backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
 
     rendered_query = render_query(
@@ -584,6 +727,72 @@ def read_queries[DataFrameType: DataFrames = pd.DataFrame](
     max_workers: int = 4,
     **format_kwargs: SupportsStr,
 ) -> tuple[DataFrameType, ...]:
+    r"""
+    Execute multiple SQL queries concurrently through *reader*.
+
+    Fans the queries out across a
+    :class:`~concurrent.futures.ThreadPoolExecutor`, delegating each one
+    to :func:`read_query` with the shared caching and templating
+    configuration. Results are returned in the same order as the input
+    queries regardless of completion order.
+
+    Parameters
+    ----------
+    queries
+        Sequence of SQL strings or template file paths, each accepted in
+        the same forms as the ``query`` argument of :func:`read_query`.
+    reader
+        Callable that executes each rendered SQL string and returns a
+        DataFrame.
+    backend
+        DataFrame backend token. Defaults to pandas when ``None``.
+    suffix
+        Cache file extension. ``None`` infers from the result type.
+    persist
+        ``None`` bypasses caching entirely, ``False`` (the default) uses
+        an in-memory cache, and ``True`` persists results to disk.
+    ttl
+        Time-to-live for cached results.
+    cache_extra
+        Additional values included in the cache keys.
+    cache_description
+        Human-readable label for the cache filenames.
+    cache_folder
+        Root directory for cache files. Only used when
+        ``persist is True``.
+    queries_folders
+        Directories to search when a query is a filename.
+    default_suffix
+        File extension assumed when a query is a bare filename.
+    max_workers
+        Maximum number of worker threads executing queries in parallel.
+    **format_kwargs
+        Template substitutions forwarded to every :func:`read_query`
+        call.
+
+    Returns
+    -------
+        Query results in the same order as ``queries``.
+
+    See Also
+    --------
+    read_query : Single-query helper invoked for each element.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> from mayutils.data.read import read_queries
+    >>> from mayutils.objects.types import SQL
+    >>> def reader(query, /, *, backend=None):
+    ...     return pd.DataFrame({"n": [1]})
+    >>> dfs = read_queries(
+    ...     [SQL("SELECT 1 AS n"), SQL("SELECT 2 AS n")],
+    ...     reader=reader,
+    ...     persist=None,
+    ... )
+    >>> len(dfs)
+    2
+    """
     logger.debug(f"Reading {len(queries)} queries with up to {max_workers} workers")
 
     with ThreadPoolExecutor(
