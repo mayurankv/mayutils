@@ -22,6 +22,13 @@ Priority: #critical
 
 ## `interfaces.data`
 
+### `snowflake`
+
+Priority: #medium
+
+- [ ] Stream management via the Snowflake Python API (`snowflake.core`) — add the `snowflake.core` dependency to the `snowflake` extra (wired through `may_require_extras`), a `to_root()` adapter on `SnowflakeConfig` / `SnowparkExtendedSession` following the existing `to_connection()` / `to_snowpark_session()` pattern, and a thin streams helper module (build `StreamSourceTable` / `StreamSourceView` / `StreamSourceStage` + `PointOfTime` from plain typed arguments; resolve `db.schema.name` to `StreamResource` / `StreamCollection` with defaults from the config). `Root` also unlocks tasks, dynamic tables, warehouses, etc. for later.
+    - Reference: [Managing streams (Snowflake Python API)](https://docs.snowflake.com/en/developer-guide/snowflake-python-api/snowflake-python-managing-streams)
+
 ### `dbt`
 
 Priority: #medium

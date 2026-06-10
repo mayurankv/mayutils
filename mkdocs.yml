@@ -1,8 +1,8 @@
 site_name: mayutils
 site_description: Utilities for Python from Mayuran Visakan
-site_url: https://mayuran-visakan.github.io/mayutils/
-repo_url: https://github.com/mayuran-visakan/mayutils
-repo_name: mayuran-visakan/mayutils
+site_url: https://mayurankv.github.io/mayutils/
+repo_url: https://github.com/mayurankv/mayutils
+repo_name: mayurankv/mayutils
 
 theme:
   name: material
