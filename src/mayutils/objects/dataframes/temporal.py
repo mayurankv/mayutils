@@ -47,8 +47,9 @@ if TYPE_CHECKING:
 
 
 type DatetimeKind = Literal["datetime", "date", "time"]
-"""Temporal flavour of a column; mirrors (and will replace) the alias in
-:mod:`mayutils.objects.dataframes.pandas.dataframes`.
+"""Temporal flavour of a column; shared by
+:mod:`mayutils.objects.dataframes.pandas.dataframes` (which re-exports it)
+and its ``map_dtypes`` accessor method.
 
 Each literal maps to a distinct parsing pathway in the backend
 implementations:
@@ -62,19 +63,30 @@ DATE_PATTERN: re.Pattern[str] = re.compile(pattern=r"^\d{4}-\d{2}-\d{2}$")
 """Matches ISO calendar dates (``YYYY-MM-DD``)."""
 
 TIME_PATTERN: re.Pattern[str] = re.compile(pattern=r"^\d{1,2}:\d{2}(:\d{2}(\.\d{1,9})?)?$")
-"""Matches bare clock times (``HH:MM[:SS[.fff]]``)."""
+"""Matches bare clock times (``HH:MM[:SS[.fff]]``).
+
+Hours may be one or two digits (``H`` or ``HH``) and range validity is
+*not* enforced: strings such as ``"99:99"`` match here and only fail
+downstream at conversion time, where the backends leave the column
+unchanged.
+"""
 
 DATETIME_PATTERN: re.Pattern[str] = re.compile(
     pattern=r"^\d{4}-\d{2}-\d{2}[T ]\d{1,2}:\d{2}(:\d{2}(\.\d{1,9})?)?(Z|[+-]\d{2}:?\d{2})?$",
 )
-"""Matches ISO datetimes with optional fractional seconds and UTC offset."""
+"""Matches ISO datetimes with optional fractional seconds and UTC offset.
+
+The offset's numeric range is *not* validated: strings such as
+``"2026-01-01T10:00+99:00"`` match here and only fail downstream at
+conversion time, where the backends leave the column unchanged.
+"""
 
 TEMPORAL_SAMPLE_SIZE: int = 100
 """Number of leading non-null values inspected per column by the backends."""
 
 
 def detect_temporal_kind(
-    values: Sequence[str],
+    values: Sequence[object],
     /,
 ) -> DatetimeKind | None:
     """
@@ -89,8 +101,9 @@ def detect_temporal_kind(
     Parameters
     ----------
     values
-        Non-empty sequence of strings to classify. An empty sequence
-        yields ``None``.
+        Sequence of candidate values to classify, typically a raw
+        object-dtype sample. Any non-``str`` element (or an empty
+        sequence) yields ``None`` without raising.
 
     Returns
     -------
@@ -118,10 +131,13 @@ def detect_temporal_kind(
     'time'
     >>> detect_temporal_kind(("2026-01-01", "10:00:00")) is None
     True
+    >>> detect_temporal_kind((20260101,)) is None
+    True
     >>> detect_temporal_kind(()) is None
     True
     """
-    if not values or not all(isinstance(value, str) for value in values):
+    strings = tuple(value for value in values if isinstance(value, str))
+    if not strings or len(strings) != len(values):
         return None
 
     for kind, pattern in (
@@ -129,7 +145,7 @@ def detect_temporal_kind(
         ("datetime", DATETIME_PATTERN),
         ("time", TIME_PATTERN),
     ):
-        if all(pattern.match(string=value) for value in values):
+        if all(pattern.match(string=value) for value in strings):
             return cast("DatetimeKind", kind)
 
     return None
@@ -187,11 +203,12 @@ def parse_temporal_columns[DataFrameType: DataFrames](
 
     Examples
     --------
+    >>> from mayutils.objects.dataframes.backends import Backend
     >>> from mayutils.objects.dataframes.temporal import parse_temporal_columns
-    >>> parse_temporal_columns(None, backend=None)  # doctest: +SKIP
+    >>> parse_temporal_columns(None, backend=Backend(type(None)))
     Traceback (most recent call last):
         ...
-    ValueError: Unsupported backend: ...
+    ValueError: Unsupported backend: builtins
     """
     backend = backend if backend is not None else Backend.infer(frame)
 
