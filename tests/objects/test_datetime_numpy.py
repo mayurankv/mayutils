@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import Any
 
 import numpy as np
 import pytest
@@ -37,7 +38,8 @@ class TestCoerceDatetime64:
 
     def test_none_coerces_to_nat(self) -> None:
         """None silently becomes NaT — documented footgun, pinned here."""
-        result = coerce_datetime64(None)  # type: ignore[arg-type]
+        none_value: Any = None
+        result = coerce_datetime64(none_value)
         assert np.isnat(result)
 
 
@@ -50,7 +52,7 @@ class TestNpDatetime64:
         class Model(BaseModel):
             created: NpDatetime64
 
-        model = Model(created="2026-01-01T09:00:00")
+        model = Model.model_validate({"created": "2026-01-01T09:00:00"})
         assert model.created == np.datetime64("2026-01-01T09:00:00", "us")
 
     def test_pydantic_field_serialises_to_string(self) -> None:
@@ -59,7 +61,7 @@ class TestNpDatetime64:
         class Model(BaseModel):
             created: NpDatetime64
 
-        model = Model(created="2026-01-01T09:00:00")
+        model = Model.model_validate({"created": "2026-01-01T09:00:00"})
         dumped = model.model_dump()
         assert isinstance(dumped["created"], str)
         assert dumped["created"].startswith("2026-01-01T09:00:00")
@@ -70,7 +72,7 @@ class TestNpDatetime64:
         class Model(BaseModel):
             created: NpDatetime64
 
-        model = Model(created="2026-01-01T09:00:00")
+        model = Model.model_validate({"created": "2026-01-01T09:00:00"})
         assert isinstance(model.created, np.datetime64)
 
     def test_junk_input_raises_validation_error(self) -> None:
@@ -80,7 +82,7 @@ class TestNpDatetime64:
             created: NpDatetime64
 
         with pytest.raises(ValidationError):
-            Model(created=object())
+            Model.model_validate({"created": object()})
 
     def test_serialised_value_round_trips(self) -> None:
         """model_dump output feeds back in and compares equal."""
@@ -88,6 +90,6 @@ class TestNpDatetime64:
         class Model(BaseModel):
             created: NpDatetime64
 
-        model = Model(created="2026-01-01T09:00:00.123456")
-        rebuilt = Model(**model.model_dump())
+        model = Model.model_validate({"created": "2026-01-01T09:00:00.123456"})
+        rebuilt = Model.model_validate(model.model_dump())
         assert rebuilt.created == model.created

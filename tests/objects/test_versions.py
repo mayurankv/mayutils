@@ -7,6 +7,7 @@ when it is not importable.
 
 from __future__ import annotations
 
+import types
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -237,18 +238,15 @@ class TestResolveVersions:
 
     def test_maps_timestamps_to_version_numbers(self) -> None:
         """Each timestamp is mapped to the active module version number."""
-
-        class FakeModule:
-            pass
-
+        fake_module = types.ModuleType("fake_module")
         versions = [
             VersionedModule(
-                module=FakeModule,  # type: ignore[arg-type]
+                module=fake_module,
                 version=0,
                 implemented_timestamp=np.datetime64("2026-01-01"),
             ),
             VersionedModule(
-                module=FakeModule,  # type: ignore[arg-type]
+                module=fake_module,
                 version=1,
                 implemented_timestamp=np.datetime64("2026-03-01"),
             ),
