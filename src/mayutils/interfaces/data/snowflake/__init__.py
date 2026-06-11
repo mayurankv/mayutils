@@ -640,7 +640,7 @@ class SnowflakeConfig(BaseModel):
         >>> session = SnowflakeConfig.from_env().to_snowpark_session()  # doctest: +SKIP
         """
         with may_require_extras():
-            import snowflake.snowpark.modin.plugin  # pyright: ignore[reportUnusedImport] # noqa: F401, PLC0415
+            import snowflake.snowpark.modin.plugin  # pyright: ignore[reportUnusedImport] # noqa: F401
 
         default_session_kwargs = {
             "telemetry_enabled": False,

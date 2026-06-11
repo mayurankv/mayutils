@@ -739,7 +739,7 @@ class DataFile[DataFrameType: DataFrames = pd.DataFrame](ABC):
         ...     out.path.exists()
         True
         """
-        from mayutils.interfaces.filetypes.parquet import Parquet  # noqa: PLC0415
+        from mayutils.interfaces.filetypes.parquet import Parquet
 
         return self.convert_to(
             Parquet,
@@ -801,7 +801,7 @@ class DataFile[DataFrameType: DataFrames = pd.DataFrame](ABC):
         ...     out.path.exists()
         True
         """
-        from mayutils.interfaces.filetypes.csv import Csv  # noqa: PLC0415
+        from mayutils.interfaces.filetypes.csv import Csv
 
         return self.convert_to(
             Csv,
@@ -863,7 +863,7 @@ class DataFile[DataFrameType: DataFrames = pd.DataFrame](ABC):
         ...     out.path.exists()
         True
         """
-        from mayutils.interfaces.filetypes.feather import Feather  # noqa: PLC0415
+        from mayutils.interfaces.filetypes.feather import Feather
 
         return self.convert_to(
             Feather,
@@ -927,7 +927,7 @@ class DataFile[DataFrameType: DataFrames = pd.DataFrame](ABC):
         ...     out.path.exists()
         True
         """
-        from mayutils.interfaces.filetypes.xlsx import XlsxSheet  # noqa: PLC0415
+        from mayutils.interfaces.filetypes.xlsx import XlsxSheet
 
         return self.convert_to(
             XlsxSheet,

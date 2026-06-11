@@ -44,15 +44,15 @@ def setup(
     >>> from mayutils import setup
     >>> setup(logging=False, plotly=False, notebook=False, pandas=False)
     """
-    from mayutils.core.extras import format_missing_extra_hint  # noqa: PLC0415
-    from mayutils.environment.logging import Logger  # noqa: PLC0415
+    from mayutils.core.extras import format_missing_extra_hint
+    from mayutils.environment.logging import Logger
 
     if logging:
         Logger.configure()
 
     if plotly:
         try:
-            from mayutils.visualisation.graphs.plotly.templates import register_templates  # noqa: PLC0415
+            from mayutils.visualisation.graphs.plotly.templates import register_templates
 
             register_templates()
         except ImportError as err:
@@ -63,7 +63,7 @@ def setup(
 
     if notebook:
         try:
-            from mayutils.visualisation.notebook import Notebook  # noqa: PLC0415
+            from mayutils.visualisation.notebook import Notebook
 
             Notebook.setup()
         except ImportError as err:
@@ -76,7 +76,7 @@ def setup(
 
     if pandas:
         try:
-            from mayutils.objects.dataframes import setup_pandas  # noqa: PLC0415
+            from mayutils.objects.dataframes import setup_pandas
 
             setup_pandas()
         except ImportError as err:

@@ -288,7 +288,7 @@ class TestClearCache:
 
     def test_clears_memory_stores(self) -> None:
         """Cache registry stores passed to clear_cache are flushed."""
-        from mayutils.environment.memoisation.memory import MemoryStore  # noqa: PLC0415
+        from mayutils.environment.memoisation.memory import MemoryStore
 
         store: MemoryStore[int] = MemoryStore()
         store.put("test_key", value=42)

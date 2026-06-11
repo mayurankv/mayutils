@@ -172,7 +172,7 @@ class TestMakeCacheStem:
 
     def test_path_query_uses_stem_without_suffix(self) -> None:
         """A Path query slugs its suffix-stripped path."""
-        from pathlib import Path  # noqa: PLC0415
+        from pathlib import Path
 
         stem = make_cache_stem(
             Path("queries/loans.sql"),

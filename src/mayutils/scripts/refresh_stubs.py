@@ -902,7 +902,7 @@ def apply_plotly_overlay(
     --------
     >>> apply_plotly_overlay(dry_run=True)  # doctest: +SKIP
     """
-    from mayutils.scripts.generate_plotly_stubs import generate_stubs  # noqa: PLC0415
+    from mayutils.scripts.generate_plotly_stubs import generate_stubs
 
     CONSOLE.print("\n[bold]Applying plotly stub overrides...[/bold]")
     try:

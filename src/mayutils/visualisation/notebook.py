@@ -132,7 +132,7 @@ class Notebook:
         >>> shell = Notebook.get_shell()  # doctest: +SKIP
         """
         with may_require_extras():
-            from IPython.core.getipython import get_ipython  # noqa: PLC0415
+            from IPython.core.getipython import get_ipython
 
         shell = get_ipython()
         if shell is None:
@@ -248,8 +248,8 @@ class Notebook:
         Notebook.get_shell()
 
         with may_require_extras():
-            from IPython.core.display import HTML, Javascript  # noqa: PLC0415
-            from IPython.display import display  # noqa: PLC0415  # pyright: ignore[reportUnknownVariableType]
+            from IPython.core.display import HTML, Javascript
+            from IPython.display import display  # pyright: ignore[reportUnknownVariableType]
 
         if method == "html":
             for css_string in css:
@@ -307,8 +307,8 @@ class Notebook:
         Notebook.get_shell()
 
         with may_require_extras():
-            from IPython.core.display import Markdown  # noqa: PLC0415
-            from IPython.display import display  # noqa: PLC0415  # pyright: ignore[reportUnknownVariableType]
+            from IPython.core.display import Markdown
+            from IPython.display import display  # pyright: ignore[reportUnknownVariableType]
 
         for arg in args:
             display(Markdown(data=arg))
@@ -351,8 +351,8 @@ class Notebook:
         Notebook.get_shell()
 
         with may_require_extras():
-            from IPython.core.display import Math  # noqa: PLC0415
-            from IPython.display import display  # noqa: PLC0415  # pyright: ignore[reportUnknownVariableType]
+            from IPython.core.display import Math
+            from IPython.display import display  # pyright: ignore[reportUnknownVariableType]
 
         for arg in args:
             display(Math(data=arg))

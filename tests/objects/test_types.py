@@ -84,7 +84,7 @@ class TestRecursiveMapping:
 
     def test_is_type_alias(self) -> None:
         """The alias is a PEP 695 :class:`TypeAliasType` at runtime."""
-        from typing import TypeAliasType  # noqa: PLC0415
+        from typing import TypeAliasType
 
         assert isinstance(RecursiveMapping, TypeAliasType)
 

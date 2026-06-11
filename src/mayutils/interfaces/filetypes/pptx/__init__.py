@@ -757,7 +757,7 @@ class Presentation:
         1
         """
         with may_require_extras():
-            from pymupdf import Document, Matrix  # noqa: PLC0415
+            from pymupdf import Document, Matrix
 
         requested = list(slide_numbers) if slide_numbers is not None else list(range(1, len(self.slides) + 1))
 
@@ -1959,7 +1959,7 @@ class Presentation:
         if link is not None:
             msg = "Hyperlinks are not implemented yet."
             raise NotImplementedError(msg)
-            from pptx.util import URI  # noqa: PLC0415
+            from pptx.util import URI
 
             textbox.text_frame.paragraphs[0].hyperlink.address = URI(link)
 

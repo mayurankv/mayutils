@@ -506,12 +506,12 @@ class Colour:
         >>> Colour(r=255, g=0, b=0).show()  # doctest: +SKIP
         """
         try:
-            from IPython.core.display import HTML  # noqa: PLC0415
-            from IPython.display import display  # pyright: ignore[reportUnknownVariableType] # noqa: PLC0415
+            from IPython.core.display import HTML
+            from IPython.display import display  # pyright: ignore[reportUnknownVariableType]
 
             display(HTML(data=self._html_show()))
         except ImportError:
-            import matplotlib.pyplot as plt  # noqa: PLC0415
+            import matplotlib.pyplot as plt
 
             fig, ax = plt.subplots(  # pyright: ignore[reportUnknownMemberType]
                 figsize=(1, 1),

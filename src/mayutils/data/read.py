@@ -573,7 +573,7 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
     (1, 1)
     """
     if reader is None:
-        from mayutils.interfaces.data import get_env_reader  # noqa: PLC0415
+        from mayutils.interfaces.data import get_env_reader
 
         reader = get_env_reader()
 
@@ -738,7 +738,7 @@ def stream_query[DataFrameType: DataFrames = pd.DataFrame](
     (1, 1)
     """
     if streamer is None:
-        from mayutils.interfaces.data import get_env_streamer  # noqa: PLC0415
+        from mayutils.interfaces.data import get_env_streamer
 
         streamer = get_env_streamer()
 

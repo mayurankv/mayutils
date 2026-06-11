@@ -1314,7 +1314,7 @@ def add_markdown_to_text_frame(  # noqa: C901, PLR0912, PLR0915
             if line_spacing is not None:
                 paragraph.line_spacing = line_spacing
             if text_alignment is not None:
-                from pptx.enum.text import PP_ALIGN  # noqa: PLC0415
+                from pptx.enum.text import PP_ALIGN
 
                 alignment_map = {
                     "left": PP_ALIGN.LEFT,
@@ -1345,7 +1345,7 @@ def add_markdown_to_text_frame(  # noqa: C901, PLR0912, PLR0915
             if line_spacing is not None:
                 paragraph.line_spacing = line_spacing
             if text_alignment is not None:
-                from pptx.enum.text import PP_ALIGN  # noqa: PLC0415
+                from pptx.enum.text import PP_ALIGN
 
                 alignment_map = {
                     "left": PP_ALIGN.LEFT,

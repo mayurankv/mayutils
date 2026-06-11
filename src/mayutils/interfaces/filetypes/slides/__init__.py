@@ -694,8 +694,8 @@ class Slides:
             url = self.get_thumbnail_url(slide_number=slide_number)
 
             try:
-                from IPython.core.display import Image  # noqa: PLC0415
-                from IPython.display import display  # pyright: ignore[reportUnknownVariableType] # noqa: PLC0415
+                from IPython.core.display import Image
+                from IPython.display import display  # pyright: ignore[reportUnknownVariableType]
 
                 display(
                     Image(

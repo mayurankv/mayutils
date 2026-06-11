@@ -219,13 +219,13 @@ def parse_temporal_columns[DataFrameType: DataFrames](
     backend = backend if backend is not None else Backend.infer(frame)
 
     if backend.name == "pandas":
-        from mayutils.objects.dataframes.pandas.dataframes import (  # noqa: PLC0415
+        from mayutils.objects.dataframes.pandas.dataframes import (
             parse_temporal_columns as parse_temporal_columns_pandas,
         )
 
         return cast("DataFrameType", parse_temporal_columns_pandas(cast("pd.DataFrame", frame), sample_size=sample_size))
     if backend.name == "polars":
-        from mayutils.objects.dataframes.polars.dataframes import (  # noqa: PLC0415
+        from mayutils.objects.dataframes.polars.dataframes import (
             parse_temporal_columns as parse_temporal_columns_polars,
         )
 

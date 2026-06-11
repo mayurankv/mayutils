@@ -248,7 +248,7 @@ class Pdf:
             img = Image.open(io.BytesIO(initial_bytes=pix.tobytes(output="png")))  # pyright: ignore[reportUnknownArgumentType]
 
             try:
-                from IPython.display import display  # pyright: ignore[reportUnknownVariableType] # noqa: PLC0415
+                from IPython.display import display  # pyright: ignore[reportUnknownVariableType]
 
                 display(img)
 

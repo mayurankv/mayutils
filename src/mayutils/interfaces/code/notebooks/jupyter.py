@@ -365,7 +365,7 @@ class MagicUtils(Magics):
         if reader_name is None:
             if self.env_reader is None:
                 with may_require_extras():
-                    from mayutils.interfaces.data import get_env_reader  # noqa: PLC0415
+                    from mayutils.interfaces.data import get_env_reader
 
                 self.env_reader = get_env_reader()
 
