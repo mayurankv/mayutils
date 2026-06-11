@@ -3,8 +3,8 @@ Expose ``mayutils`` query execution as IPython line and cell magics.
 
 This module bridges the :func:`mayutils.data.read.read_query` pipeline
 into interactive Jupyter sessions through a ``%sql`` / ``%%sql`` magic.
-The magic renders ``{name}`` template fields from variables in the
-notebook's user namespace, executes the query through a
+The magic renders ``{{ name }}`` Jinja template variables from
+variables in the notebook's user namespace, executes the query through a
 :class:`~mayutils.data.read.QueryReader`, and assigns the resulting
 DataFrame back into the namespace under a caller-chosen name. The
 reader defaults to a cached
@@ -32,10 +32,12 @@ Examples
 
 from __future__ import annotations
 
-from string import Formatter
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
+from jinja2 import meta
+
 from mayutils.core.extras import may_require_extras, requires_extras
+from mayutils.data.queries.templating import get_environment
 from mayutils.data.read import read_query
 from mayutils.environment.logging import Logger
 from mayutils.objects.dataframes.backends import Backend, DataFrames
@@ -63,9 +65,6 @@ if TYPE_CHECKING:
 
 
 logger = Logger.spawn()
-
-FORMATTER = Formatter()
-"""Formatter used to discover ``{name}`` template fields in queries."""
 
 
 class SqlArguments(Protocol):
@@ -167,33 +166,36 @@ def template_fields(
     """
     Extract the user-namespace variable names referenced by a template.
 
-    Parses *query_string* with :class:`string.Formatter` and reduces each
-    replacement field to its leading identifier, so that fields using
-    attribute access (``{config.table}``) or indexing (``{tables[0]}``)
-    resolve to the variable that must exist in the namespace.
+    Parses *query_string* as a Jinja template and collects its
+    undeclared variables via
+    :func:`jinja2.meta.find_undeclared_variables`, so that expressions
+    using attribute access (``{{ config.table }}``) or indexing
+    (``{{ tables[0] }}``) resolve to the variable that must exist in
+    the namespace.
 
     Parameters
     ----------
     query_string
-        Query template containing ``{name}`` replacement fields.
+        Query template containing ``{{ name }}`` Jinja variables.
 
     Returns
     -------
-        Leading identifiers of the replacement fields, in order of
-        appearance and including duplicates.
+        Sorted unique names of the undeclared template variables.
 
     See Also
     --------
-    string.Formatter.parse : Underlying template parser.
+    jinja2.meta.find_undeclared_variables : Underlying variable discovery.
+    mayutils.data.queries.templating.get_environment : Source of the
+        Jinja environment used for parsing.
     MagicUtils.sql : Magic that substitutes these fields from the namespace.
 
     Examples
     --------
     >>> from mayutils.interfaces.code.notebooks.jupyter import template_fields
-    >>> template_fields("SELECT * FROM {table} WHERE id = {config.id}")
-    ('table', 'config')
+    >>> template_fields("SELECT * FROM {{ table }} WHERE id = {{ config.id }}")
+    ('config', 'table')
     """
-    return tuple(field.split(".")[0].split("[")[0] for _, field, _, _ in FORMATTER.parse(format_string=query_string) if field)
+    return tuple(sorted(meta.find_undeclared_variables(ast=get_environment(()).parse(source=query_string))))
 
 
 def resolve_query_string(
@@ -410,8 +412,9 @@ class MagicUtils(Magics):
 
         As a cell magic the cell body is the query template; as a line
         magic the query is given inline or as the name of a namespace
-        variable holding it. ``{name}`` fields in the template are
-        substituted from user-namespace variables and execution is
+        variable holding it. ``{{ name }}`` Jinja variables in the
+        template are substituted from user-namespace variables and
+        execution is
         delegated to :func:`mayutils.data.read.read_query`, using the
         reader found at the ``--reader`` namespace variable or, when no
         ``--reader`` is given, a cached fallback built by
@@ -447,7 +450,7 @@ class MagicUtils(Magics):
         resolve_query_string : Resolution of the query template inputs.
         MagicUtils.resolve_reader : Resolution of the executing reader.
         resolve_backend : Mapping from ``--backend`` names to tokens.
-        template_fields : Discovery of ``{name}`` substitution fields.
+        template_fields : Discovery of ``{{ name }}`` template variables.
 
         Examples
         --------
@@ -456,7 +459,7 @@ class MagicUtils(Magics):
             %load_ext mayutils.interfaces.code.notebooks.jupyter
 
             %%sql loans
-            SELECT * FROM loans WHERE product = '{product}'
+            SELECT * FROM loans WHERE product = '{{ product }}'
 
         >>> from mayutils.interfaces.code.notebooks.jupyter import MagicUtils
         >>> MagicUtils.sql.__name__
@@ -489,7 +492,7 @@ class MagicUtils(Magics):
         )
 
         try:
-            format_kwargs = {field: user_ns[field] for field in template_fields(query_string)}
+            jinja_kwargs = {field: user_ns[field] for field in template_fields(query_string)}
         except KeyError as err:
             msg = f"Template field {err.args[0]!r} is not defined in the user namespace"
             raise ValueError(msg) from err
@@ -500,7 +503,7 @@ class MagicUtils(Magics):
             SQL(query_string),
             reader=reader,
             backend=resolve_backend(args.backend),
-            **format_kwargs,
+            jinja_kwargs=jinja_kwargs,
         )
 
         user_ns[args.var_name] = df

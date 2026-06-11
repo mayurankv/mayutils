@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from jinja2.exceptions import UndefinedError
 from pendulum import Duration
 
 from mayutils.data.read import (
@@ -22,9 +23,9 @@ from mayutils.objects.types import SQL
 class TestRenderQuery:
     """Tests for :func:`render_query`."""
 
-    def test_inline_sql_with_format_kwargs(self) -> None:
-        """Format kwargs are interpolated into the inline SQL template."""
-        result = render_query(SQL("SELECT * FROM {table}"), table="loans")
+    def test_inline_sql_with_jinja_kwargs(self) -> None:
+        """Jinja kwargs are interpolated into the inline SQL template."""
+        result = render_query(SQL("SELECT * FROM {{ table }}"), jinja_kwargs={"table": "loans"})
         assert result == "SELECT * FROM loans"
 
     def test_inline_sql_no_kwargs(self) -> None:
@@ -33,11 +34,24 @@ class TestRenderQuery:
         assert result == "SELECT 1"
 
     def test_path_dispatches_to_format_query(self) -> None:
-        """A Path argument is resolved via format_query, not str.format."""
+        """A Path argument is resolved via format_query, not inline rendering."""
         with patch("mayutils.data.read.format_query", return_value="mocked") as mock:
             result = render_query(Path("loans_summary"))
         mock.assert_called_once()
         assert result == "mocked"
+
+    def test_missing_variable_raises_undefined_error(self) -> None:
+        """A template variable absent from jinja_kwargs raises UndefinedError."""
+        with pytest.raises(UndefinedError):
+            render_query(SQL("SELECT * FROM {{ table }}"))
+
+    def test_inline_for_loop_expansion(self) -> None:
+        """A Jinja for loop in an inline template expands to the exact SQL string."""
+        result = render_query(
+            SQL("SELECT {% for col in cols %}{{ col }}{% if not loop.last %}, {% endif %}{% endfor %} FROM loans"),
+            jinja_kwargs={"cols": ("loan_id", "amount")},
+        )
+        assert result == "SELECT loan_id, amount FROM loans"
 
 
 class TestQueryInputWarning:
@@ -166,7 +180,7 @@ class TestMakeCacheStem:
             SQL("SELECT * FROM loans WHERE x = 1"),
             cache_description=None,
             ttl=None,
-            format_kwargs={},
+            jinja_kwargs={},
             cache_extra=None,
             key="abcdef123456789",
         )
@@ -178,7 +192,7 @@ class TestMakeCacheStem:
             Path("loans/by_region"),
             cache_description=None,
             ttl=None,
-            format_kwargs={"region": "London"},
+            jinja_kwargs={"region": "London"},
             cache_extra=None,
             key="abcdef123456789",
         )
@@ -191,7 +205,7 @@ class TestMakeCacheStem:
             SQL("SELECT 1"),
             cache_description="daily volume snapshot",
             ttl=None,
-            format_kwargs={},
+            jinja_kwargs={},
             cache_extra=None,
             key="abcdef123456789",
         )
@@ -203,7 +217,7 @@ class TestMakeCacheStem:
             SQL("SELECT 1"),
             cache_description=None,
             ttl=Duration(hours=6),
-            format_kwargs={},
+            jinja_kwargs={},
             cache_extra=None,
             key="abcdef123456789",
         )
@@ -215,7 +229,7 @@ class TestMakeCacheStem:
             SQL("SELECT 1"),
             cache_description=None,
             ttl=Duration(minutes=30),
-            format_kwargs={},
+            jinja_kwargs={},
             cache_extra=None,
             key="abcdef123456789",
         )
@@ -227,7 +241,7 @@ class TestMakeCacheStem:
             SQL("SELECT 1"),
             cache_description=None,
             ttl=Duration(days=2),
-            format_kwargs={},
+            jinja_kwargs={},
             cache_extra=None,
             key="abcdef123456789",
         )
@@ -239,7 +253,7 @@ class TestMakeCacheStem:
             SQL("SELECT 1"),
             cache_description=None,
             ttl=None,
-            format_kwargs={},
+            jinja_kwargs={},
             cache_extra={"warehouse": "analytics_m"},
             key="abcdef123456789",
         )
@@ -252,7 +266,7 @@ class TestMakeCacheStem:
             SQL("SELECT 1"),
             cache_description=None,
             ttl=None,
-            format_kwargs={},
+            jinja_kwargs={},
             cache_extra=None,
             key=key,
         )
