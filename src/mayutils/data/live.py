@@ -15,11 +15,12 @@ with may_require_extras():
     import pandas as pd
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from pathlib import Path
 
     from mayutils.data.read import QueryReader
     from mayutils.objects.datetime import Duration
-    from mayutils.objects.types import SQL, SupportsStr
+    from mayutils.objects.types import SQL
 
 
 logger = Logger.spawn()
@@ -29,14 +30,15 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
     """
     Incrementally pull rows by tracking ``max(cursor_column)``.
 
-    The query template must contain a ``{cursor}`` placeholder. On each
-    update the cursor is formatted into the template and only rows past
-    the previous cursor are fetched.
+    The query template must contain a ``{{ cursor }}`` placeholder. On
+    each update the cursor is rendered into the template and only rows
+    past the previous cursor are fetched.
 
     Parameters
     ----------
     query
-        SQL string or path to a ``.sql`` template containing ``{cursor}``.
+        SQL string or path to a ``.sql`` template containing
+        ``{{ cursor }}``.
     cursor_column
         Column whose maximum is tracked as the cursor.
     initial_cursor
@@ -55,8 +57,8 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         :meth:`~datetime.datetime.strftime` format for datetime cursors.
     queries_folders
         Directories searched when *query* is a filename.
-    **fixed_format_kwargs
-        Extra keyword arguments substituted into the query template on
+    jinja_kwargs
+        Jinja2 template variables rendered into the query template on
         every call.
 
     See Also
@@ -82,7 +84,7 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         update_frequency: Duration | None = None,
         time_format: str = "%Y-%m-%d %H:%M:%S",
         queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
-        **fixed_format_kwargs: SupportsStr,
+        jinja_kwargs: Mapping[str, object] | None = None,
     ) -> None:
         """
         Initialise the streaming query and perform the first fetch.
@@ -94,7 +96,7 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         ----------
         query
             SQL string or path to a ``.sql`` template containing
-            ``{cursor}``.
+            ``{{ cursor }}``.
         cursor_column
             Column whose maximum is tracked as the cursor.
         initial_cursor
@@ -115,8 +117,8 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
             cursors.
         queries_folders
             Directories searched when *query* is a filename.
-        **fixed_format_kwargs
-            Extra keyword arguments substituted into the query template
+        jinja_kwargs
+            Jinja2 template variables rendered into the query template
             on every call.
 
         See Also
@@ -127,7 +129,7 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         --------
         >>> from mayutils.data.live import StreamingQuery  # doctest: +SKIP
         >>> sq = StreamingQuery(  # doctest: +SKIP
-        ...     "SELECT * FROM t WHERE id > {cursor}",
+        ...     "SELECT * FROM t WHERE id > {{ cursor }}",
         ...     cursor_column="id",
         ...     initial_cursor=0,
         ...     reader=my_reader,
@@ -142,7 +144,7 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         self.update_frequency = update_frequency
         self.time_format = time_format
         self.queries_folders = queries_folders
-        self.fixed_format_kwargs = fixed_format_kwargs
+        self.jinja_kwargs: dict[str, object] = dict(jinja_kwargs or {})
         self.initial_cursor = initial_cursor
 
         self.validate_retention()
@@ -274,7 +276,7 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         --------
         >>> delta = sq.fetch()  # doctest: +SKIP
         """
-        data = self.read_query(cursor=self.cursor)
+        data = self.read_query(jinja_kwargs={"cursor": self.cursor})
 
         if len(data) != 0:
             self.cursor_value = BackendOperations.max(data, self.cursor_column, backend=self.backend)
@@ -313,21 +315,23 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         self,
         *,
         default_suffix: str = "sql",
-        **extra_kwargs: SupportsStr,
+        jinja_kwargs: Mapping[str, object] | None = None,
     ) -> DataFrameType:
         """
         Render and execute the SQL query template.
 
-        Combines *fixed_format_kwargs* with any additional keyword
-        arguments, renders the template, and passes it to *reader*.
+        Merges the per-call *jinja_kwargs* over the mapping stored at
+        construction (per-call keys win), renders the template, and
+        passes it to *reader*.
 
         Parameters
         ----------
         default_suffix
             File extension appended when *query* is a filename without
             one.
-        **extra_kwargs
-            Additional format arguments merged into the template.
+        jinja_kwargs
+            Per-call Jinja2 template variables merged over the stored
+            mapping.
 
         Returns
         -------
@@ -339,14 +343,13 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
 
         Examples
         --------
-        >>> df = sq.read_query(cursor="0")  # doctest: +SKIP
+        >>> df = sq.read_query(jinja_kwargs={"cursor": "0"})  # doctest: +SKIP
         """
         rendered = render_query(
             self.query,
             queries_folders=self.queries_folders,
             default_suffix=default_suffix,
-            **self.fixed_format_kwargs,
-            **extra_kwargs,
+            jinja_kwargs={**self.jinja_kwargs, **(jinja_kwargs or {})},
         )
 
         return self.reader(
@@ -464,9 +467,9 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
     """
     Manage a sliding or expanding time window over a SQL query.
 
-    The query template must contain ``{start_timestamp}`` and
-    ``{end_timestamp}`` placeholders. On each update, only the delta
-    since the previous window end is fetched.
+    The query template must contain ``{{ start_timestamp }}`` and
+    ``{{ end_timestamp }}`` placeholders. On each update, only the
+    delta since the previous window end is fetched.
 
     When *deduplicate* is ``True``, rows are deduped on *index_column*
     after each concat (keeps last), which handles re-fetched open
@@ -476,7 +479,7 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
     ----------
     query
         SQL string or path to a ``.sql`` template containing
-        ``{start_timestamp}`` and ``{end_timestamp}``.
+        ``{{ start_timestamp }}`` and ``{{ end_timestamp }}``.
     index_column
         Column used for deduplication and rolling-window filtering.
     start_timestamp
@@ -499,8 +502,8 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         :meth:`~datetime.datetime.strftime` format for window boundaries.
     queries_folders
         Directories searched when *query* is a filename.
-    **fixed_format_kwargs
-        Extra keyword arguments substituted into the query template on
+    jinja_kwargs
+        Jinja2 template variables rendered into the query template on
         every call.
 
     See Also
@@ -528,7 +531,7 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         update_frequency: Duration | None = None,
         time_format: str = "%Y-%m-%d",
         queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
-        **fixed_format_kwargs: SupportsStr,
+        jinja_kwargs: Mapping[str, object] | None = None,
     ) -> None:
         """
         Initialise the windowed query and perform the first fetch.
@@ -540,7 +543,7 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         ----------
         query
             SQL string or path to a ``.sql`` template containing
-            ``{start_timestamp}`` and ``{end_timestamp}``.
+            ``{{ start_timestamp }}`` and ``{{ end_timestamp }}``.
         index_column
             Column used for deduplication and rolling-window filtering.
         start_timestamp
@@ -565,8 +568,8 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
             boundaries.
         queries_folders
             Directories searched when *query* is a filename.
-        **fixed_format_kwargs
-            Extra keyword arguments substituted into the query template
+        jinja_kwargs
+            Jinja2 template variables rendered into the query template
             on every call.
 
         See Also
@@ -577,7 +580,7 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         --------
         >>> from mayutils.data.live import WindowedQuery  # doctest: +SKIP
         >>> wq = WindowedQuery(  # doctest: +SKIP
-        ...     "SELECT * FROM t WHERE ts BETWEEN '{start_timestamp}' AND '{end_timestamp}'",
+        ...     "SELECT * FROM t WHERE ts BETWEEN '{{ start_timestamp }}' AND '{{ end_timestamp }}'",
         ...     index_column="ts",
         ...     start_timestamp=DateTime.now(),
         ...     reader=my_reader,
@@ -594,7 +597,7 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         self.update_frequency = update_frequency
         self.time_format = time_format
         self.queries_folders = queries_folders
-        self.fixed_format_kwargs = fixed_format_kwargs
+        self.jinja_kwargs: dict[str, object] = dict(jinja_kwargs or {})
         self.start_timestamp = start_timestamp
 
         self.validate_retention()
@@ -840,8 +843,10 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         """
         if initial:
             return self.read_query(
-                start_timestamp=self._interval.start.strftime(format=self.time_format),
-                end_timestamp=self._interval.end.strftime(format=self.time_format),
+                jinja_kwargs={
+                    "start_timestamp": self._interval.start.strftime(format=self.time_format),
+                    "end_timestamp": self._interval.end.strftime(format=self.time_format),
+                },
             )
 
         now = DateTime.now()
@@ -858,8 +863,10 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
             )
 
         delta = self.read_query(
-            start_timestamp=previous_end.strftime(format=self.time_format),
-            end_timestamp=now.strftime(format=self.time_format),
+            jinja_kwargs={
+                "start_timestamp": previous_end.strftime(format=self.time_format),
+                "end_timestamp": now.strftime(format=self.time_format),
+            },
         )
 
         self._interval = Interval(start=new_start, end=now, absolute=True)
@@ -871,21 +878,23 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         /,
         *,
         default_suffix: str = "sql",
-        **extra_kwargs: SupportsStr,
+        jinja_kwargs: Mapping[str, object] | None = None,
     ) -> DataFrameType:
         """
         Render and execute the SQL query template.
 
-        Combines *fixed_format_kwargs* with any additional keyword
-        arguments, renders the template, and passes it to *reader*.
+        Merges the per-call *jinja_kwargs* over the mapping stored at
+        construction (per-call keys win), renders the template, and
+        passes it to *reader*.
 
         Parameters
         ----------
         default_suffix
             File extension appended when *query* is a filename without
             one.
-        **extra_kwargs
-            Additional format arguments merged into the template.
+        jinja_kwargs
+            Per-call Jinja2 template variables merged over the stored
+            mapping.
 
         Returns
         -------
@@ -898,16 +907,17 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         Examples
         --------
         >>> df = wq.read_query(  # doctest: +SKIP
-        ...     start_timestamp="2024-01-01",
-        ...     end_timestamp="2024-01-02",
+        ...     jinja_kwargs={
+        ...         "start_timestamp": "2024-01-01",
+        ...         "end_timestamp": "2024-01-02",
+        ...     },
         ... )
         """
         rendered = render_query(
             self.query,
             queries_folders=self.queries_folders,
             default_suffix=default_suffix,
-            **self.fixed_format_kwargs,
-            **extra_kwargs,
+            jinja_kwargs={**self.jinja_kwargs, **(jinja_kwargs or {})},
         )
 
         return self.reader(

@@ -108,7 +108,7 @@ def _make_streaming(
     backend: Backend[pd.DataFrame] | None = None,
 ) -> StreamingQuery[pd.DataFrame]:
     return StreamingQuery(
-        SQL("SELECT * FROM t WHERE id > {cursor}"),
+        SQL("SELECT * FROM t WHERE id > {{ cursor }}"),
         cursor_column=cursor_column,
         initial_cursor=initial_cursor,
         reader=SequentialReader(*frames),
@@ -240,7 +240,7 @@ class TestStreamingErrorHandling:
         initial = pd.DataFrame({"id": [1, 2, 3]})
         reader = FailingReader(succeed_first=1, fallback_frame=initial)
         view = StreamingQuery(
-            SQL("SELECT * FROM t WHERE id > {cursor}"),
+            SQL("SELECT * FROM t WHERE id > {{ cursor }}"),
             cursor_column="id",
             initial_cursor=0,
             reader=reader,
@@ -258,7 +258,7 @@ class TestStreamingRateLimiting:
         delta = pd.DataFrame({"id": [3]})
         reader = SequentialReader(initial, delta)
         view = StreamingQuery(
-            SQL("SELECT * FROM t WHERE id > {cursor}"),
+            SQL("SELECT * FROM t WHERE id > {{ cursor }}"),
             cursor_column="id",
             initial_cursor=0,
             reader=reader,
@@ -273,7 +273,7 @@ class TestStreamingRateLimiting:
         delta = pd.DataFrame({"id": [3]})
         reader = SequentialReader(initial, delta)
         view = StreamingQuery(
-            SQL("SELECT * FROM t WHERE id > {cursor}"),
+            SQL("SELECT * FROM t WHERE id > {{ cursor }}"),
             cursor_column="id",
             initial_cursor=0,
             reader=reader,
@@ -305,7 +305,7 @@ class TestStreamingPolars:
         initial = pl.DataFrame({"id": [1, 2, 3], "v": [10, 20, 30]})
         delta = pl.DataFrame({"id": [4, 5], "v": [40, 50]})
         view = StreamingQuery(
-            SQL("SELECT * FROM t WHERE id > {cursor}"),
+            SQL("SELECT * FROM t WHERE id > {{ cursor }}"),
             cursor_column="id",
             initial_cursor=0,
             reader=SequentialReader(initial, delta),
@@ -332,7 +332,7 @@ def _make_windowed(
     max_age: Duration | None = None,
 ) -> WindowedQuery[pd.DataFrame]:
     return WindowedQuery(
-        SQL("SELECT * FROM t WHERE ts BETWEEN '{start_timestamp}' AND '{end_timestamp}'"),
+        SQL("SELECT * FROM t WHERE ts BETWEEN '{{ start_timestamp }}' AND '{{ end_timestamp }}'"),
         index_column="ts",
         start_timestamp=start_timestamp or DateTime(2026, 1, 1, tzinfo=UTC),
         reader=SequentialReader(*frames),
@@ -465,7 +465,7 @@ class TestWindowedErrorHandling:
         initial = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01"]), "c": [1]})
         reader = FailingReader(succeed_first=1, fallback_frame=initial)
         view = WindowedQuery(
-            SQL("SELECT * FROM t WHERE ts BETWEEN '{start_timestamp}' AND '{end_timestamp}'"),
+            SQL("SELECT * FROM t WHERE ts BETWEEN '{{ start_timestamp }}' AND '{{ end_timestamp }}'"),
             index_column="ts",
             start_timestamp=DateTime(2026, 1, 1, tzinfo=UTC),
             reader=reader,
@@ -505,7 +505,7 @@ class TestWindowedRateLimiting:
         delta = pd.DataFrame({"ts": pd.to_datetime(["2026-01-02"]), "c": [2]})
         reader = SequentialReader(initial, delta)
         view = WindowedQuery(
-            SQL("SELECT * FROM t WHERE ts BETWEEN '{start_timestamp}' AND '{end_timestamp}'"),
+            SQL("SELECT * FROM t WHERE ts BETWEEN '{{ start_timestamp }}' AND '{{ end_timestamp }}'"),
             index_column="ts",
             start_timestamp=DateTime(2026, 1, 1, tzinfo=UTC),
             reader=reader,
@@ -520,7 +520,7 @@ class TestWindowedRateLimiting:
         delta = pd.DataFrame({"ts": pd.to_datetime(["2026-01-02"]), "c": [2]})
         reader = SequentialReader(initial, delta)
         view = WindowedQuery(
-            SQL("SELECT * FROM t WHERE ts BETWEEN '{start_timestamp}' AND '{end_timestamp}'"),
+            SQL("SELECT * FROM t WHERE ts BETWEEN '{{ start_timestamp }}' AND '{{ end_timestamp }}'"),
             index_column="ts",
             start_timestamp=DateTime(2026, 1, 1, tzinfo=UTC),
             reader=reader,
@@ -549,7 +549,7 @@ class TestWindowedTimeFormat:
             return original_reader(query)
 
         WindowedQuery(
-            SQL("SELECT * FROM t WHERE ts BETWEEN '{start_timestamp}' AND '{end_timestamp}'"),
+            SQL("SELECT * FROM t WHERE ts BETWEEN '{{ start_timestamp }}' AND '{{ end_timestamp }}'"),
             index_column="ts",
             start_timestamp=DateTime(2026, 1, 1, tzinfo=UTC),
             reader=capturing_reader,
@@ -576,7 +576,7 @@ class TestWindowedPolars:
             },
         )
         view = WindowedQuery(
-            SQL("SELECT * FROM t WHERE ts BETWEEN '{start_timestamp}' AND '{end_timestamp}'"),
+            SQL("SELECT * FROM t WHERE ts BETWEEN '{{ start_timestamp }}' AND '{{ end_timestamp }}'"),
             index_column="ts",
             start_timestamp=DateTime(2026, 1, 1, tzinfo=UTC),
             reader=SequentialReader(initial, delta),
