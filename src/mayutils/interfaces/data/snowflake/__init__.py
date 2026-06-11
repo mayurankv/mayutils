@@ -181,6 +181,8 @@ class SnowflakeConfig(BaseModel):
 
     DEFAULT_CONNECTION_ARGUMENTS: ClassVar[dict[str, Any]] = {
         "disable_ocsp_checks": True,
+        "client_session_keep_alive": True,
+        "client_store_temporary_credential": True,
         "session_parameters": {
             "QUERY_TAG": json.dumps({}),
         },
@@ -493,7 +495,6 @@ class SnowflakeConfig(BaseModel):
 
         if self.authentication in (Authentication.private_key_pem, Authentication.private_key_der):
             kwargs["private_key"] = self.unencrypted_private_key
-            kwargs["client_session_keep_alive"] = True
 
         return kwargs
 
