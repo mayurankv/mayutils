@@ -318,8 +318,8 @@ def format_query(
     ...     try:
     ...         format_query("needs_arg", queries_folders=(folder,))
     ...     except UndefinedError as error:
-    ...         print("UndefinedError raised")
-    UndefinedError raised
+    ...         print(error)
+    'schema' is undefined
     """
     unformatted_query = read_query(
         path,
