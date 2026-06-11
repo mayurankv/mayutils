@@ -57,3 +57,12 @@ class TestNpDatetime64:
         dumped = model.model_dump()
         assert isinstance(dumped["created"], str)
         assert dumped["created"].startswith("2026-01-01T09:00:00")
+
+    def test_validated_field_is_datetime64(self) -> None:
+        """The validated field must be an actual np.datetime64, not a passthrough."""
+
+        class Model(BaseModel):
+            created: NpDatetime64
+
+        model = Model(created="2026-01-01T09:00:00")
+        assert isinstance(model.created, np.datetime64)

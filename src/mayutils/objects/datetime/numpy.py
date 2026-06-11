@@ -20,9 +20,10 @@ mayutils.objects.datetime : Pendulum-backed temporal toolkit; this
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated, Any
+from typing import TYPE_CHECKING, Annotated
 
-from pydantic import BeforeValidator, PlainSerializer
+from pydantic import BeforeValidator, GetPydanticSchema, PlainSerializer
+from pydantic_core import core_schema
 
 from mayutils.core.extras import may_require_extras
 
@@ -58,7 +59,8 @@ def coerce_datetime64(
 
 
 NpDatetime64 = Annotated[
-    Any,
+    np.datetime64,
+    GetPydanticSchema(lambda _source, _handler: core_schema.any_schema()),
     BeforeValidator(coerce_datetime64),
     PlainSerializer(str, return_type=str),
 ]
