@@ -54,6 +54,7 @@ from mayutils.data.queries.templating import render_template
 from mayutils.environment.logging import Logger
 from mayutils.environment.memoisation import cache, make_cache_stem
 from mayutils.objects.dataframes.backends import Backend, DataFrames, default_backend
+from mayutils.objects.dataframes.temporal import parse_temporal_columns
 
 with may_require_extras():
     import pandas as pd
@@ -499,6 +500,7 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
     *,
     reader: QueryReader | None = None,
     backend: Backend[DataFrameType] | None = None,
+    parse_temporal: bool = True,
     suffix: str | None = None,
     persist: bool | None = False,
     ttl: Duration | None = None,
@@ -523,6 +525,12 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
         Callable that executes the rendered SQL and returns a DataFrame.
     backend
         DataFrame backend token. Defaults to pandas when ``None``.
+    parse_temporal
+        Whether to automatically convert string (and object) columns
+        that look like dates, times or datetimes into temporal dtypes
+        after the query result materialises. Applied after the cache
+        layer, so cached artefacts are also upgraded; parsing is
+        idempotent. Disable for strict schema stability.
     suffix
         Cache file extension. ``None`` infers from the result type.
     persist
@@ -581,10 +589,12 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
     logger.debug(f"Executing query ({len(rendered_query)} chars) with backend={backend.name!r} and persist={persist!r}")
 
     if persist is None:
-        return reader(
+        result = reader(
             rendered_query,
             backend=backend,
         )
+
+        return parse_temporal_columns(result, backend=backend) if parse_temporal else result
 
     def execute(
         rendered: str,
@@ -653,10 +663,12 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
             )(execute),
         )
 
-    return cached_execute(
+    result = cached_execute(
         rendered_query,
         _extra=dict(cache_extra) if cache_extra else None,
     )
+
+    return parse_temporal_columns(result, backend=backend) if parse_temporal else result
 
 
 def stream_query[DataFrameType: DataFrames = pd.DataFrame](
@@ -665,6 +677,7 @@ def stream_query[DataFrameType: DataFrames = pd.DataFrame](
     *,
     streamer: QueryStreamer | None = None,
     backend: Backend[DataFrameType] | None = None,
+    parse_temporal: bool = True,
     queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
     default_suffix: str = "sql",
     jinja_kwargs: Mapping[str, object] | None = None,
@@ -675,7 +688,10 @@ def stream_query[DataFrameType: DataFrames = pd.DataFrame](
     Renders the query via :func:`render_query` and lazily yields the
     chunks produced by *streamer*. No caching is applied; each chunk is
     forwarded as soon as the underlying driver produces it, keeping
-    peak memory bounded for large result sets.
+    peak memory bounded for large result sets. Temporal parsing is
+    applied to each chunk independently, so the inferred temporal kinds
+    can differ between chunks; pass ``parse_temporal=False`` for strict
+    schema stability across chunks.
 
     Parameters
     ----------
@@ -686,6 +702,12 @@ def stream_query[DataFrameType: DataFrames = pd.DataFrame](
         chunks.
     backend
         DataFrame backend token. Defaults to pandas when ``None``.
+    parse_temporal
+        Whether to automatically convert string (and object) columns
+        that look like dates, times or datetimes into temporal dtypes
+        in each yielded chunk. Chunks are parsed independently, so the
+        inferred kinds can differ between chunks; parsing is
+        idempotent. Disable for strict schema stability.
     queries_folders
         Directories to search when *query* is a filename.
     default_suffix
@@ -731,10 +753,11 @@ def stream_query[DataFrameType: DataFrames = pd.DataFrame](
 
     logger.debug(f"Streaming query ({len(rendered_query)} chars) with backend={backend.name!r}")
 
-    yield from streamer(
+    for chunk in streamer(
         rendered_query,
         backend=backend,
-    )
+    ):
+        yield parse_temporal_columns(chunk, backend=backend) if parse_temporal else chunk
 
 
 def read_queries[DataFrameType: DataFrames = pd.DataFrame](
@@ -743,6 +766,7 @@ def read_queries[DataFrameType: DataFrames = pd.DataFrame](
     *,
     reader: QueryReader,
     backend: Backend[DataFrameType] | None = None,
+    parse_temporal: bool = True,
     suffix: str | None = None,
     persist: bool | None = False,
     ttl: Duration | None = None,
@@ -773,6 +797,12 @@ def read_queries[DataFrameType: DataFrames = pd.DataFrame](
         DataFrame.
     backend
         DataFrame backend token. Defaults to pandas when ``None``.
+    parse_temporal
+        Whether to automatically convert string (and object) columns
+        that look like dates, times or datetimes into temporal dtypes
+        in each query result. Forwarded to every :func:`read_query`
+        call; applied after the cache layer, so cached artefacts are
+        also upgraded. Disable for strict schema stability.
     suffix
         Cache file extension. ``None`` infers from the result type.
     persist
@@ -831,6 +861,7 @@ def read_queries[DataFrameType: DataFrames = pd.DataFrame](
                 query,
                 reader=reader,
                 backend=backend,  # ty:ignore[invalid-argument-type]
+                parse_temporal=parse_temporal,
                 suffix=suffix,
                 persist=persist,
                 ttl=ttl,

@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import warnings
 from pathlib import Path
+from typing import TYPE_CHECKING, cast
 from unittest.mock import patch
 
+import pandas as pd
 import pytest
 from jinja2.exceptions import UndefinedError
 from pendulum import Duration
@@ -13,11 +15,19 @@ from pendulum import Duration
 from mayutils.data.read import (
     QueryInputWarning,
     looks_like_sql_path,
+    read_query,
     render_query,
+    stream_query,
 )
 from mayutils.environment.memoisation.clearing import clear_cache
 from mayutils.environment.memoisation.files import make_cache_stem
+from mayutils.objects.dataframes.backends import DataFrames
 from mayutils.objects.types import SQL
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from mayutils.objects.dataframes.backends import Backend
 
 
 class TestRenderQuery:
@@ -316,3 +326,74 @@ class TestClearCache:
 
         deleted = clear_cache(ttl=None, cache_folder=tmp_path)
         assert len(deleted) == 1
+
+
+class TestTemporalParsing:
+    """Tests for automatic temporal parsing in :func:`read_query` and :func:`stream_query`."""
+
+    def test_read_query_parses_temporal_columns(self) -> None:
+        """String date columns from the reader come back as datetime64."""
+
+        def reader[DataFrameType: DataFrames = pd.DataFrame](
+            query: str,
+            /,
+            *,
+            backend: Backend[DataFrameType] | None = None,
+        ) -> DataFrameType:
+            assert "SELECT" in query
+            assert backend is not None
+            return cast("DataFrameType", pd.DataFrame({"d": ["2026-01-01", "2026-06-11"]}))
+
+        result = read_query(SQL("SELECT 1"), reader=reader, persist=None)
+        assert result["d"].dtype == "datetime64[ns]"
+
+    def test_read_query_parse_temporal_opt_out(self) -> None:
+        """parse_temporal=False preserves raw string columns."""
+
+        def reader[DataFrameType: DataFrames = pd.DataFrame](
+            query: str,
+            /,
+            *,
+            backend: Backend[DataFrameType] | None = None,
+        ) -> DataFrameType:
+            assert "SELECT" in query
+            assert backend is not None
+            return cast("DataFrameType", pd.DataFrame({"d": ["2026-01-01"]}))
+
+        result = read_query(SQL("SELECT 1"), reader=reader, persist=None, parse_temporal=False)
+        assert result["d"].dtype == object
+
+    def test_read_query_parses_temporal_columns_with_cache(self) -> None:
+        """The in-memory cached path also returns parsed frames."""
+
+        def reader[DataFrameType: DataFrames = pd.DataFrame](
+            query: str,
+            /,
+            *,
+            backend: Backend[DataFrameType] | None = None,
+        ) -> DataFrameType:
+            assert "SELECT" in query
+            assert backend is not None
+            return cast("DataFrameType", pd.DataFrame({"d": ["2026-01-01", "2026-06-11"]}))
+
+        first = read_query(SQL("SELECT 1 AS c1"), reader=reader, persist=False)
+        second = read_query(SQL("SELECT 1 AS c1"), reader=reader, persist=False)
+        assert first["d"].dtype == "datetime64[ns]"
+        assert second["d"].dtype == "datetime64[ns]"
+
+    def test_stream_query_parses_each_chunk(self) -> None:
+        """Every streamed chunk is temporally parsed."""
+
+        def streamer[DataFrameType: DataFrames = pd.DataFrame](
+            query: str,
+            /,
+            *,
+            backend: Backend[DataFrameType] | None = None,
+        ) -> Iterator[DataFrameType]:
+            assert "SELECT" in query
+            assert backend is not None
+            yield cast("DataFrameType", pd.DataFrame({"d": ["2026-01-01"]}))
+            yield cast("DataFrameType", pd.DataFrame({"d": ["2026-06-11"]}))
+
+        chunks = list(stream_query(SQL("SELECT 1"), streamer=streamer))
+        assert all(chunk["d"].dtype == "datetime64[ns]" for chunk in chunks)
