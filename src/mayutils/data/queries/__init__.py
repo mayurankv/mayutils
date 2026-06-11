@@ -6,7 +6,7 @@ SQL query files that live either inside the host project or inside
 installed sibling packages. It builds a deterministic search path
 rooted at the project directory, exposes it as a module-level constant,
 and provides convenience functions that resolve a query by name and
-optionally render it with Jinja2 via ``jinja_kwargs``. The search
+optionally render it with Jinja2 via ``template_kwargs``. The search
 path lets a host project override query text shipped by upstream
 packages simply by placing a file with the same relative name in its
 own ``queries/`` directory.
@@ -42,7 +42,7 @@ True
 ...     format_query(
 ...         "revenue",
 ...         queries_folders=(folder,),
-...         jinja_kwargs={"schema": "analytics", "start_date": "2024-01-01"},
+...         template_kwargs={"schema": "analytics", "start_date": "2024-01-01"},
 ...     )
 "SELECT * FROM analytics.revenue WHERE dt >= '2024-01-01'"
 """
@@ -225,7 +225,7 @@ def format_query(
     *,
     queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
     default_suffix: str = "sql",
-    jinja_kwargs: Mapping[str, object] | None = None,
+    template_kwargs: Mapping[str, object] | None = None,
 ) -> str:
     """
     Load a named SQL query and render its Jinja2 placeholders.
@@ -233,9 +233,9 @@ def format_query(
     Act as a thin convenience wrapper around :func:`read_query`: the
     query text is resolved using the same rules and then passed to
     :func:`~mayutils.data.queries.templating.render_template` with
-    ``jinja_kwargs`` to substitute ``{{ name }}`` Jinja2 placeholders.
+    ``template_kwargs`` to substitute ``{{ name }}`` Jinja2 placeholders.
     The environment uses :class:`~jinja2.StrictUndefined`, so
-    referencing a template variable not present in ``jinja_kwargs``
+    referencing a template variable not present in ``template_kwargs``
     raises :class:`~jinja2.exceptions.UndefinedError`. Because
     substitution is performed via Jinja2 and not via SQL parameter
     binding, only values safe for literal interpolation (schema names,
@@ -256,7 +256,7 @@ def format_query(
     default_suffix
         Extension forwarded to :func:`read_query` for queries
         referenced by bare name. Defaults to ``"sql"``.
-    jinja_kwargs
+    template_kwargs
         Mapping of Jinja2 variable names to their values, forwarded
         to :func:`~mayutils.data.queries.templating.render_template`.
         When ``None`` or omitted the template is rendered with no
@@ -272,7 +272,7 @@ def format_query(
         the template cannot be located.
         :class:`~jinja2.exceptions.UndefinedError` propagates from the
         Jinja2 engine when the template references a variable not
-        present in ``jinja_kwargs``.
+        present in ``template_kwargs``.
 
     See Also
     --------
@@ -301,7 +301,7 @@ def format_query(
     ...     format_query(
     ...         "loans_by_region",
     ...         queries_folders=(folder,),
-    ...         jinja_kwargs={"region": "London"},
+    ...         template_kwargs={"region": "London"},
     ...     )
     "SELECT * FROM loans WHERE region = 'London'"
 
@@ -330,5 +330,5 @@ def format_query(
     return render_template(
         unformatted_query,
         queries_folders=queries_folders,
-        jinja_kwargs=jinja_kwargs,
+        template_kwargs=template_kwargs,
     )

@@ -10,12 +10,12 @@ from mayutils.data.queries.templating import TemplateStyleWarning, render_templa
 
 
 def test_render_template_substitutes_variables() -> None:
-    """``{{ name }}`` placeholders are substituted from *jinja_kwargs*."""
-    assert render_template("SELECT * FROM {{ table }}", jinja_kwargs={"table": "loans"}) == "SELECT * FROM loans"
+    """``{{ name }}`` placeholders are substituted from *template_kwargs*."""
+    assert render_template("SELECT * FROM {{ table }}", template_kwargs={"table": "loans"}) == "SELECT * FROM loans"
 
 
 def test_render_template_defaults_to_no_substitutions() -> None:
-    """Omitting *jinja_kwargs* renders static templates verbatim."""
+    """Omitting *template_kwargs* renders static templates verbatim."""
     assert render_template("SELECT 1") == "SELECT 1"
 
 
@@ -23,7 +23,7 @@ def test_render_template_supports_loops() -> None:
     """Jinja control flow expands sequence values into SQL fragments."""
     rendered = render_template(
         "SELECT * FROM loans WHERE product IN ({% for p in products %}'{{ p }}'{% if not loop.last %}, {% endif %}{% endfor %})",
-        jinja_kwargs={"products": ["personal", "topup"]},
+        template_kwargs={"products": ["personal", "topup"]},
     )
     assert rendered == "SELECT * FROM loans WHERE product IN ('personal', 'topup')"
 
@@ -31,8 +31,8 @@ def test_render_template_supports_loops() -> None:
 def test_render_template_supports_conditionals() -> None:
     """``{% if %}`` blocks render conditionally."""
     template = "SELECT * FROM loans{% if region %} WHERE region = '{{ region }}'{% endif %}"
-    assert render_template(template, jinja_kwargs={"region": "London"}) == "SELECT * FROM loans WHERE region = 'London'"
-    assert render_template(template, jinja_kwargs={"region": None}) == "SELECT * FROM loans"
+    assert render_template(template, template_kwargs={"region": "London"}) == "SELECT * FROM loans WHERE region = 'London'"
+    assert render_template(template, template_kwargs={"region": None}) == "SELECT * FROM loans"
 
 
 def test_render_template_includes_from_queries_folders(
@@ -43,7 +43,7 @@ def test_render_template_includes_from_queries_folders(
     rendered = render_template(
         "SELECT * FROM loans {% include 'filters.sql' %}",
         queries_folders=(tmp_path,),
-        jinja_kwargs={"start": "2026-01-01"},
+        template_kwargs={"start": "2026-01-01"},
     )
     assert rendered == "SELECT * FROM loans WHERE dt >= '2026-01-01'"
 
@@ -57,7 +57,7 @@ def test_render_template_missing_variable_raises() -> None:
 def test_render_template_warns_on_legacy_placeholders() -> None:
     """Surviving ``{kwarg}`` text for a passed key triggers TemplateStyleWarning."""
     with pytest.warns(TemplateStyleWarning):
-        rendered = render_template("SELECT * FROM {table}", jinja_kwargs={"table": "loans"})
+        rendered = render_template("SELECT * FROM {table}", template_kwargs={"table": "loans"})
     assert rendered == "SELECT * FROM {table}"
 
 
@@ -65,7 +65,7 @@ def test_render_template_no_warning_for_unrelated_braces() -> None:
     """Brace text not matching any key renders silently."""
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        assert render_template("SELECT '{json}' FROM t", jinja_kwargs={"limit": 1}) == "SELECT '{json}' FROM t"
+        assert render_template("SELECT '{json}' FROM t", template_kwargs={"limit": 1}) == "SELECT '{json}' FROM t"
 
 
 def test_render_template_no_warning_when_value_contains_braces() -> None:
@@ -74,7 +74,7 @@ def test_render_template_no_warning_when_value_contains_braces() -> None:
         warnings.simplefilter("error")
         rendered = render_template(
             "SELECT {{ result }} FROM t",
-            jinja_kwargs={"result": "{table}", "table": "loans"},
+            template_kwargs={"result": "{table}", "table": "loans"},
         )
     assert rendered == "SELECT {table} FROM t"
 
@@ -84,5 +84,5 @@ def test_render_template_strict_undefined_inside_if() -> None:
     with pytest.raises(UndefinedError):
         render_template(
             "SELECT * FROM loans{% if region %} WHERE region = '{{ region }}'{% endif %}",
-            jinja_kwargs={},
+            template_kwargs={},
         )

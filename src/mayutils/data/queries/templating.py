@@ -16,7 +16,7 @@ jinja2.Environment : Underlying rendering engine.
 Examples
 --------
 >>> from mayutils.data.queries.templating import render_template
->>> render_template("SELECT * FROM {{ table }}", jinja_kwargs={"table": "loans"})
+>>> render_template("SELECT * FROM {{ table }}", template_kwargs={"table": "loans"})
 'SELECT * FROM loans'
 """
 
@@ -39,7 +39,7 @@ class TemplateStyleWarning(UserWarning):
 
     Emitted by :func:`render_template` when the original template text
     contains at least one ``{name}`` substring that matches a key that
-    was passed in ``jinja_kwargs``. This indicates an unmigrated
+    was passed in ``template_kwargs``. This indicates an unmigrated
     :meth:`str.format` template — the placeholder was never expanded
     because Jinja2 does not recognise single-brace syntax, so the
     caller's intent was likely not fulfilled.
@@ -54,7 +54,7 @@ class TemplateStyleWarning(UserWarning):
     >>> from mayutils.data.queries.templating import TemplateStyleWarning, render_template
     >>> with warnings.catch_warnings(record=True) as w:
     ...     warnings.simplefilter("always")
-    ...     render_template("SELECT * FROM {table}", jinja_kwargs={"table": "loans"})
+    ...     render_template("SELECT * FROM {table}", template_kwargs={"table": "loans"})
     ...     assert issubclass(w[0].category, TemplateStyleWarning)
     'SELECT * FROM {table}'
     """
@@ -122,19 +122,19 @@ def render_template(
     /,
     *,
     queries_folders: tuple[Path, ...] = (),
-    jinja_kwargs: Mapping[str, object] | None = None,
+    template_kwargs: Mapping[str, object] | None = None,
 ) -> str:
     """
     Render a Jinja2 SQL template string and return the expanded text.
 
     Compiles *text* as a Jinja2 template using the environment returned
     by :func:`get_environment` for *queries_folders*, then renders it
-    by forwarding all entries in *jinja_kwargs* as template variables.
+    by forwarding all entries in *template_kwargs* as template variables.
     The environment uses :class:`~jinja2.StrictUndefined`, so referencing
-    a variable not present in *jinja_kwargs* immediately raises
+    a variable not present in *template_kwargs* immediately raises
     :class:`~jinja2.exceptions.UndefinedError`. The original template
     *text* is also scanned for ``{name}`` substrings matching any key
-    in *jinja_kwargs*; when any are found a
+    in *template_kwargs*; when any are found a
     :class:`TemplateStyleWarning` is emitted to signal an unmigrated
     :meth:`str.format` template.
 
@@ -149,7 +149,7 @@ def render_template(
         and ``{% extends %}`` directives. Forwarded verbatim to
         :func:`get_environment`. Defaults to an empty tuple, which
         disables file-based includes.
-    jinja_kwargs
+    template_kwargs
         Mapping of template variable names to their values. When
         ``None`` or omitted the template is rendered with no variables,
         which is only valid for templates that contain no variable
@@ -162,13 +162,13 @@ def render_template(
         expanded and all ``{{ variable }}`` placeholders substituted.
         :class:`~jinja2.exceptions.UndefinedError` propagates from the
         Jinja2 engine when the template references a variable not
-        present in *jinja_kwargs*.
+        present in *template_kwargs*.
 
     Warns
     -----
     TemplateStyleWarning
         When the original template *text* contains ``{name}`` for a
-        key that was supplied in *jinja_kwargs*, indicating an
+        key that was supplied in *template_kwargs*, indicating an
         unmigrated :meth:`str.format`-style placeholder.
 
     See Also
@@ -184,7 +184,7 @@ def render_template(
     Substitute a single variable:
 
     >>> from mayutils.data.queries.templating import render_template
-    >>> render_template("SELECT * FROM {{ table }}", jinja_kwargs={"table": "loans"})
+    >>> render_template("SELECT * FROM {{ table }}", template_kwargs={"table": "loans"})
     'SELECT * FROM loans'
 
     Static templates pass through unchanged:
@@ -196,15 +196,15 @@ def render_template(
 
     >>> render_template(
     ...     "SELECT 1{% if flag %} WHERE flag{% endif %}",
-    ...     jinja_kwargs={"flag": None},
+    ...     template_kwargs={"flag": None},
     ... )
     'SELECT 1'
     """
-    jinja_kwargs = dict(jinja_kwargs or {})
+    template_kwargs = dict(template_kwargs or {})
 
-    rendered = get_environment(queries_folders).from_string(source=text).render(**jinja_kwargs)
+    rendered = get_environment(queries_folders).from_string(source=text).render(**template_kwargs)
 
-    legacy = [name for name in jinja_kwargs if f"{{{name}}}" in text]
+    legacy = [name for name in template_kwargs if f"{{{name}}}" in text]
     if legacy:
         warnings.warn(
             message=f"Rendered query still contains str.format-style placeholders {legacy}; "

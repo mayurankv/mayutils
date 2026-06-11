@@ -33,9 +33,9 @@ if TYPE_CHECKING:
 class TestRenderQuery:
     """Tests for :func:`render_query`."""
 
-    def test_inline_sql_with_jinja_kwargs(self) -> None:
+    def test_inline_sql_with_template_kwargs(self) -> None:
         """Jinja kwargs are interpolated into the inline SQL template."""
-        result = render_query(SQL("SELECT * FROM {{ table }}"), jinja_kwargs={"table": "loans"})
+        result = render_query(SQL("SELECT * FROM {{ table }}"), template_kwargs={"table": "loans"})
         assert result == "SELECT * FROM loans"
 
     def test_inline_sql_no_kwargs(self) -> None:
@@ -51,7 +51,7 @@ class TestRenderQuery:
         assert result == "mocked"
 
     def test_missing_variable_raises_undefined_error(self) -> None:
-        """A template variable absent from jinja_kwargs raises UndefinedError."""
+        """A template variable absent from template_kwargs raises UndefinedError."""
         with pytest.raises(UndefinedError):
             render_query(SQL("SELECT * FROM {{ table }}"))
 
@@ -59,7 +59,7 @@ class TestRenderQuery:
         """A Jinja for loop in an inline template expands to the exact SQL string."""
         result = render_query(
             SQL("SELECT {% for col in cols %}{{ col }}{% if not loop.last %}, {% endif %}{% endfor %} FROM loans"),
-            jinja_kwargs={"cols": ("loan_id", "amount")},
+            template_kwargs={"cols": ("loan_id", "amount")},
         )
         assert result == "SELECT loan_id, amount FROM loans"
 
@@ -190,7 +190,7 @@ class TestMakeCacheStem:
             SQL("SELECT * FROM loans WHERE x = 1"),
             cache_description=None,
             ttl=None,
-            jinja_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key="abcdef123456789",
         )
@@ -202,7 +202,7 @@ class TestMakeCacheStem:
             Path("loans/by_region"),
             cache_description=None,
             ttl=None,
-            jinja_kwargs={"region": "London"},
+            template_kwargs={"region": "London"},
             cache_extra=None,
             key="abcdef123456789",
         )
@@ -215,7 +215,7 @@ class TestMakeCacheStem:
             SQL("SELECT 1"),
             cache_description="daily volume snapshot",
             ttl=None,
-            jinja_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key="abcdef123456789",
         )
@@ -227,7 +227,7 @@ class TestMakeCacheStem:
             SQL("SELECT 1"),
             cache_description=None,
             ttl=Duration(hours=6),
-            jinja_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key="abcdef123456789",
         )
@@ -239,7 +239,7 @@ class TestMakeCacheStem:
             SQL("SELECT 1"),
             cache_description=None,
             ttl=Duration(minutes=30),
-            jinja_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key="abcdef123456789",
         )
@@ -251,7 +251,7 @@ class TestMakeCacheStem:
             SQL("SELECT 1"),
             cache_description=None,
             ttl=Duration(days=2),
-            jinja_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key="abcdef123456789",
         )
@@ -263,7 +263,7 @@ class TestMakeCacheStem:
             SQL("SELECT 1"),
             cache_description=None,
             ttl=None,
-            jinja_kwargs={},
+            template_kwargs={},
             cache_extra={"warehouse": "analytics_m"},
             key="abcdef123456789",
         )
@@ -276,7 +276,7 @@ class TestMakeCacheStem:
             SQL("SELECT 1"),
             cache_description=None,
             ttl=None,
-            jinja_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key=key,
         )

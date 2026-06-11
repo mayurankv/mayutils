@@ -322,7 +322,7 @@ class TestStreamingJinjaKwargsMerge:
     """Verify that fetch injects ``cursor`` and overrides any stored value."""
 
     def test_cursor_key_wins_over_stored_value(self) -> None:
-        """Internal cursor injection overrides a ``cursor`` key in jinja_kwargs."""
+        """Internal cursor injection overrides a ``cursor`` key in template_kwargs."""
         df = pd.DataFrame({"id": [1, 2, 3]})
         rendered_queries: list[str] = []
         original_reader = SequentialReader(df)
@@ -341,7 +341,7 @@ class TestStreamingJinjaKwargsMerge:
             cursor_column="id",
             initial_cursor=0,
             reader=capturing_reader,
-            jinja_kwargs={"table": "loans", "cursor": "SHADOWED"},
+            template_kwargs={"table": "loans", "cursor": "SHADOWED"},
         )
 
         assert len(rendered_queries) == 1
@@ -623,7 +623,7 @@ class TestWindowedJinjaKwargsMerge:
     """Verify that fetch injects window boundaries and overrides stored values."""
 
     def test_timestamp_keys_win_over_stored_values(self) -> None:
-        """Internal timestamp injection overrides shadowed keys in jinja_kwargs."""
+        """Internal timestamp injection overrides shadowed keys in template_kwargs."""
         df = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01"]), "c": [1]})
         rendered_queries: list[str] = []
         original_reader = SequentialReader(df)
@@ -643,7 +643,7 @@ class TestWindowedJinjaKwargsMerge:
             start_timestamp=DateTime(2026, 1, 1, tzinfo=UTC),
             reader=capturing_reader,
             time_format="%Y-%m-%d",
-            jinja_kwargs={"table": "loans", "start_timestamp": "SHADOWED"},
+            template_kwargs={"table": "loans", "start_timestamp": "SHADOWED"},
         )
 
         assert len(rendered_queries) == 1

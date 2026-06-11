@@ -144,16 +144,16 @@ class TestFormatQuery:
     def test_substitutes_single_placeholder(self, tmp_path: Path) -> None:
         """A single ``{{ name }}`` placeholder is replaced by the matching value."""
         _write_query(tmp_path, "region.sql", "SELECT * FROM loans WHERE region = '{{ region }}'")
-        rendered = format_query("region", queries_folders=(tmp_path,), jinja_kwargs={"region": "London"})
+        rendered = format_query("region", queries_folders=(tmp_path,), template_kwargs={"region": "London"})
         assert rendered == "SELECT * FROM loans WHERE region = 'London'"
 
     def test_substitutes_multiple_placeholders(self, tmp_path: Path) -> None:
-        """Multiple Jinja placeholders are all substituted from *jinja_kwargs*."""
+        """Multiple Jinja placeholders are all substituted from *template_kwargs*."""
         _write_query(tmp_path, "revenue.sql", "SELECT * FROM {{ schema }}.revenue WHERE dt >= '{{ start_date }}'")
         rendered = format_query(
             "revenue",
             queries_folders=(tmp_path,),
-            jinja_kwargs={"schema": "analytics", "start_date": "2024-01-01"},
+            template_kwargs={"schema": "analytics", "start_date": "2024-01-01"},
         )
         assert rendered == "SELECT * FROM analytics.revenue WHERE dt >= '2024-01-01'"
 
@@ -165,7 +165,7 @@ class TestFormatQuery:
     def test_non_string_value_is_stringified(self, tmp_path: Path) -> None:
         """Non-string substitutions are coerced to their string representation by Jinja."""
         _write_query(tmp_path, "limit.sql", "SELECT * FROM t LIMIT {{ n }}")
-        assert format_query("limit", queries_folders=(tmp_path,), jinja_kwargs={"n": 10}) == "SELECT * FROM t LIMIT 10"
+        assert format_query("limit", queries_folders=(tmp_path,), template_kwargs={"n": 10}) == "SELECT * FROM t LIMIT 10"
 
     def test_missing_placeholder_raises_undefined_error(self, tmp_path: Path) -> None:
         """A ``{{ name }}`` placeholder without a matching key propagates :class:`~jinja2.exceptions.UndefinedError`."""
@@ -183,14 +183,14 @@ class TestFormatQuery:
         rendered = format_query(
             "regions",
             queries_folders=(tmp_path,),
-            jinja_kwargs={"regions": ["London", "Leeds"]},
+            template_kwargs={"regions": ["London", "Leeds"]},
         )
         assert rendered == "SELECT * FROM loans WHERE region IN ('London', 'Leeds')"
 
     def test_unresolvable_query_propagates_value_error(self, tmp_path: Path) -> None:
         """A missing template surfaces the ``ValueError`` raised by :func:`read_query`."""
         with pytest.raises(ValueError, match="No query"):
-            format_query("absent", queries_folders=(tmp_path,), jinja_kwargs={"x": "y"})
+            format_query("absent", queries_folders=(tmp_path,), template_kwargs={"x": "y"})
 
     def test_empty_search_path_with_bare_name_raises(self) -> None:
         """A bare name with an empty search path cannot resolve and raises ``ValueError``."""

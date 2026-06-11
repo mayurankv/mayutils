@@ -61,7 +61,7 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         :meth:`~datetime.datetime.strftime` format for datetime cursors.
     queries_folders
         Directories searched when *query* is a filename.
-    jinja_kwargs
+    template_kwargs
         Jinja2 template variables rendered into the query template on
         every call.  The key ``cursor`` is injected per-call by
         :meth:`fetch` and overrides any value stored here.
@@ -89,7 +89,7 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         update_frequency: Duration | None = None,
         time_format: str = "%Y-%m-%d %H:%M:%S",
         queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
-        jinja_kwargs: Mapping[str, object] | None = None,
+        template_kwargs: Mapping[str, object] | None = None,
     ) -> None:
         """
         Initialise the streaming query and perform the first fetch.
@@ -122,7 +122,7 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
             cursors.
         queries_folders
             Directories searched when *query* is a filename.
-        jinja_kwargs
+        template_kwargs
             Jinja2 template variables rendered into the query template
             on every call.  The key ``cursor`` is injected per-call by
             :meth:`fetch` and overrides any value stored here.
@@ -150,7 +150,7 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         self.update_frequency = update_frequency
         self.time_format = time_format
         self.queries_folders = queries_folders
-        self.jinja_kwargs: dict[str, object] = dict(jinja_kwargs or {})
+        self.template_kwargs: dict[str, object] = dict(template_kwargs or {})
         self.initial_cursor = initial_cursor
 
         self.validate_retention()
@@ -282,7 +282,7 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         --------
         >>> delta = sq.fetch()  # doctest: +SKIP
         """
-        data = self.read_query(jinja_kwargs={"cursor": self.cursor})
+        data = self.read_query(template_kwargs={"cursor": self.cursor})
 
         if len(data) != 0:
             self.cursor_value = BackendOperations.max(data, self.cursor_column, backend=self.backend)
@@ -321,12 +321,12 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         self,
         *,
         default_suffix: str = "sql",
-        jinja_kwargs: Mapping[str, object] | None = None,
+        template_kwargs: Mapping[str, object] | None = None,
     ) -> DataFrameType:
         """
         Render and execute the SQL query template.
 
-        Merges the per-call *jinja_kwargs* over the mapping stored at
+        Merges the per-call *template_kwargs* over the mapping stored at
         construction (per-call keys win), renders the template, and
         passes it to *reader*.
 
@@ -335,7 +335,7 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         default_suffix
             File extension appended when *query* is a filename without
             one.
-        jinja_kwargs
+        template_kwargs
             Per-call Jinja2 template variables merged over the stored
             mapping.
 
@@ -349,13 +349,13 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
 
         Examples
         --------
-        >>> df = sq.read_query(jinja_kwargs={"cursor": "0"})  # doctest: +SKIP
+        >>> df = sq.read_query(template_kwargs={"cursor": "0"})  # doctest: +SKIP
         """
         rendered = render_query(
             self.query,
             queries_folders=self.queries_folders,
             default_suffix=default_suffix,
-            jinja_kwargs={**self.jinja_kwargs, **(jinja_kwargs or {})},
+            template_kwargs={**self.template_kwargs, **(template_kwargs or {})},
         )
 
         return self.reader(
@@ -512,7 +512,7 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         :meth:`~datetime.datetime.strftime` format for window boundaries.
     queries_folders
         Directories searched when *query* is a filename.
-    jinja_kwargs
+    template_kwargs
         Jinja2 template variables rendered into the query template on
         every call.  The keys ``start_timestamp`` and ``end_timestamp``
         are injected per-call by :meth:`fetch` and override any values
@@ -543,7 +543,7 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         update_frequency: Duration | None = None,
         time_format: str = "%Y-%m-%d",
         queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
-        jinja_kwargs: Mapping[str, object] | None = None,
+        template_kwargs: Mapping[str, object] | None = None,
     ) -> None:
         """
         Initialise the windowed query and perform the first fetch.
@@ -580,7 +580,7 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
             boundaries.
         queries_folders
             Directories searched when *query* is a filename.
-        jinja_kwargs
+        template_kwargs
             Jinja2 template variables rendered into the query template
             on every call.  The keys ``start_timestamp`` and
             ``end_timestamp`` are injected per-call by :meth:`fetch`
@@ -611,7 +611,7 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         self.update_frequency = update_frequency
         self.time_format = time_format
         self.queries_folders = queries_folders
-        self.jinja_kwargs: dict[str, object] = dict(jinja_kwargs or {})
+        self.template_kwargs: dict[str, object] = dict(template_kwargs or {})
         self.start_timestamp = start_timestamp
 
         self.validate_retention()
@@ -857,7 +857,7 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         """
         if initial:
             return self.read_query(
-                jinja_kwargs={
+                template_kwargs={
                     "start_timestamp": self._interval.start.strftime(format=self.time_format),
                     "end_timestamp": self._interval.end.strftime(format=self.time_format),
                 },
@@ -877,7 +877,7 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
             )
 
         delta = self.read_query(
-            jinja_kwargs={
+            template_kwargs={
                 "start_timestamp": previous_end.strftime(format=self.time_format),
                 "end_timestamp": now.strftime(format=self.time_format),
             },
@@ -892,12 +892,12 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         /,
         *,
         default_suffix: str = "sql",
-        jinja_kwargs: Mapping[str, object] | None = None,
+        template_kwargs: Mapping[str, object] | None = None,
     ) -> DataFrameType:
         """
         Render and execute the SQL query template.
 
-        Merges the per-call *jinja_kwargs* over the mapping stored at
+        Merges the per-call *template_kwargs* over the mapping stored at
         construction (per-call keys win), renders the template, and
         passes it to *reader*.
 
@@ -906,7 +906,7 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         default_suffix
             File extension appended when *query* is a filename without
             one.
-        jinja_kwargs
+        template_kwargs
             Per-call Jinja2 template variables merged over the stored
             mapping.
 
@@ -921,7 +921,7 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         Examples
         --------
         >>> df = wq.read_query(  # doctest: +SKIP
-        ...     jinja_kwargs={
+        ...     template_kwargs={
         ...         "start_timestamp": "2024-01-01",
         ...         "end_timestamp": "2024-01-02",
         ...     },
@@ -931,7 +931,7 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
             self.query,
             queries_folders=self.queries_folders,
             default_suffix=default_suffix,
-            jinja_kwargs={**self.jinja_kwargs, **(jinja_kwargs or {})},
+            template_kwargs={**self.template_kwargs, **(template_kwargs or {})},
         )
 
         return self.reader(

@@ -33,7 +33,7 @@ Examples
 ...     "SELECT * FROM loans WHERE product = '{{ product }}'",
 ...     reader=engine.read_pandas,
 ...     cache=True,
-...     jinja_kwargs={"product": "personal"},
+...     template_kwargs={"product": "personal"},
 ... )
 >>> df.shape  # doctest: +SKIP
 (3, 1)
@@ -376,7 +376,7 @@ def render_query(
     *,
     queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
     default_suffix: str = "sql",
-    jinja_kwargs: Mapping[str, object] | None = None,
+    template_kwargs: Mapping[str, object] | None = None,
 ) -> str:
     r"""
     Render a query template to a concrete SQL string.
@@ -385,7 +385,7 @@ def render_query(
     :class:`~pathlib.Path` is resolved against ``queries_folders`` via
     :func:`mayutils.data.queries.format_query`, which reads the
     template from disk and renders it with Jinja2 using
-    ``jinja_kwargs``. An :data:`~mayutils.objects.types.SQL` string is
+    ``template_kwargs``. An :data:`~mayutils.objects.types.SQL` string is
     treated as an inline Jinja template and rendered directly via
     :func:`~mayutils.data.queries.templating.render_template`. When a
     plain :class:`str` structurally resembles a file path (detected by
@@ -415,7 +415,7 @@ def render_query(
     default_suffix
         File extension assumed when *query* is a bare filename
         without a suffix. Forwarded to :func:`format_query`.
-    jinja_kwargs
+    template_kwargs
         Mapping of Jinja2 template variable names to their values.
         When ``None`` or omitted the template is rendered with no
         variables, which is only valid for templates that contain no
@@ -428,7 +428,7 @@ def render_query(
         :class:`QueryReader`.
         :class:`~jinja2.exceptions.UndefinedError` propagates from the
         Jinja2 engine when the template references a variable not
-        present in ``jinja_kwargs``.
+        present in ``template_kwargs``.
 
     Warns
     -----
@@ -455,11 +455,11 @@ def render_query(
     --------
     >>> from mayutils.objects.types import SQL
     >>> from mayutils.data.read import render_query
-    >>> render_query(SQL("SELECT * FROM {{ table }}"), jinja_kwargs={"table": "loans"})
+    >>> render_query(SQL("SELECT * FROM {{ table }}"), template_kwargs={"table": "loans"})
     'SELECT * FROM loans'
     >>> render_query(
     ...     SQL("SELECT * FROM {{ table }} WHERE product = '{{ product }}'"),
-    ...     jinja_kwargs={"table": "loans", "product": "personal"},
+    ...     template_kwargs={"table": "loans", "product": "personal"},
     ... )
     "SELECT * FROM loans WHERE product = 'personal'"
     """
@@ -473,24 +473,24 @@ def render_query(
         )
         query = Path(query)
 
-    jinja_kwargs = dict(jinja_kwargs or {})
+    template_kwargs = dict(template_kwargs or {})
 
     if isinstance(query, Path):
-        logger.debug(f"Rendering query file {query} with arguments {sorted(jinja_kwargs)}")
+        logger.debug(f"Rendering query file {query} with arguments {sorted(template_kwargs)}")
 
         return format_query(
             query,
             queries_folders=queries_folders,
             default_suffix=default_suffix,
-            jinja_kwargs=jinja_kwargs,
+            template_kwargs=template_kwargs,
         )
 
-    logger.debug(f"Rendering inline SQL ({len(query)} chars) with arguments {sorted(jinja_kwargs)}")
+    logger.debug(f"Rendering inline SQL ({len(query)} chars) with arguments {sorted(template_kwargs)}")
 
     return render_template(
         query,
         queries_folders=queries_folders,
-        jinja_kwargs=jinja_kwargs,
+        template_kwargs=template_kwargs,
     )
 
 
@@ -509,7 +509,7 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
     cache_folder: Path | str = CACHE_FOLDER,
     queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
     default_suffix: str = "sql",
-    jinja_kwargs: Mapping[str, object] | None = None,
+    template_kwargs: Mapping[str, object] | None = None,
 ) -> DataFrameType:
     r"""
     Execute a SQL query through *reader* with optional caching.
@@ -549,7 +549,7 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
         Directories to search when *query* is a filename.
     default_suffix
         File extension assumed when *query* is a bare filename.
-    jinja_kwargs
+    template_kwargs
         Jinja2 template substitutions forwarded to
         :func:`render_query`.
 
@@ -583,7 +583,7 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
         query,
         queries_folders=queries_folders,
         default_suffix=default_suffix,
-        jinja_kwargs=jinja_kwargs,
+        template_kwargs=template_kwargs,
     )
 
     logger.debug(f"Executing query ({len(rendered_query)} chars) with backend={backend.name!r} and persist={persist!r}")
@@ -656,7 +656,7 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
                     query,
                     cache_description=cache_description,
                     ttl=ttl,
-                    jinja_kwargs=dict(jinja_kwargs or {}),
+                    template_kwargs=dict(template_kwargs or {}),
                     cache_extra=cache_extra,
                     key="",
                 ),
@@ -680,7 +680,7 @@ def stream_query[DataFrameType: DataFrames = pd.DataFrame](
     parse_temporal: bool = True,
     queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
     default_suffix: str = "sql",
-    jinja_kwargs: Mapping[str, object] | None = None,
+    template_kwargs: Mapping[str, object] | None = None,
 ) -> Iterator[DataFrameType]:
     r"""
     Stream a SQL query through *streamer* in DataFrame chunks.
@@ -712,7 +712,7 @@ def stream_query[DataFrameType: DataFrames = pd.DataFrame](
         Directories to search when *query* is a filename.
     default_suffix
         File extension assumed when *query* is a bare filename.
-    jinja_kwargs
+    template_kwargs
         Jinja2 template substitutions forwarded to
         :func:`render_query`.
 
@@ -748,7 +748,7 @@ def stream_query[DataFrameType: DataFrames = pd.DataFrame](
         query,
         queries_folders=queries_folders,
         default_suffix=default_suffix,
-        jinja_kwargs=jinja_kwargs,
+        template_kwargs=template_kwargs,
     )
 
     logger.debug(f"Streaming query ({len(rendered_query)} chars) with backend={backend.name!r}")
@@ -776,7 +776,7 @@ def read_queries[DataFrameType: DataFrames = pd.DataFrame](
     queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
     default_suffix: str = "sql",
     max_workers: int = 4,
-    jinja_kwargs: Mapping[str, object] | None = None,
+    template_kwargs: Mapping[str, object] | None = None,
 ) -> tuple[DataFrameType, ...]:
     r"""
     Execute multiple SQL queries concurrently through *reader*.
@@ -823,7 +823,7 @@ def read_queries[DataFrameType: DataFrames = pd.DataFrame](
         File extension assumed when a query is a bare filename.
     max_workers
         Maximum number of worker threads executing queries in parallel.
-    jinja_kwargs
+    template_kwargs
         Jinja2 template substitutions forwarded to every
         :func:`read_query` call.
 
@@ -870,7 +870,7 @@ def read_queries[DataFrameType: DataFrames = pd.DataFrame](
                 cache_folder=cache_folder,
                 queries_folders=queries_folders,
                 default_suffix=default_suffix,
-                jinja_kwargs=jinja_kwargs,
+                template_kwargs=template_kwargs,
             )
             for query in queries
         )

@@ -498,7 +498,7 @@ class MagicUtils(Magics):
         )
 
         try:
-            jinja_kwargs = {field: user_ns[field] for field in template_fields(query_string)}
+            template_kwargs = {field: user_ns[field] for field in template_fields(query_string)}
         except KeyError as err:
             msg = f"Template field {err.args[0]!r} is not defined in the user namespace"
             raise ValueError(msg) from err
@@ -509,7 +509,7 @@ class MagicUtils(Magics):
             SQL(query_string),
             reader=reader,
             backend=resolve_backend(args.backend),
-            jinja_kwargs=jinja_kwargs,
+            template_kwargs=template_kwargs,
         )
 
         user_ns[args.var_name] = df

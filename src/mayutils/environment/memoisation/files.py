@@ -711,7 +711,7 @@ def make_cache_stem(
     *,
     cache_description: str | None,
     ttl: Duration | None,
-    jinja_kwargs: Mapping[str, object],
+    template_kwargs: Mapping[str, object],
     cache_extra: Mapping[str, object] | None,
     key: str,
 ) -> str:
@@ -731,7 +731,7 @@ def make_cache_stem(
         Explicit description overriding the auto-generated one.
     ttl
         Cache TTL, embedded in the filename when set.
-    jinja_kwargs
+    template_kwargs
         Template substitutions passed to the query.
     cache_extra
         Additional cache key values.
@@ -756,7 +756,7 @@ def make_cache_stem(
     ...     SQL("SELECT * FROM loans"),
     ...     cache_description=None,
     ...     ttl=None,
-    ...     jinja_kwargs={},
+    ...     template_kwargs={},
     ...     cache_extra=None,
     ...     key="abc123",
     ... )
@@ -771,8 +771,8 @@ def make_cache_stem(
     else:
         sections.append(String.to_slug(" ".join(query.split()[:3])))
 
-    if jinja_kwargs:
-        sections.append(String.to_slug("_".join(flatten_dict(jinja_kwargs))))
+    if template_kwargs:
+        sections.append(String.to_slug("_".join(flatten_dict(template_kwargs))))
 
     if cache_extra:
         sections.append(String.to_slug("_".join(flatten_dict(cache_extra))))

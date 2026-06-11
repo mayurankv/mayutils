@@ -164,7 +164,7 @@ class TestMakeCacheStem:
             SQL("SELECT * FROM loans"),
             cache_description=None,
             ttl=None,
-            jinja_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key="abc123",
         )
@@ -178,7 +178,7 @@ class TestMakeCacheStem:
             Path("queries/loans.sql"),
             cache_description=None,
             ttl=None,
-            jinja_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key="k",
         )
@@ -190,7 +190,7 @@ class TestMakeCacheStem:
             SQL("SELECT a FROM b"),
             cache_description="My Report",
             ttl=None,
-            jinja_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key="deadbeef",
         )
@@ -203,7 +203,7 @@ class TestMakeCacheStem:
             SQL("SELECT a FROM b"),
             cache_description="report",
             ttl=Duration(hours=6),
-            jinja_kwargs={"region": "london"},
+            template_kwargs={"region": "london"},
             cache_extra={"version": 2},
             key="deadbeef",
         )
@@ -215,7 +215,7 @@ class TestMakeCacheStem:
             SQL("SELECT 1"),
             cache_description=None,
             ttl=None,
-            jinja_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key="thehash",
         )
