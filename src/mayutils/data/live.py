@@ -32,7 +32,11 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
 
     The query template must contain a ``{{ cursor }}`` placeholder. On
     each update the cursor is rendered into the template and only rows
-    past the previous cursor are fetched.
+    past the previous cursor are fetched. Results are returned exactly
+    as the *reader* produces them: unlike
+    :func:`mayutils.data.read.read_query`, no automatic temporal column
+    parsing is applied, keeping the schema stable across incremental
+    fetches that are concatenated together.
 
     Parameters
     ----------
@@ -471,7 +475,11 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
 
     The query template must contain ``{{ start_timestamp }}`` and
     ``{{ end_timestamp }}`` placeholders. On each update, only the
-    delta since the previous window end is fetched.
+    delta since the previous window end is fetched. Results are
+    returned exactly as the *reader* produces them: unlike
+    :func:`mayutils.data.read.read_query`, no automatic temporal column
+    parsing is applied, keeping the schema stable across windowed
+    fetches that are concatenated together.
 
     When *deduplicate* is ``True``, rows are deduped on *index_column*
     after each concat (keeps last), which handles re-fetched open

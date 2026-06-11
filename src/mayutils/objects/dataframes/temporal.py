@@ -15,7 +15,13 @@ file would create a circular dependency.
 Each call to :func:`parse_temporal_columns` inspects up to
 :data:`TEMPORAL_SAMPLE_SIZE` leading non-null string values per column.
 Columns whose samples do not uniformly match any single temporal pattern
-are left unchanged by the backend implementations.
+are left unchanged by the backend implementations. Because conversion
+strictness differs between libraries, the backends can disagree on edge
+cases: polars' strict ``str.to_time`` rejects mixed-precision time
+columns (e.g. ``"09:30"`` alongside ``"23:59:59"``), leaving them as
+strings, while pandas parses the same column into ``datetime.time``
+objects via ``format="mixed"``. Pin dtypes explicitly downstream where
+cross-backend schema stability matters.
 
 See Also
 --------
