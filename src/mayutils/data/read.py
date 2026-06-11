@@ -51,7 +51,6 @@ from mayutils.data import CACHE_FOLDER
 from mayutils.data.queries import QUERIES_FOLDERS, format_query
 from mayutils.environment.logging import Logger
 from mayutils.environment.memoisation import cache, make_cache_stem
-from mayutils.interfaces.data import get_env_reader, get_env_streamer
 from mayutils.objects.dataframes.backends import Backend, DataFrames, default_backend
 
 with may_require_extras():
@@ -550,6 +549,8 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
     (1, 1)
     """
     if reader is None:
+        from mayutils.interfaces.data import get_env_reader  # noqa: PLC0415
+
         reader = get_env_reader()
 
     backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
@@ -698,6 +699,8 @@ def stream_query[DataFrameType: DataFrames = pd.DataFrame](
     (1, 1)
     """
     if streamer is None:
+        from mayutils.interfaces.data import get_env_streamer  # noqa: PLC0415
+
         streamer = get_env_streamer()
 
     backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
