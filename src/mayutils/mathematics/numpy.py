@@ -90,8 +90,9 @@ def merge_detail(
     """
     Merge a per-group detail dict into the full-batch detail dict.
 
-    For each key in *detail_out*, creates an empty array shaped like
-    *template* on first encounter, then fills the *mask* positions.
+    For each key in *detail_out*, allocates an uninitialised array (via
+    ``np.empty``) shaped like *template* on first encounter, then fills
+    the *mask* positions.
 
     Parameters
     ----------
@@ -108,6 +109,15 @@ def merge_detail(
     -------
     dict[str, NDArray[Any]]
         The accumulator dict, for chaining.
+
+    Notes
+    -----
+    Across accumulated calls, the masks must jointly cover every
+    position: uncovered positions remain uninitialised memory, not
+    zeros. When *values* has the same number of dimensions as
+    *template* the full template shape is trusted, so trailing
+    dimensions must match; otherwise assignment raises a raw NumPy
+    broadcast ``ValueError``.
     """
     with may_require_extras():
         import numpy as np

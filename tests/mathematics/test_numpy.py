@@ -96,6 +96,19 @@ class TestMergeDetail:
         assert detail["m"].shape == (3, 2)
         assert (detail["m"][mask] == np.array([[1.0, 2.0], [5.0, 6.0]])).all()
 
+    def test_mismatched_trailing_dimension_raises(self) -> None:
+        """2-D values whose trailing dimension differs from the template raise ValueError."""
+        template = np.zeros((3, 2))
+        detail: dict[str, np.ndarray] = {}
+        mask = np.array([True, False, True])
+        with pytest.raises(ValueError, match="broadcast"):
+            merge_detail(
+                detail=detail,
+                detail_out={"m": np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])},
+                mask=mask,
+                template=template,
+            )
+
 
 class TestDictionaryLookup:
     """Tests for :func:`dictionary_lookup` — vectorised dict mapping."""
