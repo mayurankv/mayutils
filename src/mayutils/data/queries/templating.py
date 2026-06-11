@@ -132,9 +132,9 @@ def render_template(
     by forwarding all entries in *jinja_kwargs* as template variables.
     The environment uses :class:`~jinja2.StrictUndefined`, so referencing
     a variable not present in *jinja_kwargs* immediately raises
-    :class:`~jinja2.exceptions.UndefinedError`. After rendering, the
-    result is scanned for surviving ``{name}`` substrings matching any
-    key in *jinja_kwargs*; when any are found a
+    :class:`~jinja2.exceptions.UndefinedError`. The original template
+    *text* is also scanned for ``{name}`` substrings matching any key
+    in *jinja_kwargs*; when any are found a
     :class:`TemplateStyleWarning` is emitted to signal an unmigrated
     :meth:`str.format` template.
 
