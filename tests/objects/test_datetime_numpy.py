@@ -5,7 +5,8 @@ from __future__ import annotations
 from datetime import date, datetime
 
 import numpy as np
-from pydantic import BaseModel
+import pytest
+from pydantic import BaseModel, ValidationError
 
 from mayutils.objects.datetime.numpy import NpDatetime64, coerce_datetime64
 
@@ -33,6 +34,11 @@ class TestCoerceDatetime64:
         """ISO 8601 strings are coerced to microsecond ``datetime64``."""
         result = coerce_datetime64("2026-01-01T00:00:00")
         assert result == np.datetime64("2026-01-01", "us")
+
+    def test_none_coerces_to_nat(self) -> None:
+        """None silently becomes NaT — documented footgun, pinned here."""
+        result = coerce_datetime64(None)  # type: ignore[arg-type]
+        assert np.isnat(result)
 
 
 class TestNpDatetime64:
@@ -66,3 +72,22 @@ class TestNpDatetime64:
 
         model = Model(created="2026-01-01T09:00:00")
         assert isinstance(model.created, np.datetime64)
+
+    def test_junk_input_raises_validation_error(self) -> None:
+        """Unparseable input surfaces as pydantic ValidationError, not a numpy error."""
+
+        class Model(BaseModel):
+            created: NpDatetime64
+
+        with pytest.raises(ValidationError):
+            Model(created=object())
+
+    def test_serialised_value_round_trips(self) -> None:
+        """model_dump output feeds back in and compares equal."""
+
+        class Model(BaseModel):
+            created: NpDatetime64
+
+        model = Model(created="2026-01-01T09:00:00.123456")
+        rebuilt = Model(**model.model_dump())
+        assert rebuilt.created == model.created

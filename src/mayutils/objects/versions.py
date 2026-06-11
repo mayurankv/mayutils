@@ -172,6 +172,10 @@ def discover_versioned_modules(
     ----------
     directory : Path
         Parent directory containing ``v0/``, ``v1/``, ... sub-directories.
+        Version sub-directories must be named ``v<int>`` (e.g. ``v0``,
+        ``v1``); a directory whose name starts with ``v`` but is not
+        followed by a valid integer (e.g. ``vendor/``) will raise
+        ``ValueError`` when the version number is extracted.
     module_prefix : str
         Dotted import prefix for the versioned modules (e.g. ``"myapp.plugins"``).
     module_filename : str
@@ -242,7 +246,8 @@ def resolve_module_version_index(
     -------
     NDArray[np.intp]
         Index into *implemented_timestamps* for each element, selecting
-        the most recent version implemented on or before that timestamp.
+        the most recent version implemented on or before that timestamp,
+        clamped to the earliest version for timestamps preceding all versions.
     """
     with may_require_extras():
         import numpy as np
@@ -363,7 +368,8 @@ def resolve_version_indices(
     -------
     NDArray[np.intp]
         Index (into the date-sorted keys of *version_values*) of the
-        active version for each element.
+        active version for each element, clamped to the earliest version
+        for timestamps preceding all versions.
     """
     with may_require_extras():
         import numpy as np

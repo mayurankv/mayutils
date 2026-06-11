@@ -51,6 +51,22 @@ def coerce_datetime64(
     -------
     np.datetime64
         Microsecond-resolution timestamp.
+
+    Notes
+    -----
+    Three non-obvious coercion behaviours worth knowing:
+
+    * **None → NaT**: passing ``None`` does not raise; numpy silently
+      produces ``NaT``.  A non-optional Pydantic field using
+      :data:`NpDatetime64` will therefore accept ``None`` and store
+      ``NaT`` without any validation error.
+    * **int → microsecond epoch offset**: an integer input is interpreted
+      by numpy as a number of microseconds since the Unix epoch
+      (1970-01-01T00:00:00 UTC), matching the ``"us"`` unit passed to
+      the constructor.
+    * **higher-resolution datetime64 truncated**: a ``datetime64[ns]``
+      (or finer) value is cast to ``datetime64[us]``, discarding
+      sub-microsecond precision without warning.
     """
     if isinstance(v, np.datetime64):
         return v.astype("datetime64[us]")
