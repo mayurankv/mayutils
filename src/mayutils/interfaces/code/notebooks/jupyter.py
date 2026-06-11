@@ -173,6 +173,12 @@ def template_fields(
     (``{{ tables[0] }}``) resolve to the variable that must exist in
     the namespace.
 
+    :func:`jinja2.meta.find_undeclared_variables` does not traverse
+    ``{% include %}`` or ``{% import %}`` directives, so variables
+    referenced only inside included fragments are not discovered here
+    and will surface as a Jinja ``UndefinedError`` at render time
+    instead.
+
     Parameters
     ----------
     query_string

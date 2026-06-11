@@ -318,6 +318,37 @@ class TestStreamingPolars:
         assert view.cursor_value == 5  # noqa: PLR2004
 
 
+class TestStreamingJinjaKwargsMerge:
+    """Verify that fetch injects ``cursor`` and overrides any stored value."""
+
+    def test_cursor_key_wins_over_stored_value(self) -> None:
+        """Internal cursor injection overrides a ``cursor`` key in jinja_kwargs."""
+        df = pd.DataFrame({"id": [1, 2, 3]})
+        rendered_queries: list[str] = []
+        original_reader = SequentialReader(df)
+
+        def capturing_reader(
+            query: str,
+            /,
+            *,
+            backend: Any = None,  # noqa: ANN401, ARG001
+        ) -> Any:  # noqa: ANN401
+            rendered_queries.append(query)
+            return original_reader(query)
+
+        StreamingQuery(
+            SQL("SELECT * FROM {{ table }} WHERE id > {{ cursor }}"),
+            cursor_column="id",
+            initial_cursor=0,
+            reader=capturing_reader,
+            jinja_kwargs={"table": "loans", "cursor": "SHADOWED"},
+        )
+
+        assert len(rendered_queries) == 1
+        assert "FROM loans" in rendered_queries[0]
+        assert "SHADOWED" not in rendered_queries[0]
+
+
 # ------------------------------------------------------------------
 # WindowedQuery
 # ------------------------------------------------------------------
@@ -586,3 +617,36 @@ class TestWindowedPolars:
         assert view.data.height == 2  # noqa: PLR2004
         view.update(force=True)
         assert view.data.height == 3  # noqa: PLR2004
+
+
+class TestWindowedJinjaKwargsMerge:
+    """Verify that fetch injects window boundaries and overrides stored values."""
+
+    def test_timestamp_keys_win_over_stored_values(self) -> None:
+        """Internal timestamp injection overrides shadowed keys in jinja_kwargs."""
+        df = pd.DataFrame({"ts": pd.to_datetime(["2026-01-01"]), "c": [1]})
+        rendered_queries: list[str] = []
+        original_reader = SequentialReader(df)
+
+        def capturing_reader(
+            query: str,
+            /,
+            *,
+            backend: Any = None,  # noqa: ANN401, ARG001
+        ) -> Any:  # noqa: ANN401
+            rendered_queries.append(query)
+            return original_reader(query)
+
+        WindowedQuery(
+            SQL("SELECT * FROM {{ table }} WHERE ts BETWEEN '{{ start_timestamp }}' AND '{{ end_timestamp }}'"),
+            index_column="ts",
+            start_timestamp=DateTime(2026, 1, 1, tzinfo=UTC),
+            reader=capturing_reader,
+            time_format="%Y-%m-%d",
+            jinja_kwargs={"table": "loans", "start_timestamp": "SHADOWED"},
+        )
+
+        assert len(rendered_queries) == 1
+        assert "FROM loans" in rendered_queries[0]
+        assert "SHADOWED" not in rendered_queries[0]
+        assert "2026-01-01" in rendered_queries[0]

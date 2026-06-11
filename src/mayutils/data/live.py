@@ -59,7 +59,8 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         Directories searched when *query* is a filename.
     jinja_kwargs
         Jinja2 template variables rendered into the query template on
-        every call.
+        every call.  The key ``cursor`` is injected per-call by
+        :meth:`fetch` and overrides any value stored here.
 
     See Also
     --------
@@ -119,7 +120,8 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
             Directories searched when *query* is a filename.
         jinja_kwargs
             Jinja2 template variables rendered into the query template
-            on every call.
+            on every call.  The key ``cursor`` is injected per-call by
+            :meth:`fetch` and overrides any value stored here.
 
         See Also
         --------
@@ -504,7 +506,9 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         Directories searched when *query* is a filename.
     jinja_kwargs
         Jinja2 template variables rendered into the query template on
-        every call.
+        every call.  The keys ``start_timestamp`` and ``end_timestamp``
+        are injected per-call by :meth:`fetch` and override any values
+        stored here.
 
     See Also
     --------
@@ -570,7 +574,9 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
             Directories searched when *query* is a filename.
         jinja_kwargs
             Jinja2 template variables rendered into the query template
-            on every call.
+            on every call.  The keys ``start_timestamp`` and
+            ``end_timestamp`` are injected per-call by :meth:`fetch`
+            and override any values stored here.
 
         See Also
         --------
