@@ -9,7 +9,6 @@ from mayutils.data.queries import QUERIES_FOLDERS
 from mayutils.data.read import render_query
 from mayutils.environment.logging import Logger
 from mayutils.objects.dataframes.backends import Backend, BackendOperations, DataFrames, default_backend
-from mayutils.objects.datetime import DateTime, Interval
 
 with may_require_extras():
     import pandas as pd
@@ -19,7 +18,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from mayutils.data.read import QueryReader
-    from mayutils.objects.datetime import Duration
+    from mayutils.objects.datetime import DateTime, Duration, Interval
     from mayutils.objects.types import SQL
 
 
@@ -155,6 +154,8 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
 
         self.validate_retention()
 
+        from mayutils.objects.datetime import DateTime
+
         self.cursor_value: Any = initial_cursor
         self.cursor_is_datetime: bool = hasattr(initial_cursor, "strftime")
         self._data: DataFrameType = self.fetch()
@@ -216,6 +217,8 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         if not self.should_update(force=force):
             return self
 
+        from mayutils.objects.datetime import DateTime
+
         snapshot = self.data
         try:
             delta = self.fetch()
@@ -256,6 +259,8 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         --------
         >>> sq.reset()  # doctest: +SKIP
         """
+        from mayutils.objects.datetime import DateTime
+
         self._data = self.fetch()
         self.last_updated = DateTime.now()
 
@@ -396,6 +401,8 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         if force or self.update_frequency is None:
             return True
 
+        from mayutils.objects.datetime import DateTime
+
         return (DateTime.now() - self.last_updated) > self.update_frequency
 
     def apply_retention(
@@ -418,6 +425,8 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         if self.max_age is not None and len(self.data) > 0:
             newest = BackendOperations.max(self.data, self.cursor_column, backend=self.backend)
             if hasattr(newest, "strftime"):
+                from mayutils.objects.datetime import DateTime
+
                 try:
                     cutoff = DateTime.parse(cast("DateTime", newest).strftime(self.time_format)) - self.max_age
 
@@ -616,6 +625,8 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
 
         self.validate_retention()
 
+        from mayutils.objects.datetime import DateTime, Interval
+
         self._interval: Interval[DateTime] = Interval(
             start=start_timestamp,
             end=DateTime.now(),
@@ -755,6 +766,8 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         if not self.should_update(force=force):
             return self
 
+        from mayutils.objects.datetime import DateTime
+
         snapshot = self.data
         snapshot_interval = self.interval
         try:
@@ -811,6 +824,8 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         --------
         >>> wq.reset()  # doctest: +SKIP
         """
+        from mayutils.objects.datetime import DateTime, Interval
+
         if start_timestamp is not None:
             self.start_timestamp = start_timestamp
 
@@ -862,6 +877,8 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
                     "end_timestamp": self._interval.end.strftime(format=self.time_format),
                 },
             )
+
+        from mayutils.objects.datetime import DateTime, Interval
 
         now = DateTime.now()
         previous_end = self._interval.end
@@ -972,6 +989,8 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         if force or self.update_frequency is None:
             return True
 
+        from mayutils.objects.datetime import DateTime
+
         return (DateTime.now() - self.last_updated) > self.update_frequency
 
     def apply_retention(
@@ -994,6 +1013,8 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         if self.max_age is not None and len(self.data) > 0:
             newest = BackendOperations.max(self.data, self.index_column, backend=self.backend)
             if hasattr(newest, "strftime"):
+                from mayutils.objects.datetime import DateTime
+
                 try:
                     cutoff = DateTime.parse(cast("DateTime", newest).strftime(self.time_format)) - self.max_age
 

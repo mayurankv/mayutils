@@ -149,7 +149,7 @@ class TestLoadSecretsDiscovery:
         """With ``env_file=None`` the path is resolved via :func:`dotenv.find_dotenv`."""
         monkeypatch.delenv("DISCOVERED", raising=False)
         discovered = write_env(tmp_path / ".env", "DISCOVERED=yes\n")
-        monkeypatch.setattr(secrets, "find_dotenv", lambda: str(discovered))
+        monkeypatch.setattr("dotenv.find_dotenv", lambda: str(discovered))
 
         assert load_secrets() is True
         import os
@@ -161,6 +161,6 @@ class TestLoadSecretsDiscovery:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """When discovery finds nothing the loader degrades to a ``False`` no-op."""
-        monkeypatch.setattr(secrets, "find_dotenv", lambda: "")
+        monkeypatch.setattr("dotenv.find_dotenv", lambda: "")
 
         assert load_secrets() is False

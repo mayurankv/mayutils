@@ -3,7 +3,6 @@
 from typing import Any, ClassVar
 
 from mayutils.core.extras import may_require_extras
-from mayutils.objects.datetime import DateTime
 from mayutils.visualisation.graphs.plotly.traces.types import TraceType
 
 with may_require_extras():
@@ -78,6 +77,8 @@ class Null(go.Scatter):
         >>> trace.meta
         <TraceType.NULL: 'null'>
         """
+        from mayutils.objects.datetime import DateTime
+
         if "meta" in kwargs:
             msg = "The 'meta' argument is reserved for internal use and cannot be set by the user."
             raise ValueError(msg)

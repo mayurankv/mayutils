@@ -16,13 +16,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from mayutils.objects.datetime import DateTime
 from mayutils.objects.hashing import hash_inputs
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-    from mayutils.objects.datetime import Duration
+    from mayutils.objects.datetime import DateTime, Duration
 
 
 def make_cache_key(
@@ -116,7 +115,12 @@ def is_expired(
     >>> is_expired(future)
     False
     """
-    return expires_at is not None and expires_at <= DateTime.now()
+    if expires_at is None:
+        return False
+
+    from mayutils.objects.datetime import DateTime
+
+    return expires_at <= DateTime.now()
 
 
 def expiry(
@@ -157,6 +161,8 @@ def expiry(
     """
     if ttl is None:
         return None
+
+    from mayutils.objects.datetime import DateTime
 
     return DateTime.now() + ttl
 

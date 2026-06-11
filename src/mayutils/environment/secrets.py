@@ -33,9 +33,6 @@ from pathlib import Path
 
 from mayutils.core.extras import may_require_extras
 
-with may_require_extras():
-    from dotenv import find_dotenv, load_dotenv
-
 
 def load_secrets(
     *,
@@ -92,6 +89,9 @@ def load_secrets(
 
     >>> load_secrets(env_file=".env.local")  # doctest: +SKIP
     """
+    with may_require_extras():
+        from dotenv import find_dotenv, load_dotenv
+
     if env_file is None:
         env_file = find_dotenv()
 

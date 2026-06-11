@@ -6,7 +6,6 @@ from math import ceil, isqrt
 from typing import Any, Literal, Self, cast
 
 from mayutils.core.extras import may_require_extras
-from mayutils.objects.datetime import DateTime
 
 with may_require_extras():
     import datetime
@@ -765,6 +764,8 @@ class SubPlotConfig:
         >>> config.infer_x_datetime()
         True
         """
+        from mayutils.objects.datetime import DateTime
+
         for row_configs in self.plots:
             for plot_config in row_configs:
                 if plot_config is None:
