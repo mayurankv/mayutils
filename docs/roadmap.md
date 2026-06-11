@@ -2,6 +2,14 @@
 
 Organised by package layout (`src/mayutils/*`). Priority tags: `#critical`, `#high`, `#medium`, `#low`; difficulty tags: `#hard`.
 
+## `core`
+
+### Lazy imports (PEP 810)
+
+Priority: #low
+
+- [ ] Adopt [PEP 810 – Lazy imports](https://peps.python.org/pep-0810/) once it lands in CPython. PEP 810 proposes a stdlib `importlib.lazy` mechanism (building on the earlier `importlib.util.LazyLoader` and the `lazy-loader` / `slothy` ecosystem) that defers execution of a module's body until one of its attributes is accessed. This would let `mayutils` drop the `may_require_extras` guard boilerplate for optional extras and instead rely on the interpreter to defer the import cost — only loading a heavy dependency (e.g. `snowflake-connector`, `plotly`) when the caller first touches it. Track the PEP status; revisit when the reference implementation ships.
+
 ## `data`
 
 ### Async reading and streaming
