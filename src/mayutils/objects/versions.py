@@ -9,7 +9,9 @@ distribution and is guarded by
 :func:`mayutils.core.extras.may_require_extras` so a missing install
 surfaces an actionable hint instead of a bare ``ImportError``. PEP 440
 ordering rules govern how the resulting versions compare against
-pre-release or post-release siblings.
+pre-release or post-release siblings. Also provides discovery and
+resolution of time-effective versioned modules and values, vectorised
+over timestamp arrays.
 
 See Also
 --------
@@ -30,8 +32,22 @@ Examples
 '1.3.0'
 """
 
+from __future__ import annotations
+
+import importlib
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
+
 from mayutils.core.extras import may_require_extras
 from mayutils.environment.logging import Logger
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
+    from types import ModuleType
+
+    import numpy as np
+    from numpy.typing import NDArray
 
 with may_require_extras():
     from packaging.version import Version
@@ -121,3 +137,251 @@ def bump_version_string(
 
     msg = f"Unknown part to bump: {bump}"
     raise ValueError(msg)
+
+
+@dataclass(frozen=True)
+class VersionedModule:
+    """
+    A module discovered under a ``v<N>/`` directory.
+
+    Attributes
+    ----------
+    module : ModuleType
+        The imported Python module.
+    version : int
+        Integer version extracted from the directory name (e.g. ``0`` from ``v0/``).
+    implemented_timestamp : np.datetime64
+        Value of the module's ``__implemented__`` attribute, used for routing.
+    """
+
+    module: ModuleType
+    version: int
+    implemented_timestamp: np.datetime64
+
+
+def discover_versioned_modules(
+    *,
+    directory: Path,
+    module_prefix: str,
+    module_filename: str,
+) -> list[VersionedModule] | None:
+    """
+    Scan ``{directory}/v*/module_filename`` for ``__implemented__`` timestamps.
+
+    Parameters
+    ----------
+    directory : Path
+        Parent directory containing ``v0/``, ``v1/``, ... sub-directories.
+    module_prefix : str
+        Dotted import prefix for the versioned modules (e.g. ``"myapp.plugins"``).
+    module_filename : str
+        Filename to look for inside each version directory (e.g. ``"plugin.py"``).
+
+    Returns
+    -------
+    list[VersionedModule] | None
+        Modules sorted by ``__implemented__`` timestamp, or ``None`` if
+        *directory* doesn't exist or contains no valid versions.
+    """
+    with may_require_extras():
+        import numpy as np
+
+    if not directory.is_dir():
+        return None
+
+    versions: list[VersionedModule] = []
+
+    for version_dir in sorted(directory.iterdir()):
+        if not version_dir.is_dir() or not version_dir.name.startswith("v"):
+            continue
+
+        module_file = version_dir / module_filename
+        if not module_file.exists():
+            continue
+
+        module_path = f"{module_prefix}.{version_dir.name}.{module_filename.removesuffix('.py')}"
+        mod = importlib.import_module(module_path)
+
+        implemented_str = getattr(mod, "__implemented__", None)
+        if implemented_str is None:
+            continue
+
+        versions.append(
+            VersionedModule(
+                module=mod,
+                version=int(version_dir.name[1:]),
+                implemented_timestamp=np.datetime64(implemented_str),
+            ),
+        )
+
+    if len(versions) == 0:
+        return None
+
+    return sorted(
+        versions,
+        key=lambda v: (int(v.implemented_timestamp.astype(np.int64)), v.version),
+    )
+
+
+def resolve_module_version_index(
+    *,
+    implemented_timestamps: NDArray[np.datetime64],
+    timestamps: NDArray[np.datetime64],
+) -> NDArray[np.intp]:
+    """
+    Return the per-element module index into a sorted version list (vectorised).
+
+    Parameters
+    ----------
+    implemented_timestamps : NDArray[np.datetime64]
+        Sorted array of ``__implemented__`` timestamps from discovered modules.
+    timestamps : NDArray[np.datetime64]
+        Timestamp for each element.
+
+    Returns
+    -------
+    NDArray[np.intp]
+        Index into *implemented_timestamps* for each element, selecting
+        the most recent version implemented on or before that timestamp.
+    """
+    with may_require_extras():
+        import numpy as np
+
+    indices = (
+        np.searchsorted(
+            implemented_timestamps,
+            timestamps,
+            side="right",
+        )
+        - 1
+    )
+    return np.clip(indices, 0, len(implemented_timestamps) - 1)
+
+
+def resolve_versions(
+    *,
+    versions: list[VersionedModule],
+    timestamps: NDArray[np.datetime64],
+) -> NDArray[np.intp]:
+    """
+    Resolve the active module version number per element.
+
+    Parameters
+    ----------
+    versions : list[VersionedModule]
+        Available module versions, sorted by implementation timestamp.
+    timestamps : NDArray[np.datetime64]
+        Timestamp per element.
+
+    Returns
+    -------
+    NDArray[np.intp]
+        Version number per element.
+    """
+    with may_require_extras():
+        import numpy as np
+
+    raw_indices = resolve_module_version_index(
+        implemented_timestamps=np.asarray(
+            [v.implemented_timestamp for v in versions],
+            dtype="datetime64[us]",
+        ),
+        timestamps=timestamps,
+    )
+
+    return np.asarray(
+        [v.version for v in versions],
+        dtype=np.intp,
+    )[raw_indices]
+
+
+def apply_func_to_versioned_value(
+    *,
+    array: NDArray[Any],
+    timestamps: NDArray[np.datetime64],
+    versioned_value: dict[np.datetime64, Any],
+    func: Callable[[NDArray[Any], Any], NDArray[Any]],
+    dtype: type[np.bool_ | np.intp | np.int64 | np.float64 | np.str_] | str = "bool",
+) -> NDArray[Any]:
+    """
+    Apply a function to each element using the time-appropriate versioned parameter.
+
+    Parameters
+    ----------
+    array : NDArray[Any]
+        Input array to process.
+    timestamps : NDArray[np.datetime64]
+        Timestamp per element used to resolve the active version.
+    versioned_value : dict[np.datetime64, Any]
+        Mapping from effective date to the parameter value for that version.
+        Insertion order does not matter; values are resolved against
+        date-sorted keys.
+    func : Callable[[NDArray[Any], Any], NDArray[Any]]
+        Function to apply, called with (array_slice, version_value) per version group.
+    dtype : type or str, optional
+        Data type of the output array, by default ``"bool"``.
+
+    Returns
+    -------
+    NDArray[Any]
+        Result array with the same shape as ``array``.
+    """
+    with may_require_extras():
+        import numpy as np
+
+    version_indices = resolve_version_indices(
+        version_values=versioned_value,
+        timestamps=timestamps,
+    )
+
+    sorted_values = [value for _, value in sorted(versioned_value.items())]
+
+    versioned_return = np.empty(array.shape, dtype=dtype)
+    for version_index in np.unique(version_indices):
+        mask = version_indices == version_index
+        versioned_return[mask] = func(array[mask], sorted_values[version_index])
+
+    return versioned_return
+
+
+def resolve_version_indices(
+    *,
+    version_values: dict[np.datetime64, Any],
+    timestamps: NDArray[np.datetime64],
+) -> NDArray[np.intp]:
+    """
+    Find the index of the most recent config date <= each timestamp.
+
+    Parameters
+    ----------
+    version_values : dict[np.datetime64, Any]
+        Mapping from effective date to a versioned parameter value.
+    timestamps : NDArray[np.datetime64]
+        Timestamp for each element.
+
+    Returns
+    -------
+    NDArray[np.intp]
+        Index (into the date-sorted keys of *version_values*) of the
+        active version for each element.
+    """
+    with may_require_extras():
+        import numpy as np
+
+    sorted_version_values = dict(sorted(version_values.items()))
+    indices = (
+        np.searchsorted(
+            np.asarray(
+                list(sorted_version_values.keys()),
+                dtype="datetime64[us]",
+            ),
+            timestamps,
+            side="right",
+        )
+        - 1
+    )
+    return np.clip(
+        indices,
+        0,
+        len(version_values) - 1,
+    )
