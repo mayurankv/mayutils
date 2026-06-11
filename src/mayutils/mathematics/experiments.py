@@ -43,6 +43,10 @@ def hash_to_experiment_value(
     Uses SHA-256 of ``"{experiment_name}_{id}"`` to produce a
     reproducible hash that is independent across experiments.
 
+    The SHA-256 digest is converted to an integer and taken modulo
+    *max_value*, guaranteeing a stable, pseudo-random integer for each
+    (experiment_name, id) pair regardless of execution environment.
+
     Parameters
     ----------
     ids : ArrayLike | NDArray[np.int64]
@@ -56,6 +60,18 @@ def hash_to_experiment_value(
     -------
     NDArray[np.int64]
         Hash value per identifier in ``[0, max_value)``.
+
+    See Also
+    --------
+    get_experiment_outcomes : Maps hash values to named experiment arms.
+    assign_experiment : End-to-end assignment combining hashing and outcome resolution.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from mayutils.mathematics.experiments import hash_to_experiment_value
+    >>> hash_to_experiment_value(ids=[1, 2, 3], experiment_name="test", max_value=100)
+    array([59, 63,  9])
     """
     with may_require_extras():
         import numpy as np
@@ -85,6 +101,10 @@ def get_experiment_outcomes(
     """
     Map hashed experiment values to named outcome buckets by proportion.
 
+    Normalises the proportions in *version_value*, computes cumulative
+    thresholds scaled to *max_value*, and uses ``np.searchsorted`` to
+    assign each hash value to the appropriate arm name.
+
     Parameters
     ----------
     array : NDArray[np.int64]
@@ -99,6 +119,20 @@ def get_experiment_outcomes(
     -------
     NDArray[np.str_]
         Experiment outcome name assigned to each subject.
+
+    See Also
+    --------
+    hash_to_experiment_value : Produces the integer hash array consumed by this function.
+    assign_experiment : Combines hashing and outcome resolution into a single call.
+    mayutils.objects.versions.apply_func_to_versioned_value : Applies versioned functions over timestamped arrays.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from mayutils.mathematics.experiments import get_experiment_outcomes
+    >>> config = (("control", 0.5), ("treatment", 0.5))
+    >>> get_experiment_outcomes(array=np.array([0, 25, 50, 75], dtype=np.int64), version_value=config, max_value=100)
+    array(['control', 'control', 'treatment', 'treatment'], dtype='<U9')
     """
     with may_require_extras():
         import numpy as np
@@ -130,6 +164,11 @@ def assign_experiment(
     Hashes each identifier, resolves the time-appropriate experiment
     config, and maps hash values to named outcome buckets.
 
+    Combines :func:`hash_to_experiment_value` with
+    :func:`mayutils.objects.versions.apply_func_to_versioned_value` so
+    that arm configurations can change over time without altering
+    existing subject assignments for dates already covered.
+
     Parameters
     ----------
     experiment_name : str
@@ -148,6 +187,30 @@ def assign_experiment(
     -------
     NDArray[np.str_]
         Experiment arm name assigned to each subject.
+
+    See Also
+    --------
+    parse_experiments : Assign outcomes for all experiments in the registry at once.
+    hash_to_experiment_value : Produces the per-subject hash values used internally.
+    get_experiment_outcomes : Maps hash values to arm names for a single version config.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from mayutils.mathematics.experiments import assign_experiment
+    >>> experiments = {
+    ...     "my_exp": {
+    ...         np.datetime64("2026-01-01"): (("control", 0.5), ("treatment", 0.5)),
+    ...     }
+    ... }
+    >>> assign_experiment(
+    ...     experiment_name="my_exp",
+    ...     ids=np.array([1, 2], dtype=np.int64),
+    ...     timestamps=np.array(["2026-02-01", "2026-02-01"], dtype="datetime64[us]"),
+    ...     max_value=100,
+    ...     experiments=experiments,
+    ... )
+    array(['treatment', 'treatment'], dtype='<U9')
     """
     with may_require_extras():
         import numpy as np
@@ -192,6 +255,10 @@ def parse_experiments(
     The experiment config is selected based on the most recent
     effective date <= the subject timestamp.
 
+    Iterates over all experiments in the registry and delegates to
+    :func:`assign_experiment` for each, returning a dict keyed by
+    experiment name.
+
     Parameters
     ----------
     ids : ArrayLike | NDArray[np.int64]
@@ -208,6 +275,29 @@ def parse_experiments(
     -------
     ExperimentsOutcomes
         Mapping from experiment name to an array of assigned arm names.
+
+    See Also
+    --------
+    assign_experiment : Assigns outcomes for a single named experiment.
+    hash_to_experiment_value : Underlying hash function providing per-experiment isolation.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from mayutils.mathematics.experiments import parse_experiments
+    >>> experiments = {
+    ...     "my_exp": {
+    ...         np.datetime64("2026-01-01"): (("control", 0.5), ("treatment", 0.5)),
+    ...     }
+    ... }
+    >>> result = parse_experiments(
+    ...     ids=np.array([1, 2], dtype=np.int64),
+    ...     timestamps=np.array(["2026-02-01", "2026-02-01"], dtype="datetime64[us]"),
+    ...     experiments=experiments,
+    ...     max_value=100,
+    ... )
+    >>> result["my_exp"]
+    array(['treatment', 'treatment'], dtype='<U9')
     """
     with may_require_extras():
         import numpy as np

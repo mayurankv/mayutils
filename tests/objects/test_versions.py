@@ -7,6 +7,8 @@ when it is not importable.
 
 from __future__ import annotations
 
+import importlib
+import sys
 import types
 from typing import TYPE_CHECKING
 
@@ -205,7 +207,8 @@ class TestDiscoverVersionedModules:
                 f'__implemented__ = "{implemented} 00:00:00"\n',
             )
         (package / "__init__.py").write_text("")
-        monkeypatch.syspath_prepend(str(tmp_path))
+        monkeypatch.setattr(sys, "path", [str(tmp_path), *sys.path])
+        importlib.invalidate_caches()
         return "fake_plugins"
 
     def test_discovers_versions_sorted_by_timestamp(

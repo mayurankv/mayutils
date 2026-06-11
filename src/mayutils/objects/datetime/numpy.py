@@ -40,6 +40,12 @@ def coerce_datetime64(
     """
     Coerce any datetime-like value to ``np.datetime64[us]``.
 
+    Normalises heterogeneous temporal inputs — Python ``datetime``
+    and ``date`` objects, ISO strings, integers, bytes, and already-typed
+    ``datetime64`` values — to a single microsecond-resolution
+    ``np.datetime64`` so downstream array operations work at a consistent
+    unit.
+
     Parameters
     ----------
     v : np.datetime64 | datetime | date | str | int | bytes
@@ -51,6 +57,17 @@ def coerce_datetime64(
     -------
     np.datetime64
         Microsecond-resolution timestamp.
+
+    See Also
+    --------
+    numpy.datetime64 : Target dtype for all coercions in this function.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from mayutils.objects.datetime.numpy import coerce_datetime64
+    >>> coerce_datetime64("2026-01-15")
+    np.datetime64('2026-01-15T00:00:00.000000')
 
     Notes
     -----

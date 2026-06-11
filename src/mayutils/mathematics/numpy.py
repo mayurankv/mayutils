@@ -48,6 +48,10 @@ def broadcast_to_array(
     Uses ``object`` dtype only when the value is ``None``; otherwise
     lets NumPy infer the appropriate dtype from the value.
 
+    This is the canonical way to normalise caller-supplied constants or
+    sequences into a fixed-length array before passing them alongside
+    per-element data to vectorised operations.
+
     Parameters
     ----------
     value : ArrayLike | NDArray[Any] | None
@@ -61,6 +65,19 @@ def broadcast_to_array(
     -------
     NDArray[Any]
         Array of length *n*.
+
+    See Also
+    --------
+    merge_detail : Merge per-group detail arrays into a full-batch dict.
+    dictionary_lookup : Map each element through a dict with a default.
+    check_lengths : Verify that all arrays share the same first dimension.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from mayutils.mathematics.numpy import broadcast_to_array
+    >>> broadcast_to_array(value=5.0, n=3)
+    array([5., 5., 5.])
     """
     with may_require_extras():
         import numpy as np
@@ -94,6 +111,9 @@ def merge_detail(
     ``np.empty``) shaped like *template* on first encounter, then fills
     the *mask* positions.
 
+    Call this function once per group in a loop to scatter group results
+    back into a full-batch accumulator dict without copying the template.
+
     Parameters
     ----------
     detail : dict[str, NDArray[Any]]
@@ -109,6 +129,24 @@ def merge_detail(
     -------
     dict[str, NDArray[Any]]
         The accumulator dict, for chaining.
+
+    See Also
+    --------
+    broadcast_to_array : Broadcast a scalar or sequence to a fixed-length array.
+    check_lengths : Verify that all arrays share the same first dimension.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from mayutils.mathematics.numpy import merge_detail
+    >>> template = np.zeros(4, dtype=np.float64)
+    >>> mask0 = np.array([True, True, False, False])
+    >>> mask1 = np.array([False, False, True, True])
+    >>> detail: dict = {}
+    >>> merge_detail(detail=detail, detail_out={"score": np.array([1.0, 2.0])}, mask=mask0, template=template)
+    {'score': array([1., 2., 0., 0.])}
+    >>> merge_detail(detail=detail, detail_out={"score": np.array([3.0, 4.0])}, mask=mask1, template=template)
+    {'score': array([1., 2., 3., 4.])}
 
     Notes
     -----
@@ -140,6 +178,10 @@ def dictionary_lookup(
     """
     Map each element of *lookup* through *dictionary* with a default.
 
+    Vectorises a plain Python ``dict.get`` over an array of keys,
+    producing a NumPy array of mapped values suitable for downstream
+    array operations.
+
     Parameters
     ----------
     lookup : ArrayLike | NDArray[Any]
@@ -153,6 +195,22 @@ def dictionary_lookup(
     -------
     NDArray[Any]
         Array of mapped values, same length as *lookup*.
+
+    See Also
+    --------
+    broadcast_to_array : Broadcast a scalar or sequence to a fixed-length array.
+    merge_detail : Merge per-group detail arrays into a full-batch dict.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from mayutils.mathematics.numpy import dictionary_lookup
+    >>> dictionary_lookup(
+    ...     lookup=["a", "b", "c"],
+    ...     dictionary={"a": 1, "b": 2},
+    ...     default_value=0,
+    ... )
+    array([1, 2, 0])
     """
     with may_require_extras():
         import numpy as np
@@ -175,6 +233,10 @@ def check_lengths(
     """
     Verify that all arrays have the same first-dimension length.
 
+    Use this as a defensive guard at function boundaries to surface
+    length mismatches with informative names before NumPy broadcasting
+    silently accepts or raises an opaque error.
+
     Parameters
     ----------
     **arrays : NDArray[Any]
@@ -184,6 +246,19 @@ def check_lengths(
     ------
     ValueError
         If any array's first dimension differs from the others.
+
+    See Also
+    --------
+    broadcast_to_array : Broadcast a scalar or sequence to a fixed-length array.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from mayutils.mathematics.numpy import check_lengths
+    >>> check_lengths(a=np.array([1, 2, 3]), b=np.array([4, 5, 6]))
+    >>> import pytest
+    >>> with pytest.raises(ValueError, match="length mismatch"):
+    ...     check_lengths(a=np.array([1, 2]), b=np.array([1, 2, 3]))
     """
     lengths = {name: arr.shape[0] for name, arr in arrays.items()}
     unique = set(lengths.values())

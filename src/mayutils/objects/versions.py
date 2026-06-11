@@ -144,6 +144,10 @@ class VersionedModule:
     """
     A module discovered under a ``v<N>/`` directory.
 
+    Carries the imported module object alongside the integer version and
+    the ``__implemented__`` timestamp that governs when it becomes active,
+    so callers can resolve which module to use for a given point in time.
+
     Attributes
     ----------
     module : ModuleType
@@ -152,6 +156,25 @@ class VersionedModule:
         Integer version extracted from the directory name (e.g. ``0`` from ``v0/``).
     implemented_timestamp : np.datetime64
         Value of the module's ``__implemented__`` attribute, used for routing.
+
+    See Also
+    --------
+    discover_versioned_modules : Scan a directory tree and return a list of VersionedModule objects.
+    resolve_versions : Resolve the active version number per timestamp from a list of VersionedModule objects.
+
+    Examples
+    --------
+    >>> import types
+    >>> import numpy as np
+    >>> from mayutils.objects.versions import VersionedModule
+    >>> mod = types.ModuleType("fake")
+    >>> vm = VersionedModule(
+    ...     module=mod,
+    ...     version=0,
+    ...     implemented_timestamp=np.datetime64("2026-01-01"),
+    ... )
+    >>> vm.version
+    0
     """
 
     module: ModuleType
@@ -167,6 +190,10 @@ def discover_versioned_modules(
 ) -> list[VersionedModule] | None:
     """
     Scan ``{directory}/v*/module_filename`` for ``__implemented__`` timestamps.
+
+    Walks the immediate children of *directory*, imports any ``v<N>/``
+    subdirectory that contains *module_filename* and a ``__implemented__``
+    attribute, and returns the discovered modules sorted by that timestamp.
 
     Parameters
     ----------
@@ -186,6 +213,24 @@ def discover_versioned_modules(
     list[VersionedModule] | None
         Modules sorted by ``__implemented__`` timestamp, or ``None`` if
         *directory* doesn't exist or contains no valid versions.
+
+    See Also
+    --------
+    VersionedModule : Dataclass holding a discovered module with its version and timestamp.
+    resolve_versions : Resolve the active version number per element from a discovered list.
+    resolve_module_version_index : Low-level index resolution over sorted timestamp arrays.
+
+    Examples
+    --------
+    >>> from pathlib import Path
+    >>> from mayutils.objects.versions import discover_versioned_modules
+    >>> result = discover_versioned_modules(
+    ...     directory=Path("nonexistent_directory"),
+    ...     module_prefix="myapp.plugins",
+    ...     module_filename="plugin.py",
+    ... )
+    >>> result is None
+    True
     """
     with may_require_extras():
         import numpy as np
@@ -235,6 +280,10 @@ def resolve_module_version_index(
     """
     Return the per-element module index into a sorted version list (vectorised).
 
+    Uses ``np.searchsorted`` with ``side="right"`` then subtracts one so
+    that a timestamp exactly on a version boundary selects that version,
+    and clamps the result to keep out-of-range timestamps within bounds.
+
     Parameters
     ----------
     implemented_timestamps : NDArray[np.datetime64]
@@ -248,6 +297,21 @@ def resolve_module_version_index(
         Index into *implemented_timestamps* for each element, selecting
         the most recent version implemented on or before that timestamp,
         clamped to the earliest version for timestamps preceding all versions.
+
+    See Also
+    --------
+    resolve_versions : Higher-level helper that maps timestamps to version numbers.
+    discover_versioned_modules : Produces the list whose timestamps feed this function.
+    resolve_version_indices : Analogous resolution over a dict of config dates.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from mayutils.objects.versions import resolve_module_version_index
+    >>> impls = np.array(["2026-01-01", "2026-02-01"], dtype="datetime64[us]")
+    >>> ts = np.array(["2025-12-01", "2026-01-15", "2026-03-01"], dtype="datetime64[us]")
+    >>> resolve_module_version_index(implemented_timestamps=impls, timestamps=ts)
+    array([0, 0, 1])
     """
     with may_require_extras():
         import numpy as np
@@ -271,6 +335,10 @@ def resolve_versions(
     """
     Resolve the active module version number per element.
 
+    Extracts the ``__implemented__`` timestamps from *versions*, delegates
+    index resolution to :func:`resolve_module_version_index`, and maps the
+    result back to integer version numbers from the ``VersionedModule`` list.
+
     Parameters
     ----------
     versions : list[VersionedModule]
@@ -282,6 +350,25 @@ def resolve_versions(
     -------
     NDArray[np.intp]
         Version number per element.
+
+    See Also
+    --------
+    resolve_module_version_index : Low-level index resolution over sorted timestamp arrays.
+    discover_versioned_modules : Produces the ``VersionedModule`` list passed here.
+
+    Examples
+    --------
+    >>> import types
+    >>> import numpy as np
+    >>> from mayutils.objects.versions import VersionedModule, resolve_versions
+    >>> fake_mod = types.ModuleType("fake")
+    >>> versions = [
+    ...     VersionedModule(module=fake_mod, version=0, implemented_timestamp=np.datetime64("2026-01-01")),
+    ...     VersionedModule(module=fake_mod, version=1, implemented_timestamp=np.datetime64("2026-03-01")),
+    ... ]
+    >>> ts = np.array(["2025-12-01", "2026-02-01", "2026-04-01"], dtype="datetime64[us]")
+    >>> resolve_versions(versions=versions, timestamps=ts)
+    array([0, 0, 1])
     """
     with may_require_extras():
         import numpy as np
@@ -311,6 +398,10 @@ def apply_func_to_versioned_value(
     """
     Apply a function to each element using the time-appropriate versioned parameter.
 
+    Groups elements by their resolved version, calls *func* once per
+    version group with the slice of *array* and the parameter active at
+    that time, then scatters results back into a single output array.
+
     Parameters
     ----------
     array : NDArray[Any]
@@ -330,6 +421,24 @@ def apply_func_to_versioned_value(
     -------
     NDArray[Any]
         Result array with the same shape as ``array``.
+
+    See Also
+    --------
+    resolve_version_indices : Resolve the active version index per timestamp from a dict.
+    resolve_module_version_index : Lower-level resolution over sorted timestamp arrays.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from mayutils.objects.versions import apply_func_to_versioned_value
+    >>> apply_func_to_versioned_value(
+    ...     array=np.array([1, 2, 3]),
+    ...     timestamps=np.array(["2026-01-15", "2026-01-20", "2026-02-15"], dtype="datetime64[us]"),
+    ...     versioned_value={np.datetime64("2026-01-01"): 10, np.datetime64("2026-02-01"): 100},
+    ...     func=lambda array, version_value: array * version_value,
+    ...     dtype=np.int64,
+    ... )
+    array([ 10,  20, 300])
     """
     with may_require_extras():
         import numpy as np
@@ -357,6 +466,10 @@ def resolve_version_indices(
     """
     Find the index of the most recent config date <= each timestamp.
 
+    Sorts the keys of *version_values* by date, then uses
+    ``np.searchsorted`` to assign each timestamp the index of the most
+    recent effective date that is on or before it.
+
     Parameters
     ----------
     version_values : dict[np.datetime64, Any]
@@ -370,6 +483,23 @@ def resolve_version_indices(
         Index (into the date-sorted keys of *version_values*) of the
         active version for each element, clamped to the earliest version
         for timestamps preceding all versions.
+
+    See Also
+    --------
+    apply_func_to_versioned_value : Uses this function to dispatch per-version computation.
+    resolve_module_version_index : Analogous resolution over a sorted array of timestamps.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from mayutils.objects.versions import resolve_version_indices
+    >>> version_values = {
+    ...     np.datetime64("2026-01-01"): "first",
+    ...     np.datetime64("2026-02-01"): "second",
+    ... }
+    >>> ts = np.array(["2026-01-15", "2026-03-01"], dtype="datetime64[us]")
+    >>> resolve_version_indices(version_values=version_values, timestamps=ts)
+    array([0, 1])
     """
     with may_require_extras():
         import numpy as np
