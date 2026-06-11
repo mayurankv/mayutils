@@ -1,12 +1,12 @@
 """
-Locate and interpolate SQL query files shipped with the project.
+Locate and render Jinja SQL query templates shipped with the project.
 
-This module exposes helpers for locating, loading, and interpolating
+This module exposes helpers for locating, loading, and rendering
 SQL query files that live either inside the host project or inside
 installed sibling packages. It builds a deterministic search path
 rooted at the project directory, exposes it as a module-level constant,
 and provides convenience functions that resolve a query by name and
-optionally substitute placeholders via :meth:`str.format`. The search
+optionally render it with Jinja2 via ``jinja_kwargs``. The search
 path lets a host project override query text shipped by upstream
 packages simply by placing a file with the same relative name in its
 own ``queries/`` directory.
@@ -19,13 +19,13 @@ mayutils.environment.filesystem.read_file : Primitive used here to
     read the resolved query text from disk.
 sqlalchemy.text : Typical wrapper applied to the string produced by
     :func:`format_query` before execution.
-string.Template : Alternative placeholder mechanism whose ``$name``
-    syntax differs from the ``{name}`` braces used here.
+mayutils.data.queries.templating : Jinja2 rendering engine used by
+    :func:`format_query`.
 
 Examples
 --------
 Resolve the default search path, read a query by bare name, and
-interpolate a pair of placeholders:
+render a pair of Jinja placeholders:
 
 >>> from mayutils.data.queries import QUERIES_FOLDERS
 >>> isinstance(QUERIES_FOLDERS, tuple)
@@ -36,25 +36,30 @@ True
 >>> with tempfile.TemporaryDirectory() as tmp:
 ...     folder = Path(tmp)
 ...     _ = (folder / "revenue.sql").write_text(
-...         "SELECT * FROM {schema}.revenue WHERE dt >= '{start_date}'",
+...         "SELECT * FROM {{ schema }}.revenue WHERE dt >= '{{ start_date }}'",
 ...         encoding="utf-8",
 ...     )
 ...     format_query(
 ...         "revenue",
 ...         queries_folders=(folder,),
-...         schema="analytics",
-...         start_date="2024-01-01",
+...         jinja_kwargs={"schema": "analytics", "start_date": "2024-01-01"},
 ...     )
 "SELECT * FROM analytics.revenue WHERE dt >= '2024-01-01'"
 """
 
-from pathlib import Path
+from __future__ import annotations
 
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from mayutils.data.queries.templating import render_template
 from mayutils.environment.filesystem import (
     get_root,
     read_file,
 )
-from mayutils.objects.types import SupportsStr
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 
 def get_queries_folders() -> tuple[Path, ...]:
@@ -82,7 +87,7 @@ def get_queries_folders() -> tuple[Path, ...]:
     See Also
     --------
     read_query : Primary consumer of the returned search path.
-    format_query : Sibling helper that resolves and interpolates a
+    format_query : Sibling helper that resolves and renders a
         query using this search path.
     mayutils.environment.filesystem.get_root : Supplies the project
         root anchor used to derive the folders.
@@ -129,7 +134,8 @@ def read_query(
     is read directly; otherwise each directory in ``queries_folders``
     is checked in order and the first match wins. The returned string
     preserves the file's original whitespace and line endings so that
-    downstream formatting with :meth:`str.format` remains predictable.
+    downstream Jinja rendering via :func:`format_query` remains
+    predictable.
 
     Parameters
     ----------
@@ -162,7 +168,7 @@ def read_query(
     See Also
     --------
     format_query : Convenience wrapper that additionally performs
-        placeholder substitution on the text returned here.
+        Jinja rendering on the text returned here.
     get_queries_folders : Producer of the default ``queries_folders``
         search path.
     mayutils.environment.filesystem.read_file : Low-level primitive
@@ -219,60 +225,68 @@ def format_query(
     *,
     queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
     default_suffix: str = "sql",
-    **format_kwargs: SupportsStr,
+    jinja_kwargs: Mapping[str, object] | None = None,
 ) -> str:
     """
-    Load a named SQL query and interpolate placeholders via ``str.format``.
+    Load a named SQL query and render its Jinja2 placeholders.
 
     Act as a thin convenience wrapper around :func:`read_query`: the
-    query text is resolved using the same rules and then passed
-    through :meth:`str.format` with ``format_kwargs`` to substitute
-    named placeholders of the form ``{name}`` embedded in the SQL.
-    Because substitution is performed with :meth:`str.format` and not
-    with SQL parameter binding, only values safe for literal
-    interpolation (schema names, table names, date literals) should
-    be passed; user-supplied values intended as query parameters must
-    still be bound by the driver downstream.
+    query text is resolved using the same rules and then passed to
+    :func:`~mayutils.data.queries.templating.render_template` with
+    ``jinja_kwargs`` to substitute ``{{ name }}`` Jinja2 placeholders.
+    The environment uses :class:`~jinja2.StrictUndefined`, so
+    referencing a template variable not present in ``jinja_kwargs``
+    raises :class:`~jinja2.exceptions.UndefinedError`. Because
+    substitution is performed via Jinja2 and not via SQL parameter
+    binding, only values safe for literal interpolation (schema names,
+    table names, date literals) should be passed; user-supplied values
+    intended as query parameters must still be bound by the driver
+    downstream. Full Jinja2 syntax — ``{% for %}``, ``{% if %}``,
+    ``{% include %}``, etc. — is supported.
 
     Parameters
     ----------
     path
         Query identifier, interpreted exactly as in :func:`read_query`.
     queries_folders
-        Search path forwarded to :func:`read_query`. Defaults to
-        :data:`QUERIES_FOLDERS`.
+        Search path forwarded to :func:`read_query` and also to
+        :func:`~mayutils.data.queries.templating.render_template` so
+        that ``{% include %}`` directives resolve against the same
+        directories. Defaults to :data:`QUERIES_FOLDERS`.
     default_suffix
         Extension forwarded to :func:`read_query` for queries
         referenced by bare name. Defaults to ``"sql"``.
-    **format_kwargs
-        Keyword substitutions passed to :meth:`str.format`. Each value
-        must be stringifiable; at format time Python inserts its
-        string representation at the matching placeholder.
+    jinja_kwargs
+        Mapping of Jinja2 variable names to their values, forwarded
+        to :func:`~mayutils.data.queries.templating.render_template`.
+        When ``None`` or omitted the template is rendered with no
+        variables, which is only valid for templates that contain no
+        variable references; otherwise
+        :class:`~jinja2.exceptions.UndefinedError` is raised.
 
     Returns
     -------
-        The query text after placeholder substitution, ready to be
-        submitted to a database driver. :class:`ValueError` propagates
-        from :func:`read_query` when the template cannot be located,
-        :class:`KeyError` propagates from :meth:`str.format` when a
-        referenced placeholder has no matching keyword, and
-        :class:`IndexError` propagates when a template uses positional
-        ``{0}`` placeholders without positional arguments (only
-        keyword substitution is supported here).
+        The fully rendered SQL string with all Jinja2 directives
+        expanded and all ``{{ variable }}`` placeholders substituted.
+        :class:`ValueError` propagates from :func:`read_query` when
+        the template cannot be located.
+        :class:`~jinja2.exceptions.UndefinedError` propagates from the
+        Jinja2 engine when the template references a variable not
+        present in ``jinja_kwargs``.
 
     See Also
     --------
     read_query : Underlying loader that locates the template text.
+    mayutils.data.queries.templating.render_template : Jinja2
+        rendering function invoked after the template is loaded.
     get_queries_folders : Producer of the default search path used
         to resolve ``path``.
     sqlalchemy.text : Typical next step for the returned SQL string
         prior to execution against an engine.
-    string.Template : Alternative placeholder mechanism if callers
-        prefer ``$name`` syntax to the ``{name}`` used here.
 
     Examples
     --------
-    Interpolate a single placeholder into a query loaded from an
+    Render a single Jinja2 placeholder in a query loaded from an
     explicit search folder:
 
     >>> import tempfile
@@ -281,25 +295,31 @@ def format_query(
     >>> with tempfile.TemporaryDirectory() as tmp:
     ...     folder = Path(tmp)
     ...     _ = (folder / "loans_by_region.sql").write_text(
-    ...         "SELECT * FROM loans WHERE region = '{region}'",
+    ...         "SELECT * FROM loans WHERE region = '{{ region }}'",
     ...         encoding="utf-8",
     ...     )
-    ...     format_query("loans_by_region", queries_folders=(folder,), region="London")
+    ...     format_query(
+    ...         "loans_by_region",
+    ...         queries_folders=(folder,),
+    ...         jinja_kwargs={"region": "London"},
+    ...     )
     "SELECT * FROM loans WHERE region = 'London'"
 
-    A placeholder with no matching keyword propagates :class:`KeyError`:
+    A placeholder with no matching variable propagates
+    :class:`~jinja2.exceptions.UndefinedError`:
 
+    >>> from jinja2.exceptions import UndefinedError
     >>> with tempfile.TemporaryDirectory() as tmp:
     ...     folder = Path(tmp)
     ...     _ = (folder / "needs_arg.sql").write_text(
-    ...         "SELECT * FROM {schema}.t",
+    ...         "SELECT * FROM {{ schema }}.t",
     ...         encoding="utf-8",
     ...     )
     ...     try:
     ...         format_query("needs_arg", queries_folders=(folder,))
-    ...     except KeyError as error:
-    ...         print(error)
-    'schema'
+    ...     except UndefinedError as error:
+    ...         print("UndefinedError raised")
+    UndefinedError raised
     """
     unformatted_query = read_query(
         path,
@@ -307,4 +327,8 @@ def format_query(
         default_suffix=default_suffix,
     )
 
-    return unformatted_query.format(**format_kwargs)
+    return render_template(
+        unformatted_query,
+        queries_folders=queries_folders,
+        jinja_kwargs=jinja_kwargs,
+    )
