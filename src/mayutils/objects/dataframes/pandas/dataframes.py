@@ -33,11 +33,17 @@ Examples
 """
 
 from collections.abc import Callable, Hashable, Mapping, Sequence
+from datetime import date, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, cast, get_args
 
 from mayutils.core.extras import may_require_extras
 from mayutils.objects.dataframes.pandas.stylers import Styler
+from mayutils.objects.dataframes.temporal import (
+    TEMPORAL_SAMPLE_SIZE,
+    DatetimeKind,
+    detect_temporal_kind,
+)
 from mayutils.objects.datetime import Date, DateTime, Interval
 
 with may_require_extras():
@@ -49,24 +55,13 @@ with may_require_extras():
         ExcelWriter,
         Index,
         Series,
+        StringDtype,
         to_datetime,
         to_numeric,
     )
 
 if TYPE_CHECKING:
     from pandas._typing import DtypeObj
-
-type DatetimeKind = Literal["datetime", "date", "time"]
-"""Enumerates the temporal parsing modes accepted by
-:meth:`DataframeUtilsAccessor.map_dtypes`.
-
-Each literal selects a different parsing pathway:
-
-- ``"datetime"`` produces full ``datetime64`` values using the caller's
-  ``datetime_format``.
-- ``"date"`` parses with ``date_format`` and then strips to ``date`` objects.
-- ``"time"`` parses with ``time_format`` and then strips to ``time`` objects.
-"""
 
 
 type DtypeSpec = DatetimeKind | Literal["numeric"] | DtypeObj
@@ -994,3 +989,99 @@ class DataframeUtilsAccessor:
 
         msg = "Grounding not implemented for DataFrames yet"
         raise NotImplementedError(msg)
+
+
+def parse_temporal_columns(
+    frame: DataFrame,
+    /,
+    *,
+    sample_size: int = TEMPORAL_SAMPLE_SIZE,
+) -> DataFrame:
+    """
+    Convert temporal-looking object columns of *frame* to native types.
+
+    Detection is sample-based: for each ``object`` or string-dtype column
+    the first ``sample_size`` non-null values are classified with
+    :func:`~mayutils.objects.dataframes.temporal.detect_temporal_kind`.
+    Both ``"date"`` and ``"datetime"`` samples convert to ``datetime64[ns]``
+    (or ``datetime64[ns, tz]`` when offsets are present) via
+    ``to_datetime(..., format="ISO8601")``, deliberately diverging from
+    :meth:`DataframeUtilsAccessor.map_dtypes`'s ``"date"`` mode, which
+    narrows to ``date`` objects — ``map_dtypes`` honours an explicit caller
+    request, whereas auto-parsing restores the natural pandas dtype.
+    ``"time"`` samples become object columns of :class:`datetime.time` via
+    ``to_datetime(..., format="mixed").dt.time``. Object columns holding
+    :class:`datetime.date` instances (the shape Snowflake returns for
+    ``DATE`` columns) also convert to ``datetime64[ns]``. A column whose
+    full conversion fails — e.g. an unparseable value beyond the sample —
+    is left unchanged rather than nulled, and the input frame is never
+    mutated: converted columns are written into a copy.
+
+    Parameters
+    ----------
+    frame
+        Source DataFrame to scan. It is returned as-is when no column
+        converts; otherwise a copy with converted columns is returned.
+    sample_size
+        Maximum number of leading non-null values inspected per column.
+        Defaults to :data:`~mayutils.objects.dataframes.temporal.TEMPORAL_SAMPLE_SIZE`.
+
+    Returns
+    -------
+        New DataFrame with temporal columns converted to native types, or
+        the original *frame* object when nothing needed converting.
+
+    See Also
+    --------
+    mayutils.objects.dataframes.temporal.detect_temporal_kind : Sample classifier.
+    mayutils.objects.dataframes.temporal.parse_temporal_columns : Backend dispatcher.
+    DataframeUtilsAccessor.map_dtypes : Explicit per-column dtype coercion.
+
+    Examples
+    --------
+    >>> import pandas as pd
+    >>> from mayutils.objects.dataframes.pandas.dataframes import (
+    ...     parse_temporal_columns,
+    ... )
+    >>> frame = pd.DataFrame({"d": ["2026-01-01", "2026-06-11"]})
+    >>> parse_temporal_columns(frame)["d"].dtype
+    dtype('<M8[ns]')
+    """
+    replacements: dict[Hashable, Series] = {}
+    for column in frame.columns:
+        series = frame[column]
+        if not (series.dtype == object or isinstance(series.dtype, StringDtype)):
+            continue
+        sample = series.dropna().head(n=sample_size)
+        if sample.empty:
+            continue
+
+        try:
+            if all(isinstance(value, date) and not isinstance(value, datetime) for value in sample):
+                replacements[column] = to_datetime(series)
+                continue
+
+            kind = detect_temporal_kind(tuple(sample))
+            if kind in {"date", "datetime"}:
+                replacements[column] = to_datetime(series, format="ISO8601")
+            elif kind == "time":
+                replacements[column] = to_datetime(series, format="mixed").dt.time
+        except (ValueError, TypeError):
+            continue
+
+    if not replacements:
+        return frame
+
+    converted = frame.copy()
+    for column, series in replacements.items():
+        converted[column] = series
+
+    return converted
+
+
+__all__ = [
+    "DataframeUtilsAccessor",
+    "DatetimeKind",
+    "DtypeSpec",
+    "parse_temporal_columns",
+]
