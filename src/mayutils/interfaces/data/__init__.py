@@ -50,6 +50,7 @@ logger = Logger.spawn()
 def get_env_reader(
     *,
     env_file: Path | str | None | Literal[False] = ".env",
+    env_overrides: Mapping[str, Any] | None = None,
     platform: Literal["snowflake"] | None = None,
     connection_arguments: Mapping[str, Any] | None = None,
     lower_case: bool = True,
@@ -76,6 +77,9 @@ def get_env_reader(
         auto-discovers a ``.env`` file by walking upwards from the
         current working directory; ``False`` skips loading entirely and
         reads the existing environment.
+    env_overrides
+        Extra field values, keyed by field name or alias, overriding those
+        read from the environment.
     platform
         Restrict the search to a single platform; ``None`` tries every
         supported platform in turn.
@@ -115,6 +119,7 @@ def get_env_reader(
         try:
             connection = SnowflakeConfig.from_env(
                 env_file=env_file,
+                **(env_overrides or {}),
             ).to_connection(
                 connection_arguments=connection_arguments,
             )

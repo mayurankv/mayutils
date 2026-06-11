@@ -204,6 +204,7 @@ class SnowflakeConfig(BaseModel):
         cls,
         *,
         env_file: Path | str | None | Literal[False] = ".env",
+        **overrides: Any,  # noqa: ANN401
     ) -> Self:
         """
         Build a configuration from ``SNOWFLAKE_*`` environment variables.
@@ -221,6 +222,9 @@ class SnowflakeConfig(BaseModel):
         env_file
             Dotenv file loaded before reading the environment. ``None``
             reads the existing environment without loading a file.
+        **overrides
+            Extra field values, keyed by field name or alias, overriding those
+            read from the environment.
 
         Returns
         -------
@@ -248,7 +252,7 @@ class SnowflakeConfig(BaseModel):
 
         logger.debug(f"Loaded Snowflake settings {sorted(values)} from the environment")
 
-        return cls.model_validate(values)
+        return cls.model_validate(values).update(**overrides)
 
     def update(
         self,
