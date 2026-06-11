@@ -39,7 +39,6 @@ Examples
 """
 
 from __future__ import annotations
-from mayutils.interfaces.data import get_env_reader, get_env_streamer
 
 import re
 import warnings
@@ -52,6 +51,7 @@ from mayutils.data import CACHE_FOLDER
 from mayutils.data.queries import QUERIES_FOLDERS, format_query
 from mayutils.environment.logging import Logger
 from mayutils.environment.memoisation import cache, make_cache_stem
+from mayutils.interfaces.data import get_env_reader, get_env_streamer
 from mayutils.objects.dataframes.backends import Backend, DataFrames, default_backend
 
 with may_require_extras():
