@@ -36,6 +36,7 @@ testing = ["pytest>=8.4.2"]
 [project]
 authors = [{email = "mayuran.k.v@gmail.com", name = "Mayuran Visakan"}]
 dependencies = [
+  "jinja2>=3.1",
   "pydantic>=2.11.7",
   "pydantic-settings>=2.10.1"
 ]
