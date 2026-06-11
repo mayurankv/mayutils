@@ -39,6 +39,7 @@ Examples
 """
 
 from __future__ import annotations
+from mayutils.interfaces.data import get_env_reader, get_env_streamer
 
 import re
 import warnings
@@ -482,7 +483,7 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
     query: SQL | Path,
     /,
     *,
-    reader: QueryReader,
+    reader: QueryReader | None = None,
     backend: Backend[DataFrameType] | None = None,
     suffix: str | None = None,
     persist: bool | None = False,
@@ -548,6 +549,9 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
     >>> df.shape  # doctest: +SKIP
     (1, 1)
     """
+    if reader is None:
+        reader = get_env_reader()
+
     backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
 
     rendered_query = render_query(
@@ -642,7 +646,7 @@ def stream_query[DataFrameType: DataFrames = pd.DataFrame](
     query: SQL | Path,
     /,
     *,
-    streamer: QueryStreamer,
+    streamer: QueryStreamer | None = None,
     backend: Backend[DataFrameType] | None = None,
     queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
     default_suffix: str = "sql",
@@ -693,6 +697,9 @@ def stream_query[DataFrameType: DataFrames = pd.DataFrame](
     >>> chunks[0].shape
     (1, 1)
     """
+    if streamer is None:
+        streamer = get_env_streamer()
+
     backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
 
     rendered_query = render_query(

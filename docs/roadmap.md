@@ -201,12 +201,22 @@ Priority: #low
 - [ ] Fix Chrome webdriver #hard — fix all Chromium variants.
 - [ ] Fix Firefox webdriver #hard.
 
+## `interfaces.code.tui`
+
+Priority: #low
+
+- [ ] `tuiplot` fixes
+    - [ ] App name sometimes obscured with a black bar when out of focus.
+    - [ ] Ideally, half the Plotly chart wouldn't be squished.
+
 ## Apps
 
 Priority: #low
 
 - [ ] [Typer](https://typer.tiangolo.com)
 - [ ] Streamlit exploration
+    - Reference: [SQL connection (`st.connections.SQLConnection`)](https://docs.streamlit.io/develop/api-reference/connections/st.connections.sqlconnection)
+    - Reference: [Connecting to data](https://docs.streamlit.io/develop/concepts/connections/connecting-to-data)
 
 ## Research / understand
 
