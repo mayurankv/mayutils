@@ -37,7 +37,7 @@ class TemplateStyleWarning(UserWarning):
     """
     Warn when a rendered query still contains ``{kwarg}``-style placeholders.
 
-    Emitted by :func:`render_template` when the rendered output still
+    Emitted by :func:`render_template` when the original template text
     contains at least one ``{name}`` substring that matches a key that
     was passed in ``jinja_kwargs``. This indicates an unmigrated
     :meth:`str.format` template — the placeholder was never expanded
@@ -74,7 +74,7 @@ def get_environment(
     :class:`~jinja2.StrictUndefined` so that any template variable not
     supplied at render time raises :class:`~jinja2.exceptions.UndefinedError`
     immediately rather than silently expanding to an empty string.
-    Results are memoised via :func:`functools.lru_cache` keyed on the
+    Results are memoised via :func:`functools.cache` keyed on the
     *queries_folders* tuple so repeated calls with the same search path
     return the same object without rebuilding the loader.
 
@@ -167,7 +167,7 @@ def render_template(
     Warns
     -----
     TemplateStyleWarning
-        When the rendered output still contains ``{name}`` text for a
+        When the original template *text* contains ``{name}`` for a
         key that was supplied in *jinja_kwargs*, indicating an
         unmigrated :meth:`str.format`-style placeholder.
 
@@ -204,7 +204,7 @@ def render_template(
 
     rendered = get_environment(queries_folders).from_string(source=text).render(**jinja_kwargs)
 
-    legacy = [name for name in jinja_kwargs if f"{{{name}}}" in rendered]
+    legacy = [name for name in jinja_kwargs if f"{{{name}}}" in text]
     if legacy:
         warnings.warn(
             message=f"Rendered query still contains str.format-style placeholders {legacy}; "

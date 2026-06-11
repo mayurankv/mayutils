@@ -66,3 +66,23 @@ def test_render_template_no_warning_for_unrelated_braces() -> None:
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         assert render_template("SELECT '{json}' FROM t", jinja_kwargs={"limit": 1}) == "SELECT '{json}' FROM t"
+
+
+def test_render_template_no_warning_when_value_contains_braces() -> None:
+    """A substituted value containing ``{key}`` text does not trigger the warning."""
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        rendered = render_template(
+            "SELECT {{ result }} FROM t",
+            jinja_kwargs={"result": "{table}", "table": "loans"},
+        )
+    assert rendered == "SELECT {table} FROM t"
+
+
+def test_render_template_strict_undefined_inside_if() -> None:
+    """A variable referenced by an ``{% if %}`` guard must still be provided."""
+    with pytest.raises(UndefinedError):
+        render_template(
+            "SELECT * FROM loans{% if region %} WHERE region = '{{ region }}'{% endif %}",
+            jinja_kwargs={},
+        )
