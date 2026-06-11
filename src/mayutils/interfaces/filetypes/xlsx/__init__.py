@@ -42,6 +42,7 @@ Examples
 
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Self, cast
 
@@ -49,15 +50,11 @@ from mayutils.core.extras import may_require_extras
 from mayutils.interfaces.filetypes import DataFile
 from mayutils.objects.dataframes.backends import Backend, DataFrames, default_backend
 
-with may_require_extras():
-    import openpyxl
-    import pandas as pd
-    import polars as pl
-    from pandas import ExcelWriter
-    from xlsxwriter import Workbook
-
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+    import pandas as pd
+    import polars as pl
 
 
 DEFAULT_SCHEMA_SAMPLE_ROWS = 1000
@@ -419,6 +416,9 @@ class Xlsx[DataFrameType: DataFrames = pd.DataFrame]:
         >>> sorted(names)
         ['Details', 'Summary']
         """
+        with may_require_extras():
+            import openpyxl
+
         workbook = openpyxl.load_workbook(
             filename=self.path,
             read_only=True,
@@ -538,11 +538,17 @@ class Xlsx[DataFrameType: DataFrames = pd.DataFrame]:
         ['a']
         """
         if self.backend.name == "polars":
+            with may_require_extras():
+                import polars as pl
+
             return pl.read_excel(  # pyright: ignore[reportUnknownVariableType]
                 source=self.path,
                 sheet_id=0,
                 **kwargs,
             )
+
+        with may_require_extras():
+            import pandas as pd
 
         return cast(
             "dict[str, DataFrameType]",
@@ -619,7 +625,16 @@ class Xlsx[DataFrameType: DataFrames = pd.DataFrame]:
             msg = "Cannot write an XLSX workbook with zero sheets."
             raise ValueError(msg)
 
-        if all(isinstance(frame, pl.DataFrame) for frame in frames.values()):
+        polars_frames = False
+        with contextlib.suppress(ImportError):
+            import polars as pl
+
+            polars_frames = all(isinstance(frame, pl.DataFrame) for frame in frames.values())
+
+        if polars_frames:
+            with may_require_extras():
+                from xlsxwriter import Workbook
+
             with Workbook(filename=self.path) as workbook:  # pyright: ignore[reportUnknownVariableType]
                 for sheet_name, frame in frames.items():
                     cast("pl.DataFrame", frame).write_excel(
@@ -630,13 +645,13 @@ class Xlsx[DataFrameType: DataFrames = pd.DataFrame]:
 
             return self
 
+        with may_require_extras():
+            from pandas import DataFrame, ExcelWriter
+
         index_kwarg = kwargs.pop("index", False)
         with ExcelWriter(path=self.path, engine="openpyxl") as writer:
             for sheet_name, frame in frames.items():
-                if isinstance(frame, pl.DataFrame):  # noqa: SIM108
-                    pandas_frame = frame.to_pandas()
-                else:
-                    pandas_frame = frame
+                pandas_frame = frame if isinstance(frame, DataFrame) else frame.to_pandas()
 
                 pandas_frame.to_excel(  # pyright: ignore[reportUnknownMemberType]
                     excel_writer=writer,
@@ -820,6 +835,9 @@ class XlsxSheet[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType
         ['a']
         """
         if self.backend.name == "polars":
+            with may_require_extras():
+                import polars as pl
+
             return self.backend.cast(
                 pl.read_excel(
                     source=self.path,
@@ -827,6 +845,9 @@ class XlsxSheet[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType
                     **kwargs,
                 )
             )
+
+        with may_require_extras():
+            import pandas as pd
 
         return self.backend.cast(
             pd.read_excel(  # pyright: ignore[reportUnknownMemberType]
@@ -908,10 +929,10 @@ class XlsxSheet[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType
 
                 return self
 
-        if isinstance(df, pl.DataFrame):  # noqa: SIM108
-            pandas_frame = df.to_pandas()
-        else:
-            pandas_frame = df
+        with may_require_extras():
+            from pandas import DataFrame, ExcelWriter
+
+        pandas_frame = df if isinstance(df, DataFrame) else cast("pl.DataFrame", df).to_pandas()
 
         mode = "a" if self.path.is_file() else "w"
         writer_kwargs: dict[str, Any] = {"engine": "openpyxl", "mode": mode}
@@ -1041,6 +1062,9 @@ class XlsxSheet[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType
         >>> str(schema["b"])
         'object'
         """
+        with may_require_extras():
+            import pandas as pd
+
         sample = pd.read_excel(  # pyright: ignore[reportUnknownMemberType]
             io=self.path,
             sheet_name=self.sheet,
@@ -1087,6 +1111,9 @@ class XlsxSheet[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType
         >>> count
         5
         """
+        with may_require_extras():
+            import openpyxl
+
         workbook = openpyxl.load_workbook(
             filename=self.path,
             read_only=True,
@@ -1154,6 +1181,9 @@ class XlsxSheet[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType
         backend = self.backend.name
 
         if backend == "polars":
+            with may_require_extras():
+                import polars as pl
+
             frame = pl.read_excel(
                 source=self.path,
                 sheet_name=self.sheet,
@@ -1164,6 +1194,9 @@ class XlsxSheet[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType
                 yield self.backend.cast(frame.slice(offset=start, length=chunk_size))
 
             return
+
+        with may_require_extras():
+            import pandas as pd
 
         pandas_frame = pd.read_excel(  # pyright: ignore[reportUnknownMemberType]
             io=self.path,

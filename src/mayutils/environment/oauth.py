@@ -29,28 +29,27 @@ True
 44
 """
 
+from __future__ import annotations
+
 import base64
 import getpass
 import json
 import os
-from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Protocol, cast
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from mayutils.core.extras import may_require_extras
 from mayutils.environment.filesystem import get_root
 from mayutils.environment.logging import Logger
 from mayutils.objects.decorators import flexwrap
 from mayutils.objects.hashing import serialise
-from mayutils.objects.types import JsonParsed, JsonString
 
-with may_require_extras():
-    import keyring
-    from cryptography.fernet import Fernet, InvalidToken
-    from dotenv import load_dotenv
-    from google.auth.transport.requests import Request
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from google.oauth2.credentials import Credentials
-    from google_auth_oauthlib.flow import InstalledAppFlow
+
+    from mayutils.objects.types import JsonParsed, JsonString
 
 logger = Logger.spawn()
 
@@ -87,6 +86,9 @@ def generate_fernet_key() -> str:
     >>> len(key)
     44
     """
+    with may_require_extras():
+        from cryptography.fernet import Fernet
+
     key = Fernet.generate_key()
 
     return key.decode()
@@ -177,6 +179,9 @@ def encrypt_token(
     >>> isinstance(ciphertext, bytes)
     True
     """
+    with may_require_extras():
+        from cryptography.fernet import Fernet
+
     if encryption_key is None:
         encryption_key = get_encryption_key()
 
@@ -238,6 +243,9 @@ def decrypt_token(
     >>> decrypt_token(blob, encryption_key=key)
     '{"access_token": "xyz"}'
     """
+    with may_require_extras():
+        from cryptography.fernet import Fernet
+
     if encryption_key is None:
         encryption_key = get_encryption_key()
 
@@ -299,6 +307,9 @@ def save_token(
     ...     username="mayuran",
     ... )  # doctest: +SKIP
     """
+    with may_require_extras():
+        import keyring
+
     encrypted_token = encrypt_token(token)
     keyring.set_password(
         service_name=service,
@@ -358,6 +369,10 @@ def load_token(
     >>> isinstance(token, str)  # doctest: +SKIP
     True
     """
+    with may_require_extras():
+        import keyring
+        from cryptography.fernet import InvalidToken
+
     encrypted_token = keyring.get_password(
         service_name=service,
         username=username,
@@ -715,6 +730,9 @@ def oauth_wrapper(
         >>> creds.valid  # doctest: +SKIP
         True
         """
+        with may_require_extras():
+            from dotenv import load_dotenv
+
         load_dotenv()
 
         try:
@@ -781,6 +799,9 @@ def reset_service_oauth(
     >>> from mayutils.environment.oauth import reset_service_oauth
     >>> reset_service_oauth("google-slides", username="mayuran")  # doctest: +SKIP
     """
+    with may_require_extras():
+        import keyring
+
     keyring.delete_password(
         service_name=service,
         username=username,
@@ -860,6 +881,11 @@ def google_oauth(
     >>> creds.valid  # doctest: +SKIP
     True
     """
+    with may_require_extras():
+        from google.auth.transport.requests import Request
+        from google.oauth2.credentials import Credentials
+        from google_auth_oauthlib.flow import InstalledAppFlow
+
     scopes = kwargs.pop("scopes", [])
     credentials_file = Path(
         kwargs.pop(

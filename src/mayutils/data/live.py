@@ -4,18 +4,16 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Self, cast
 
-from mayutils.core.extras import may_require_extras
 from mayutils.data.queries import QUERIES_FOLDERS
 from mayutils.data.read import render_query
 from mayutils.environment.logging import Logger
 from mayutils.objects.dataframes.backends import Backend, BackendOperations, DataFrames, default_backend
 
-with may_require_extras():
-    import pandas as pd
-
 if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
+
+    import pandas as pd
 
     from mayutils.data.read import QueryReader
     from mayutils.objects.datetime import DateTime, Duration, Interval

@@ -52,10 +52,6 @@ with requires_extras("notebook"):
         parse_argstring,  # pyright: ignore[reportUnknownVariableType]
     )
 
-with may_require_extras():
-    import pandas as pd
-    import polars as pl
-
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
@@ -151,8 +147,14 @@ def resolve_backend(
     'polars'
     """
     if name == "pandas":
+        with may_require_extras():
+            import pandas as pd
+
         return cast("Backend[DataFrames]", Backend(pd.DataFrame))
     if name == "polars":
+        with may_require_extras():
+            import polars as pl
+
         return cast("Backend[DataFrames]", Backend(pl.DataFrame))
 
     msg = f"Unsupported backend: {name!r}"

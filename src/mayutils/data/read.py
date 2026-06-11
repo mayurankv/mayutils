@@ -47,7 +47,6 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, cast, runtime_checkable
 
-from mayutils.core.extras import may_require_extras
 from mayutils.data import CACHE_FOLDER
 from mayutils.data.queries import QUERIES_FOLDERS, format_query
 from mayutils.data.queries.templating import render_template
@@ -56,11 +55,10 @@ from mayutils.environment.memoisation import cache, make_cache_stem
 from mayutils.objects.dataframes.backends import Backend, DataFrames, default_backend
 from mayutils.objects.dataframes.temporal import parse_temporal_columns
 
-with may_require_extras():
-    import pandas as pd
-
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
+
+    import pandas as pd
 
     from mayutils.objects.datetime import Duration
     from mayutils.objects.types import SQL

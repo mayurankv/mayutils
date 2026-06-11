@@ -34,10 +34,12 @@ Date
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from mayutils.core.extras import may_require_extras
 from mayutils.objects.dataframes.temporal import TEMPORAL_SAMPLE_SIZE, detect_temporal_kind
 
-with may_require_extras():
+if TYPE_CHECKING:
     import polars as pl
 
 
@@ -95,6 +97,9 @@ def parse_temporal_columns(
     >>> parse_temporal_columns(frame).schema["d"]
     Date
     """
+    with may_require_extras():
+        import polars as pl
+
     for name, dtype in frame.schema.items():
         if dtype != pl.String:
             continue

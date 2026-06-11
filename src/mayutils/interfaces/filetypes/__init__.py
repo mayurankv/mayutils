@@ -41,14 +41,15 @@ from copy import deepcopy
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Self, cast
 
-import pandas as pd
-import polars as pl
-
+from mayutils.core.extras import may_require_extras
 from mayutils.objects.classes import readonlyclassonlyproperty
 from mayutils.objects.dataframes.backends import Backend, DataFrames, default_backend
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
+
+    import pandas as pd
+    import polars as pl
 
 
 PREVIEW_ERRORS: tuple[type[BaseException], ...] = (
@@ -1103,6 +1104,9 @@ class DataFile[DataFrameType: DataFrames = pd.DataFrame](ABC):
         ...     isinstance(handle.to_polars(), pl.DataFrame)
         True
         """
+        with may_require_extras():
+            import polars as pl
+
         return self.with_backend(Backend(pl.DataFrame)).read(**kwargs)
 
     @abstractmethod

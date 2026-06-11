@@ -31,24 +31,6 @@ from pathlib import Path
 from mayutils.core.extras import may_require_extras
 from mayutils.export import OUTPUT_FOLDER
 
-with may_require_extras():
-    from pandas.api.extensions import (
-        register_dataframe_accessor,
-        register_index_accessor,
-        register_series_accessor,
-    )
-
-    from mayutils.objects.dataframes.pandas.dataframes import (
-        DataframeUtilsAccessor,
-    )
-    from mayutils.objects.dataframes.pandas.index import (
-        IndexUtilsAccessor,
-    )
-    from mayutils.objects.dataframes.pandas.series import (
-        SeriesUtilsAccessor,
-    )
-
-
 DATA_FOLDER: Path = OUTPUT_FOLDER / "Data"
 """Default on-disk root for DataFrame artifacts."""
 
@@ -87,6 +69,23 @@ def setup_pandas() -> None:
     >>> hasattr(df, "utils")
     True
     """
+    with may_require_extras():
+        from pandas.api.extensions import (
+            register_dataframe_accessor,
+            register_index_accessor,
+            register_series_accessor,
+        )
+
+    from mayutils.objects.dataframes.pandas.dataframes import (
+        DataframeUtilsAccessor,
+    )
+    from mayutils.objects.dataframes.pandas.index import (
+        IndexUtilsAccessor,
+    )
+    from mayutils.objects.dataframes.pandas.series import (
+        SeriesUtilsAccessor,
+    )
+
     register_dataframe_accessor(name="utils")(DataframeUtilsAccessor)
     register_series_accessor(name="utils")(SeriesUtilsAccessor)
     register_index_accessor(name="utils")(IndexUtilsAccessor)

@@ -45,9 +45,6 @@ from typing import cast
 
 from mayutils.core.extras import may_require_extras
 
-with may_require_extras():
-    from unicodeit.replace import replace  # pyright: ignore[reportUnknownVariableType]
-
 
 def latex_to_unicode(
     latex: str,
@@ -87,4 +84,7 @@ def latex_to_unicode(
     >>> isinstance(result, str)
     True
     """
+    with may_require_extras():
+        from unicodeit.replace import replace  # pyright: ignore[reportUnknownVariableType]
+
     return cast("str", replace(f=latex))

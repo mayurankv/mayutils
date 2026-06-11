@@ -18,15 +18,12 @@ import enum
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
-from mayutils.core.extras import may_require_extras
 from mayutils.objects.dataframes.backends import DataFrames
-
-with may_require_extras():
-    from numpy.typing import ArrayLike
-
 
 if TYPE_CHECKING:
     from functools import _CacheInfo as CacheInfo  # pyright: ignore[reportPrivateUsage]
+
+    from numpy.typing import ArrayLike
 
 type CacheObjects = DataFrames | ArrayLike | Mapping[str, ArrayLike] | object
 
