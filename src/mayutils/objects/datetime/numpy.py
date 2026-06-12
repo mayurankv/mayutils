@@ -36,6 +36,7 @@ with may_require_extras():
 
 def coerce_datetime64(
     v: np.datetime64 | datetime | date | str | int | bytes,
+    /,
 ) -> np.datetime64:
     """
     Coerce any datetime-like value to ``np.datetime64[us]``.
