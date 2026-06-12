@@ -29,19 +29,20 @@ Examples
 >>> df = reader("SELECT 1 AS one")  # doctest: +SKIP
 """
 
-from collections.abc import Mapping
-from pathlib import Path
-from typing import Any, Literal
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Literal
 
 import pydantic
 
 from mayutils.core.extras import may_require_extras
-from mayutils.data.read import QueryReader, QueryStreamer
 from mayutils.environment.logging import Logger
-from mayutils.interfaces.data.snowflake import SnowflakeConfig
 
-with may_require_extras():
-    from snowflake.connector.errors import Error as SnowflakeError
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+    from pathlib import Path
+
+    from mayutils.data.read import QueryReader, QueryStreamer
 
 
 logger = Logger.spawn()
@@ -116,6 +117,11 @@ def get_env_reader(
     >>> df = reader("SELECT 1 AS one")  # doctest: +SKIP
     """
     if platform is None or platform == "snowflake":
+        from mayutils.interfaces.data.snowflake import SnowflakeConfig
+
+        with may_require_extras():
+            from snowflake.connector.errors import Error as SnowflakeError
+
         try:
             connection = SnowflakeConfig.from_env(
                 env_file=env_file,
@@ -203,6 +209,11 @@ def get_env_streamer(
     ...     print(chunk.shape)
     """
     if platform is None or platform == "snowflake":
+        from mayutils.interfaces.data.snowflake import SnowflakeConfig
+
+        with may_require_extras():
+            from snowflake.connector.errors import Error as SnowflakeError
+
         try:
             connection = SnowflakeConfig.from_env(
                 env_file=env_file,

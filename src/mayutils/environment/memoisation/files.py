@@ -25,9 +25,6 @@ from functools import _CacheInfo as CacheInfo  # pyright: ignore[reportPrivateUs
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Protocol, cast, runtime_checkable
 
-import polars as pl
-from pandas import DataFrame
-
 from mayutils.core.extras import may_require_extras
 from mayutils.data import CACHE_FOLDER
 from mayutils.environment.filesystem import is_file_stale
@@ -38,12 +35,8 @@ from mayutils.objects.dataframes.backends import Backend, DataFrames, default_ba
 from mayutils.objects.dictionaries import flatten_dict
 from mayutils.objects.strings import String
 
-with may_require_extras():
-    import numpy as np
-    import pandas as pd
-    import polars as pl
-
 if TYPE_CHECKING:
+    import pandas as pd
     from numpy.typing import ArrayLike
 
     from mayutils.objects.datetime import Duration
@@ -434,6 +427,9 @@ class NumpySerialiser:
         >>> hasattr(s, "read")
         True
         """
+        with may_require_extras():
+            import numpy as np
+
         return np.load(file=str(path))
 
     def write(
@@ -467,6 +463,9 @@ class NumpySerialiser:
         >>> hasattr(s, "write")
         True
         """
+        with may_require_extras():
+            import numpy as np
+
         np.save(
             file=str(path),
             allow_pickle=True,
@@ -525,6 +524,9 @@ class NpzSerialiser:
         >>> hasattr(s, "read")
         True
         """
+        with may_require_extras():
+            import numpy as np
+
         return np.load(file=str(path))
 
     def write(
@@ -558,6 +560,9 @@ class NpzSerialiser:
         >>> hasattr(s, "write")
         True
         """
+        with may_require_extras():
+            import numpy as np
+
         np.savez(
             file=str(path),
             allow_pickle=True,
@@ -682,25 +687,28 @@ def infer_suffix(
     >>> infer_suffix({"a": 1})
     '.pkl'
     """
-    try:
+    with contextlib.suppress(ImportError):
+        from pandas import DataFrame
+
         if isinstance(obj, DataFrame):
             return ".parquet"
-    except ImportError:
-        pass
 
-    try:
+    with contextlib.suppress(ImportError):
+        import polars as pl
+
         if isinstance(obj, pl.DataFrame):
             return ".parquet"
-    except ImportError:
-        pass
 
-    if isinstance(obj, np.ndarray):
-        return ".npy"
+    with contextlib.suppress(ImportError):
+        import numpy as np
 
-    if isinstance(obj, Mapping):
-        mapping = cast("Mapping[object, object]", obj)
-        if all(isinstance(value, np.ndarray) for value in mapping.values()):
-            return ".npz"
+        if isinstance(obj, np.ndarray):
+            return ".npy"
+
+        if isinstance(obj, Mapping):
+            mapping = cast("Mapping[object, object]", obj)
+            if all(isinstance(value, np.ndarray) for value in mapping.values()):
+                return ".npz"
 
     return ".pkl"
 

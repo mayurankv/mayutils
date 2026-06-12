@@ -4,6 +4,43 @@ All notable changes to `mayutils` will be documented here.
 
 This project follows [Semantic Versioning](https://semver.org/) and the [Keep a Changelog](https://keepachangelog.com/) conventions. Releases are produced by [commitizen](https://commitizen-tools.github.io/commitizen/) from [Conventional Commits](https://www.conventionalcommits.org/) — `feat` bumps the minor version, `fix` bumps the patch, and a `!` or `BREAKING CHANGE:` footer bumps the major.
 
+## v3.0.0 (2026-06-11)
+
+### BREAKING CHANGE
+
+- the jinja_kwargs parameter introduced in this release cycle is named template_kwargs in the released API.
+- StreamingQuery and WindowedQuery accept jinja_kwargs mappings instead of \*\*fixed_format_kwargs / \*\*extra_kwargs.
+- inline SQL templates use Jinja {{ name }} placeholders and substitutions are passed as the jinja_kwargs mapping instead of \*\*format_kwargs; make_cache_stem's format_kwargs keyword is renamed jinja_kwargs.
+- query templates use Jinja {{ name }} placeholders and substitutions are passed as the jinja_kwargs mapping instead of \*\*format_kwargs.
+
+### Feat
+
+- **src/mayutils/data/read.py**: Automatically parse temporal columns in read_query and stream_query
+- **src/mayutils/objects/dataframes/polars/dataframes.py**: Add automatic temporal column parsing
+- **src/mayutils/objects/dataframes/pandas/dataframes.py**: Add automatic temporal column parsing
+- **src/mayutils/objects/dataframes/temporal.py**: Add temporal detection and backend dispatcher
+- **src/mayutils/data/live.py**: Pass template variables as jinja_kwargs mappings
+- **src/mayutils/data/read.py**: Render inline SQL with Jinja via jinja_kwargs
+- **src/mayutils/data/queries**: Render file query templates with Jinja via jinja_kwargs
+- **src/mayutils/interfaces/data/snowflake/__init__.py**: Default client session keep alive and temporary credential caching in connection arguments
+- **src/mayutils/data/queries/templating.py**: Add Jinja template rendering module
+- **src/mayutils/interfaces/data**: Add env_overrides to get_env_reader and overrides to SnowflakeConfig.from_env
+- **src/mayutils/data/read.py**: Add default reader and streamer and update roadmap
+
+### Fix
+
+- **src/mayutils/objects/dataframes/temporal.py**: Widen detection input contract and document pattern permissiveness
+- **src/mayutils/data/queries/templating.py**: Scan template text not rendered output for legacy placeholders
+- **src/mayutils/data/read.py**: Defer interfaces.data imports to break circular import
+- **repo**: Improve the docs
+
+### Refactor
+
+- **src/mayutils/interfaces/filetypes/slides**: Defer googleapiclient import to call time
+- **src/mayutils**: Defer remaining extra imports to call time
+- **src/mayutils**: Defer keystone extra imports to call time
+- **src/mayutils**: Rename jinja_kwargs to template_kwargs
+
 ## v2.0.0 (2026-06-10)
 
 ### Feat

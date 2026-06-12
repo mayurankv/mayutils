@@ -44,10 +44,6 @@ from pathlib import Path
 
 from mayutils.core.extras import may_require_extras
 
-with may_require_extras():
-    from PIL import Image
-    from pymupdf import Document, Pixmap
-
 
 def combine_figures(
     *files: Path | str,
@@ -143,6 +139,10 @@ def combine_figures(
     ...     _out.exists()
     True
     """
+    with may_require_extras():
+        from PIL import Image
+        from pymupdf import Document, Pixmap
+
     if filetype != "pdf":
         msg = "Other conversions are not supported yet"
         raise NotImplementedError(msg)

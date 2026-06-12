@@ -37,18 +37,8 @@ from pathlib import Path
 from typing import cast
 
 from mayutils.core.extras import may_require_extras
-from mayutils.visualisation.console import CONSOLE
 
 with may_require_extras():
-    from rich.progress import (
-        BarColumn,
-        Progress,
-        SpinnerColumn,
-        TaskProgressColumn,
-        TextColumn,
-        TimeElapsedColumn,
-    )
-    from rich.table import Table
     from typer import Argument, Exit, Option, Typer
 
 
@@ -903,6 +893,7 @@ def apply_plotly_overlay(
     >>> apply_plotly_overlay(dry_run=True)  # doctest: +SKIP
     """
     from mayutils.scripts.generate_plotly_stubs import generate_stubs
+    from mayutils.visualisation.console import CONSOLE
 
     CONSOLE.print("\n[bold]Applying plotly stub overrides...[/bold]")
     try:
@@ -1043,6 +1034,19 @@ def refresh(  # noqa: C901, PLR0912, PLR0915
     >>> # Show the plan without invoking pyright:
     >>> # $ refresh-stubs --dry-run
     """
+    with may_require_extras():
+        from rich.progress import (
+            BarColumn,
+            Progress,
+            SpinnerColumn,
+            TaskProgressColumn,
+            TextColumn,
+            TimeElapsedColumn,
+        )
+        from rich.table import Table
+
+    from mayutils.visualisation.console import CONSOLE
+
     packages = stub_packages(typings)
 
     if not packages:

@@ -29,20 +29,23 @@ Examples
 True
 """
 
-from collections.abc import Iterator, Mapping
-from typing import Any, Self, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Self, cast
 
 from mayutils.core.extras import may_require_extras
-from mayutils.data.read import QueryReader, QueryStreamer
 from mayutils.environment.logging import Logger
 from mayutils.objects.dataframes.backends import Backend, DataFrames, default_backend
 
-with may_require_extras():
+if TYPE_CHECKING:
+    from collections.abc import Iterator, Mapping
+
     import pandas as pd
     import polars as pl
-    from snowflake.sqlalchemy import URL  # pyright: ignore[reportAttributeAccessIssue, reportUnknownVariableType]
     from sqlalchemy import URL as SQLURL
-    from sqlalchemy import Engine, create_engine
+    from sqlalchemy import Engine
+
+    from mayutils.data.read import QueryReader, QueryStreamer
 
 
 logger = Logger.spawn()
@@ -194,6 +197,9 @@ class EngineWrapper:
         >>> isinstance(wrapper, EngineWrapper)
         True
         """
+        with may_require_extras():
+            from sqlalchemy import create_engine
+
         engine = create_engine(
             url=url,
             **kwargs,
@@ -261,6 +267,9 @@ class EngineWrapper:
         ... )  # doctest: +SKIP
         >>> df = wrapper.read_pandas("SELECT 1 AS n")  # doctest: +SKIP
         """
+        with may_require_extras():
+            from snowflake.sqlalchemy import URL  # pyright: ignore[reportAttributeAccessIssue, reportUnknownVariableType]
+
         return cls.create(
             url=cast(
                 "SQLURL",
@@ -334,6 +343,9 @@ class EngineWrapper:
         >>> df.columns.tolist()
         ['a']
         """
+        with may_require_extras():
+            import pandas as pd
+
         default_read_kwargs: dict[str, Any] = {}
 
         logger.debug(f"Reading query ({len(query)} chars) into pandas")
@@ -415,6 +427,9 @@ class EngineWrapper:
         >>> df.columns
         ['a']
         """
+        with may_require_extras():
+            import polars as pl
+
         default_read_kwargs: dict[str, Any] = {}
 
         logger.debug(f"Reading query ({len(query)} chars) into polars")
@@ -612,6 +627,9 @@ class EngineWrapper:
         >>> [chunk.shape for chunk in chunks]
         [(2, 1), (1, 1)]
         """
+        with may_require_extras():
+            import pandas as pd
+
         default_read_kwargs: dict[str, Any] = {
             "chunksize": chunk_size,
         }
@@ -693,6 +711,9 @@ class EngineWrapper:
         >>> [chunk.shape for chunk in chunks]
         [(2, 1), (1, 1)]
         """
+        with may_require_extras():
+            import polars as pl
+
         default_read_kwargs: dict[str, Any] = {
             "iter_batches": True,
             "batch_size": chunk_size,

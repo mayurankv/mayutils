@@ -83,11 +83,6 @@ from pathlib import Path
 from mayutils.core.extras import may_require_extras
 from mayutils.export import OUTPUT_FOLDER
 
-with may_require_extras():
-    import quarto_cli as quarto  # pyright: ignore[reportMissingTypeStubs]
-    from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
-
-
 DEFAULT_METADATA: dict[str, dict[str, str]] = {
     "html": {
         "theme.light": "cyborg",
@@ -214,6 +209,9 @@ def quarto_bin() -> Path:
     >>> binary is None or (isinstance(binary, Path) and binary.name == "quarto")
     True
     """
+    with may_require_extras():
+        import quarto_cli as quarto  # pyright: ignore[reportMissingTypeStubs]
+
     package_file = getattr(quarto, "__file__", None)
     roots: list[Path] = []
     if package_file is not None:
@@ -516,6 +514,9 @@ def export(
     True
     >>> _ = patcher.stop()
     """
+    with may_require_extras():
+        from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+
     binary = quarto_bin()
 
     available_formats = list_formats()

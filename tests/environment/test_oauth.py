@@ -8,10 +8,6 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-pytest.importorskip("cryptography")
-pytest.importorskip("keyring")
-
-from mayutils.environment import oauth
 from mayutils.environment.oauth import (
     decrypt_token,
     default_parse_token,
@@ -25,6 +21,8 @@ from mayutils.environment.oauth import (
     save_token,
 )
 from mayutils.objects.types import JsonParsed, JsonString
+
+keyring = pytest.importorskip("keyring")
 
 if TYPE_CHECKING:
     from cryptography.fernet import Fernet, InvalidToken
@@ -57,9 +55,9 @@ def fake_keyring(monkeypatch: pytest.MonkeyPatch) -> dict[tuple[str, str], str]:
     def delete_password(*, service_name: str, username: str) -> None:
         store.pop((service_name, username), None)
 
-    monkeypatch.setattr(oauth.keyring, "set_password", set_password)
-    monkeypatch.setattr(oauth.keyring, "get_password", get_password)
-    monkeypatch.setattr(oauth.keyring, "delete_password", delete_password)
+    monkeypatch.setattr(keyring, "set_password", set_password)
+    monkeypatch.setattr(keyring, "get_password", get_password)
+    monkeypatch.setattr(keyring, "delete_password", delete_password)
     return store
 
 
@@ -248,11 +246,12 @@ class TestOauthWrapper:
     @pytest.fixture(autouse=True)
     def _stub_dotenv(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Neutralise the ``load_dotenv`` call made inside the wrapper."""
+        import dotenv
 
         def noop_load_dotenv(*_args: object, **_kwargs: object) -> bool:
             return False
 
-        monkeypatch.setattr(oauth, "load_dotenv", noop_load_dotenv)
+        monkeypatch.setattr(dotenv, "load_dotenv", noop_load_dotenv)
 
     def test_first_run_passes_none_token_and_persists(
         self,

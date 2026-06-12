@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from mayutils.core.extras import may_require_extras
 
-with may_require_extras():
+if TYPE_CHECKING:
     import pandas as pd
-
-
-with may_require_extras():
     import polars as pl
 
 
@@ -196,6 +193,9 @@ def default_backend() -> Backend[pd.DataFrame]:
     >>> default_backend().name
     'pandas'
     """
+    with may_require_extras():
+        import pandas as pd
+
     return Backend(pd.DataFrame)
 
 
@@ -266,8 +266,14 @@ class BackendOperations:
         2  3
         """
         if backend.name == "pandas":
+            with may_require_extras():
+                import pandas as pd
+
             return cast("DataFrameType", pd.concat(cast("list[pd.DataFrame]", frames), ignore_index=True))
         if backend.name == "polars":
+            with may_require_extras():
+                import polars as pl
+
             return cast("DataFrameType", pl.concat(items=cast("list[pl.DataFrame]", frames)))
 
         msg = f"Unsupported backend: {backend.name}"
@@ -327,6 +333,9 @@ class BackendOperations:
             pandas_frame = cast("pd.DataFrame", frame)
             return cast("DataFrameType", pandas_frame.loc[pandas_frame[column] >= value])
         if backend.name == "polars":
+            with may_require_extras():
+                import polars as pl
+
             return cast("DataFrameType", cast("pl.DataFrame", frame).filter(pl.col(name=column) >= value))
 
         msg = f"Unsupported backend: {backend.name}"
@@ -380,6 +389,9 @@ class BackendOperations:
         if backend.name == "pandas":
             return cast("pd.DataFrame", frame)[column].max()
         if backend.name == "polars":
+            with may_require_extras():
+                import polars as pl
+
             return cast("pl.DataFrame", frame).select(pl.col(name=column).max()).item()
 
         msg = f"Unsupported backend: {backend.name}"
