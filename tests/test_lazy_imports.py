@@ -14,7 +14,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-# The 35 modules structurally blocked by optional-library base classes,
+# The 36 modules structurally blocked by optional-library base classes,
 # import-time decorators, or module-level instances that cannot be deferred.
 EXPECTED_BLOCKED: frozenset[str] = frozenset(
     {
@@ -39,6 +39,7 @@ EXPECTED_BLOCKED: frozenset[str] = frozenset(
         "mayutils.objects.datetime.constants",
         "mayutils.objects.datetime.datetime",
         "mayutils.objects.datetime.interval",
+        "mayutils.objects.datetime.numpy",
         "mayutils.objects.datetime.timezone",
         "mayutils.objects.datetime.traveller",
         "mayutils.visualisation.graphs.plotly.charts.plot",

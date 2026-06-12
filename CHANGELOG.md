@@ -4,6 +4,20 @@ All notable changes to `mayutils` will be documented here.
 
 This project follows [Semantic Versioning](https://semver.org/) and the [Keep a Changelog](https://keepachangelog.com/) conventions. Releases are produced by [commitizen](https://commitizen-tools.github.io/commitizen/) from [Conventional Commits](https://www.conventionalcommits.org/) — `feat` bumps the minor version, `fix` bumps the patch, and a `!` or `BREAKING CHANGE:` footer bumps the major.
 
+## v3.1.0 (2026-06-12)
+
+### Feat
+
+- **objects**: add numpy datetime64 coercion and pydantic NpDatetime64 type
+- **mathematics**: add deterministic hash-based experiment assignment
+- **objects**: add time-effective versioned module and value resolution to versions
+- **mathematics**: add numpy array broadcast, merge, lookup, and length-check helpers
+
+### Fix
+
+- **objects/datetime**: Make coerce_datetime64 argument positional-only and allowlist module in lazy-import test
+- **objects**: preserve np.datetime64 static type on NpDatetime64 via GetPydanticSchema
+
 ## v3.0.0 (2026-06-11)
 
 ### BREAKING CHANGE
