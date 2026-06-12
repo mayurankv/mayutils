@@ -62,13 +62,6 @@ def coerce_datetime64(
     --------
     numpy.datetime64 : Target dtype for all coercions in this function.
 
-    Examples
-    --------
-    >>> import numpy as np
-    >>> from mayutils.objects.datetime.numpy import coerce_datetime64
-    >>> coerce_datetime64("2026-01-15")
-    np.datetime64('2026-01-15T00:00:00.000000')
-
     Notes
     -----
     Three non-obvious coercion behaviours worth knowing:
@@ -84,6 +77,13 @@ def coerce_datetime64(
     * **higher-resolution datetime64 truncated**: a ``datetime64[ns]``
       (or finer) value is cast to ``datetime64[us]``, discarding
       sub-microsecond precision without warning.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from mayutils.objects.datetime.numpy import coerce_datetime64
+    >>> coerce_datetime64("2026-01-15")
+    np.datetime64('2026-01-15T00:00:00.000000')
     """
     if isinstance(v, np.datetime64):
         return v.astype("datetime64[us]")

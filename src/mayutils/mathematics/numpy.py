@@ -135,19 +135,6 @@ def merge_detail(
     broadcast_to_array : Broadcast a scalar or sequence to a fixed-length array.
     check_lengths : Verify that all arrays share the same first dimension.
 
-    Examples
-    --------
-    >>> import numpy as np
-    >>> from mayutils.mathematics.numpy import merge_detail
-    >>> template = np.zeros(4, dtype=np.float64)
-    >>> mask0 = np.array([True, True, False, False])
-    >>> mask1 = np.array([False, False, True, True])
-    >>> detail: dict = {}
-    >>> merge_detail(detail=detail, detail_out={"score": np.array([1.0, 2.0])}, mask=mask0, template=template)
-    {'score': array([1., 2., 0., 0.])}
-    >>> merge_detail(detail=detail, detail_out={"score": np.array([3.0, 4.0])}, mask=mask1, template=template)
-    {'score': array([1., 2., 3., 4.])}
-
     Notes
     -----
     Across accumulated calls, the masks must jointly cover every
@@ -156,6 +143,18 @@ def merge_detail(
     *template* the full template shape is trusted, so trailing
     dimensions must match; otherwise assignment raises a raw NumPy
     broadcast ``ValueError``.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from mayutils.mathematics.numpy import merge_detail
+    >>> template = np.zeros(4, dtype=np.float64)
+    >>> mask0 = np.array([True, True, False, False])
+    >>> mask1 = np.array([False, False, True, True])
+    >>> detail: dict = {}
+    >>> _ = merge_detail(detail=detail, detail_out={"score": np.array([1.0, 2.0])}, mask=mask0, template=template)
+    >>> merge_detail(detail=detail, detail_out={"score": np.array([3.0, 4.0])}, mask=mask1, template=template)
+    {'score': array([1., 2., 3., 4.])}
     """
     with may_require_extras():
         import numpy as np
