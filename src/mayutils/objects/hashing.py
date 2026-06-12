@@ -28,13 +28,14 @@ True
 64
 """
 
+from __future__ import annotations
+
 import json
 from datetime import datetime
 from hashlib import sha256
+from typing import TYPE_CHECKING
 
-from mayutils.core.extras import may_require_extras
-
-with may_require_extras():
+if TYPE_CHECKING:
     from pendulum import DateTime as PendulumDateTime
 
     from mayutils.objects.datetime import DateTime
@@ -94,7 +95,7 @@ def serialise(
     >>> json.dumps({"timestamp": datetime(2026, 4, 22)}, default=serialise)
     '{"timestamp": "2026-04-22T00:00:00"}'
     """
-    if isinstance(obj, (DateTime, PendulumDateTime, datetime)):
+    if isinstance(obj, datetime):
         return obj.isoformat()
 
     msg = f"Type {type(obj)} not serialisable"

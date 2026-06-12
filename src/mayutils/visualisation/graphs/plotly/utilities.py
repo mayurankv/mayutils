@@ -1,13 +1,14 @@
 """Utility functions for Plotly chart rendering and data preparation."""
 
+from __future__ import annotations
+
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from mayutils.core.extras import may_require_extras
 
-with may_require_extras():
+if TYPE_CHECKING:
     import numpy as np
-    import plotly
     from numpy.typing import ArrayLike, NDArray
     from pandas import DataFrame
 
@@ -43,6 +44,9 @@ def include_plotly_js(
     >>> isinstance(js, str)
     True
     """
+    with may_require_extras():
+        import plotly
+
     pkg_path = Path(plotly.__path__[0])
     js_path = pkg_path / "package_data" / "plotly.min.js"
     plotly_js = js_path.read_text(encoding="utf-8")
@@ -102,6 +106,9 @@ def map_categorical_array(
     >>> map_categorical_array(arr).tolist()
     [0, 1, 0]
     """
+    with may_require_extras():
+        import numpy as np
+
     if mapping is not None:
         mapping_arr = np.asarray(mapping)
         if len(set(mapping_arr)) != len(mapping_arr):

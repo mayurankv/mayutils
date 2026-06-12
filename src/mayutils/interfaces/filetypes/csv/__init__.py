@@ -40,12 +40,10 @@ from mayutils.core.extras import may_require_extras
 from mayutils.interfaces.filetypes import DataFile
 from mayutils.objects.dataframes.backends import DataFrames
 
-with may_require_extras():
-    import pandas as pd
-    import polars as pl
-
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+    import pandas as pd
 
 
 DEFAULT_SCHEMA_SAMPLE_ROWS = 1000
@@ -155,12 +153,18 @@ class Csv[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType]):
         (2, 2)
         """
         if self.backend.name == "polars":
+            with may_require_extras():
+                import polars as pl
+
             return self.backend.cast(
                 pl.read_csv(
                     source=self.path,
                     **kwargs,
                 ),
             )
+
+        with may_require_extras():
+            import pandas as pd
 
         return self.backend.cast(
             cast(
@@ -244,6 +248,9 @@ class Csv[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType]):
         True
         """
         if self.backend.name == "pandas":
+            with may_require_extras():
+                import pandas as pd
+
             if not isinstance(df, pd.DataFrame):
                 msg = f"Expected a pandas DataFrame for writing with backend 'pandas', but got {type(df).__name__!r} instead."
                 raise TypeError(
@@ -257,6 +264,9 @@ class Csv[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType]):
             )
 
         elif self.backend.name == "polars":
+            with may_require_extras():
+                import polars as pl
+
             if not isinstance(df, pl.DataFrame):
                 msg = f"Expected a polars DataFrame for writing with backend 'polars', but got {type(df).__name__!r} instead."
                 raise TypeError(
@@ -327,6 +337,9 @@ class Csv[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType]):
         ...     list(csv_file.schema(sample_rows=50))
         ['id', 'value']
         """
+        with may_require_extras():
+            import pandas as pd
+
         head = pd.read_csv(filepath_or_buffer=self.path, nrows=sample_rows)
 
         return {column: head[column].dtype for column in head.columns}
@@ -442,10 +455,16 @@ class Csv[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType]):
         [500, 500, 100]
         """
         if self.backend.name == "pandas":
+            with may_require_extras():
+                import pandas as pd
+
             with pd.read_csv(filepath_or_buffer=self.path, chunksize=chunk_size, **kwargs) as reader:
                 yield from reader
 
             return
+
+        with may_require_extras():
+            import polars as pl
 
         frame = pl.read_csv(source=self.path, **kwargs)
 

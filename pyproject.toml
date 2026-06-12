@@ -36,6 +36,7 @@ testing = ["pytest>=8.4.2"]
 [project]
 authors = [{email = "mayuran.k.v@gmail.com", name = "Mayuran Visakan"}]
 dependencies = [
+  "jinja2>=3.1",
   "pydantic>=2.11.7",
   "pydantic-settings>=2.10.1"
 ]
@@ -45,7 +46,7 @@ maintainers = [{email = "mayuran.k.v@gmail.com", name = "Mayuran Visakan"}]
 name = "mayutils"
 readme = "README.md"
 requires-python = ">=3.13,<4.0"
-version = "2.0.0"
+version = "3.0.0"
 
 [project.optional-dependencies]
 all = [
@@ -208,7 +209,7 @@ pre_bump_hooks = [
 ]
 tag_format = "v$version"
 update_changelog_on_bump = true
-version = "2.0.0"
+version = "3.0.0"
 version_files = ["pyproject.toml:^version"]
 
 [tool.mdformat]

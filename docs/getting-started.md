@@ -35,7 +35,7 @@ See [Dependency Groups](guides/dependency-groups.md) for the full mapping of gro
 ## For Development
 
 ```zsh
-git clone git@github.com:mayuran-visakan/mayutils.git
+git clone git@github.com:mayurankv/mayutils.git
 cd mayutils
 make init
 source .venv/bin/activate

@@ -30,16 +30,16 @@ Examples
 >>> driver.quit()  # doctest: +SKIP
 """
 
-from collections.abc import Mapping
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 from mayutils.core.extras import may_require_extras
 
-with may_require_extras():
-    from selenium.webdriver.safari.options import Options as SafariOptions
-    from selenium.webdriver.safari.service import Service as SafariService
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from selenium.webdriver.safari.webdriver import WebDriver
-    from selenium.webdriver.safari.webdriver import WebDriver as SafariWebDriver
 
 
 def get_safari_driver(
@@ -126,6 +126,11 @@ def get_safari_driver(
     ... )  # doctest: +SKIP
     >>> driver.quit()  # doctest: +SKIP
     """
+    with may_require_extras():
+        from selenium.webdriver.safari.options import Options as SafariOptions
+        from selenium.webdriver.safari.service import Service as SafariService
+        from selenium.webdriver.safari.webdriver import WebDriver as SafariWebDriver
+
     return SafariWebDriver(
         service=SafariService(**(service_kwargs or {})),
         options=SafariOptions(**(options_kwargs or {})),

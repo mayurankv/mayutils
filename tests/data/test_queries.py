@@ -2,7 +2,7 @@
 
 Covers the SQL-template discovery helpers: building the search path with
 :func:`get_queries_folders`, loading raw text by bare name / relative path /
-absolute path with :func:`read_query`, and placeholder interpolation via
+absolute path with :func:`read_query`, and Jinja template rendering via
 :func:`format_query`. Resolution is exercised against throwaway directories
 passed explicitly through ``queries_folders`` so the module-level
 :data:`QUERIES_FOLDERS` and the real project tree are never touched.
@@ -13,6 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from jinja2.exceptions import UndefinedError
 
 from mayutils.data.queries import (
     QUERIES_FOLDERS,
@@ -138,22 +139,21 @@ class TestReadQuery:
 
 
 class TestFormatQuery:
-    """Tests for :func:`format_query` — load-then-``str.format`` convenience wrapper."""
+    """Tests for :func:`format_query` — load-then-render Jinja template wrapper."""
 
     def test_substitutes_single_placeholder(self, tmp_path: Path) -> None:
-        """A single ``{name}`` placeholder is replaced by the matching keyword."""
-        _write_query(tmp_path, "region.sql", "SELECT * FROM loans WHERE region = '{region}'")
-        rendered = format_query("region", queries_folders=(tmp_path,), region="London")
+        """A single ``{{ name }}`` placeholder is replaced by the matching value."""
+        _write_query(tmp_path, "region.sql", "SELECT * FROM loans WHERE region = '{{ region }}'")
+        rendered = format_query("region", queries_folders=(tmp_path,), template_kwargs={"region": "London"})
         assert rendered == "SELECT * FROM loans WHERE region = 'London'"
 
     def test_substitutes_multiple_placeholders(self, tmp_path: Path) -> None:
-        """Multiple placeholders are all interpolated from keyword arguments."""
-        _write_query(tmp_path, "revenue.sql", "SELECT * FROM {schema}.revenue WHERE dt >= '{start_date}'")
+        """Multiple Jinja placeholders are all substituted from *template_kwargs*."""
+        _write_query(tmp_path, "revenue.sql", "SELECT * FROM {{ schema }}.revenue WHERE dt >= '{{ start_date }}'")
         rendered = format_query(
             "revenue",
             queries_folders=(tmp_path,),
-            schema="analytics",
-            start_date="2024-01-01",
+            template_kwargs={"schema": "analytics", "start_date": "2024-01-01"},
         )
         assert rendered == "SELECT * FROM analytics.revenue WHERE dt >= '2024-01-01'"
 
@@ -163,26 +163,34 @@ class TestFormatQuery:
         assert format_query("static", queries_folders=(tmp_path,)) == "SELECT 1"
 
     def test_non_string_value_is_stringified(self, tmp_path: Path) -> None:
-        """Non-string substitutions are coerced via ``str`` by ``str.format``."""
-        _write_query(tmp_path, "limit.sql", "SELECT * FROM t LIMIT {n}")
-        assert format_query("limit", queries_folders=(tmp_path,), n=10) == "SELECT * FROM t LIMIT 10"
+        """Non-string substitutions are coerced to their string representation by Jinja."""
+        _write_query(tmp_path, "limit.sql", "SELECT * FROM t LIMIT {{ n }}")
+        assert format_query("limit", queries_folders=(tmp_path,), template_kwargs={"n": 10}) == "SELECT * FROM t LIMIT 10"
 
-    def test_missing_placeholder_raises_key_error(self, tmp_path: Path) -> None:
-        """A placeholder without a matching keyword propagates ``KeyError``."""
-        _write_query(tmp_path, "needs_arg.sql", "SELECT * FROM {schema}.t")
-        with pytest.raises(KeyError):
+    def test_missing_placeholder_raises_undefined_error(self, tmp_path: Path) -> None:
+        """A ``{{ name }}`` placeholder without a matching key propagates :class:`~jinja2.exceptions.UndefinedError`."""
+        _write_query(tmp_path, "needs_arg.sql", "SELECT * FROM {{ schema }}.t")
+        with pytest.raises(UndefinedError):
             format_query("needs_arg", queries_folders=(tmp_path,))
 
-    def test_positional_placeholder_raises_index_error(self, tmp_path: Path) -> None:
-        """A positional ``{0}`` placeholder raises ``IndexError`` (keyword-only support)."""
-        _write_query(tmp_path, "positional.sql", "SELECT {0}")
-        with pytest.raises(IndexError):
-            format_query("positional", queries_folders=(tmp_path,))
+    def test_loop_expansion_produces_in_clause(self, tmp_path: Path) -> None:
+        """Jinja ``{% for %}`` loops expand sequence values into SQL fragments."""
+        _write_query(
+            tmp_path,
+            "regions.sql",
+            "SELECT * FROM loans WHERE region IN ({% for r in regions %}'{{ r }}'{% if not loop.last %}, {% endif %}{% endfor %})",
+        )
+        rendered = format_query(
+            "regions",
+            queries_folders=(tmp_path,),
+            template_kwargs={"regions": ["London", "Leeds"]},
+        )
+        assert rendered == "SELECT * FROM loans WHERE region IN ('London', 'Leeds')"
 
     def test_unresolvable_query_propagates_value_error(self, tmp_path: Path) -> None:
         """A missing template surfaces the ``ValueError`` raised by :func:`read_query`."""
         with pytest.raises(ValueError, match="No query"):
-            format_query("absent", queries_folders=(tmp_path,), x="y")
+            format_query("absent", queries_folders=(tmp_path,), template_kwargs={"x": "y"})
 
     def test_empty_search_path_with_bare_name_raises(self) -> None:
         """A bare name with an empty search path cannot resolve and raises ``ValueError``."""

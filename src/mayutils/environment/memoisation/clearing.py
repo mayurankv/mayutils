@@ -147,7 +147,7 @@ def _clear_interactive(
     []
     """
     with may_require_extras():
-        from rich.progress import (  # noqa: PLC0415
+        from rich.progress import (
             BarColumn,
             Progress,
             SpinnerColumn,
@@ -155,9 +155,9 @@ def _clear_interactive(
             TextColumn,
             TimeElapsedColumn,
         )
-        from rich.table import Table  # noqa: PLC0415
+        from rich.table import Table
 
-    from mayutils.visualisation.console import CONSOLE  # noqa: PLC0415
+    from mayutils.visualisation.console import CONSOLE
 
     if not candidates:
         CONSOLE.print("[green]No files to delete![/green]")

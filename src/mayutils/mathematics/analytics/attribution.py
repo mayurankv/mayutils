@@ -586,13 +586,13 @@ class Attribution:
         [{'price': 200.0, 'volume': 100.0, 'interaction': 20.0}]
         """
         with may_require_extras():
-            from mayutils.objects.dataframes.backends import Backend  # noqa: PLC0415
+            from mayutils.objects.dataframes.backends import Backend
 
         resolved_backend = Backend.infer(baseline) if backend is None else backend
 
         if resolved_backend.name == "pandas":
             with may_require_extras():
-                import pandas as pd  # noqa: PLC0415
+                import pandas as pd
 
             baseline_pd = cast("pd.DataFrame", baseline)
             comparison_pd = cast("pd.DataFrame", comparison)
@@ -612,7 +612,7 @@ class Attribution:
 
         if resolved_backend.name == "polars":
             with may_require_extras():
-                import polars as pl  # noqa: PLC0415
+                import polars as pl
 
             baseline_pl = cast("pl.DataFrame", baseline)
             comparison_pl = cast("pl.DataFrame", comparison)

@@ -1,20 +1,21 @@
 """Configuration dataclasses and helpers for composing Plotly subplot layouts."""
 
+from __future__ import annotations
+
+import datetime
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from math import ceil, isqrt
-from typing import Any, Literal, Self, cast
+from typing import TYPE_CHECKING, Any, Literal, Self, cast
 
-from mayutils.core.extras import may_require_extras
-from mayutils.objects.datetime import DateTime
-
-with may_require_extras():
-    import datetime
-
+if TYPE_CHECKING:
     from plotly.basedatatypes import BaseTraceType
 
+    from mayutils.visualisation.graphs.plotly.charts.plot import Plot
+    from mayutils.visualisation.graphs.plotly.charts.subplot import SubPlot
+
 AxisConfig = Mapping[str, Any]
-Trace = BaseTraceType
+type Trace = BaseTraceType
 
 DEFAULT_YAXIS_NUM = 1
 
@@ -54,7 +55,7 @@ class TracesConfig:
         /,
         *,
         yaxis_config: AxisConfig | None = None,
-    ) -> "TracesConfig":
+    ) -> TracesConfig:
         """
         Create a ``TracesConfig`` from a single trace.
 
@@ -126,7 +127,7 @@ class PlotConfig:
     @classmethod
     def empty(
         cls,
-    ) -> "PlotConfig":
+    ) -> PlotConfig:
         """
         Create an empty ``PlotConfig`` with no traces or axis overrides.
 
@@ -161,7 +162,7 @@ class PlotConfig:
         *,
         yaxis_config: AxisConfig | None = None,
         xaxis_config: AxisConfig | None = None,
-    ) -> "PlotConfig":
+    ) -> PlotConfig:
         """
         Create a ``PlotConfig`` from a single trace.
 
@@ -214,7 +215,7 @@ class PlotConfig:
         *traces: Trace,
         yaxis_config: AxisConfig | None = None,
         xaxis_config: AxisConfig | None = None,
-    ) -> "PlotConfig":
+    ) -> PlotConfig:
         """
         Create a ``PlotConfig`` from multiple traces sharing one y-axis.
 
@@ -765,6 +766,8 @@ class SubPlotConfig:
         >>> config.infer_x_datetime()
         True
         """
+        from mayutils.objects.datetime import DateTime
+
         for row_configs in self.plots:
             for plot_config in row_configs:
                 if plot_config is None:
@@ -962,8 +965,62 @@ def sort_traces_by_axes(
     return traces_axes
 
 
-from mayutils.visualisation.graphs.plotly.charts.plot import Plot  # noqa: E402
-from mayutils.visualisation.graphs.plotly.charts.subplot import SubPlot  # noqa: E402
+def __getattr__(
+    name: str,
+) -> type[Plot | SubPlot]:
+    """
+    Materialise the lazily exported chart classes on first access.
+
+    ``Plot`` and ``SubPlot`` subclass :class:`plotly.graph_objects.Figure`,
+    so importing their defining modules requires the optional plotting
+    extras. Deferring those imports to first attribute access (and caching
+    the result back into the module globals) keeps this package importable
+    without plotly while preserving the public
+    ``mayutils.visualisation.graphs.plotly.charts.Plot`` surface.
+
+    Parameters
+    ----------
+    name
+        Attribute being looked up on the module.
+
+    Returns
+    -------
+        The requested chart class when *name* is ``"Plot"`` or
+        ``"SubPlot"``.
+
+    Raises
+    ------
+    AttributeError
+        If *name* is not a lazily materialised attribute.
+
+    See Also
+    --------
+    mayutils.visualisation.graphs.plotly.charts.plot.Plot : Lazily exported.
+    mayutils.visualisation.graphs.plotly.charts.subplot.SubPlot : Lazily exported.
+
+    Examples
+    --------
+    >>> from mayutils.visualisation.graphs.plotly.charts import Plot
+    >>> Plot.__name__
+    'Plot'
+    """
+    if name == "Plot":
+        from mayutils.visualisation.graphs.plotly.charts.plot import Plot
+
+        globals()[name] = Plot
+
+        return Plot
+
+    if name == "SubPlot":
+        from mayutils.visualisation.graphs.plotly.charts.subplot import SubPlot
+
+        globals()[name] = SubPlot
+
+        return SubPlot
+
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
+
 
 __all__ = [
     "AxisConfig",

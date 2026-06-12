@@ -345,7 +345,7 @@ class Logger(logging.Logger):
 
         if console_handler is None:
             with may_require_extras():
-                from rich.logging import RichHandler  # noqa: PLC0415
+                from rich.logging import RichHandler
 
             console_handler = RichHandler(
                 level=console_level,

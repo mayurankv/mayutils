@@ -15,7 +15,6 @@ from mayutils.core.extras import may_require_extras
 from mayutils.environment.logging import Logger
 from mayutils.export.images import IMAGES_FOLDER
 from mayutils.objects.colours import TRANSPARENT, Colour
-from mayutils.objects.datetime import Date, DateTime, Interval
 from mayutils.objects.functions import set_inline
 from mayutils.objects.paths import resolve_save_path
 from mayutils.visualisation.graphs.plotly.charts import (
@@ -47,6 +46,8 @@ from mayutils.visualisation.graphs.plotly.traces import (
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
+
+    from mayutils.objects.datetime import Date, DateTime, Interval
 
 
 with may_require_extras():
@@ -1973,7 +1974,7 @@ class Plot(go.Figure):
 
     def add_interval(
         self,
-        interval: Interval[Date] | Interval[DateTime] | None,
+        interval: "Interval[Date] | Interval[DateTime] | None",
         /,
         **kwargs: Any,  # noqa: ANN401
     ) -> Self:
@@ -2003,6 +2004,7 @@ class Plot(go.Figure):
 
         Examples
         --------
+        >>> from mayutils.objects.datetime import Interval
         >>> plot = Plot.from_traces(go.Scatter(x=[datetime.date(2020, 1, 1), datetime.date(2020, 1, 2)], y=[1, 2]), description="demo")
         >>> interval = Interval(start=datetime.date(2020, 1, 1), end=datetime.date(2020, 1, 2))
         >>> plot = plot.add_interval(interval)

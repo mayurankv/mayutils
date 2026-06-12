@@ -4,8 +4,9 @@ Provide query execution with templating, caching and pluggable readers.
 This module is the canonical entry point for reading the result of a
 named or inline SQL query into a DataFrame. Query resolution runs
 through :func:`mayutils.data.queries.format_query` when ``query`` is a
-:class:`~pathlib.Path` and through :meth:`str.format` when ``query`` is
-a raw template :class:`str`, so the same interface serves both
+:class:`~pathlib.Path` and through
+:func:`mayutils.data.queries.templating.render_template` when ``query``
+is a raw Jinja template :class:`str`, so the same interface serves both
 filesystem templates and inline SQL. The underlying database
 connectivity is abstracted behind the :class:`QueryReader` protocol so
 that pandas, polars and bespoke adapters (Snowflake, Redash, fixture
@@ -29,10 +30,10 @@ Examples
 --------
 >>> from mayutils.data.read import read_query
 >>> df = read_query(  # doctest: +SKIP
-...     "SELECT * FROM loans WHERE product = {product!r}",
+...     "SELECT * FROM loans WHERE product = '{{ product }}'",
 ...     reader=engine.read_pandas,
 ...     cache=True,
-...     product="personal",
+...     template_kwargs={"product": "personal"},
 ... )
 >>> df.shape  # doctest: +SKIP
 (3, 1)
@@ -46,21 +47,21 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, cast, runtime_checkable
 
-from mayutils.core.extras import may_require_extras
 from mayutils.data import CACHE_FOLDER
 from mayutils.data.queries import QUERIES_FOLDERS, format_query
+from mayutils.data.queries.templating import render_template
 from mayutils.environment.logging import Logger
 from mayutils.environment.memoisation import cache, make_cache_stem
 from mayutils.objects.dataframes.backends import Backend, DataFrames, default_backend
-
-with may_require_extras():
-    import pandas as pd
+from mayutils.objects.dataframes.temporal import parse_temporal_columns
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping, Sequence
 
+    import pandas as pd
+
     from mayutils.objects.datetime import Duration
-    from mayutils.objects.types import SQL, SupportsStr
+    from mayutils.objects.types import SQL
 
 
 logger = Logger.spawn()
@@ -373,7 +374,7 @@ def render_query(
     *,
     queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
     default_suffix: str = "sql",
-    **format_kwargs: SupportsStr,
+    template_kwargs: Mapping[str, object] | None = None,
 ) -> str:
     r"""
     Render a query template to a concrete SQL string.
@@ -381,14 +382,14 @@ def render_query(
     The behaviour depends on the runtime type of ``query``. A
     :class:`~pathlib.Path` is resolved against ``queries_folders`` via
     :func:`mayutils.data.queries.format_query`, which reads the
-    template from disk and applies :meth:`str.format` with
-    ``format_kwargs``. An :data:`~mayutils.objects.types.SQL` string is
-    treated as an inline template and rendered directly via
-    :meth:`str.format` when ``format_kwargs`` is non-empty, or returned
-    verbatim otherwise. When a plain :class:`str` structurally resembles
-    a file path (detected by :func:`looks_like_sql_path`), a
-    :class:`QueryInputWarning` is emitted and the string is routed
-    through :func:`~mayutils.data.queries.format_query` as if it were a
+    template from disk and renders it with Jinja2 using
+    ``template_kwargs``. An :data:`~mayutils.objects.types.SQL` string is
+    treated as an inline Jinja template and rendered directly via
+    :func:`~mayutils.data.queries.templating.render_template`. When a
+    plain :class:`str` structurally resembles a file path (detected by
+    :func:`looks_like_sql_path`), a :class:`QueryInputWarning` is
+    emitted and the string is routed through
+    :func:`~mayutils.data.queries.format_query` as if it were a
     :class:`~pathlib.Path`. Keeping both paths behind a single helper
     means :func:`read_query`, its caching logic, and any bespoke
     pre-processing agree on exactly one string to hash and to execute.
@@ -396,8 +397,8 @@ def render_query(
     Parameters
     ----------
     query
-        Either an inline SQL template wrapped in
-        :data:`~mayutils.objects.types.SQL` with ``{name}``
+        Either an inline SQL Jinja template wrapped in
+        :data:`~mayutils.objects.types.SQL` with ``{{ name }}``
         placeholders, or a :class:`~pathlib.Path` identifying a
         bundled query template on disk. A plain :class:`str` is
         accepted at runtime for backwards compatibility but will be
@@ -405,21 +406,27 @@ def render_query(
         path, a :class:`QueryInputWarning` is emitted.
     queries_folders
         Search path forwarded to :func:`format_query` when
-        resolving path-typed queries. Defaults to
-        :data:`mayutils.data.queries.QUERIES_FOLDERS`.
+        resolving path-typed queries and to
+        :func:`~mayutils.data.queries.templating.render_template` for
+        resolving ``{% include %}`` directives in inline templates.
+        Defaults to :data:`mayutils.data.queries.QUERIES_FOLDERS`.
     default_suffix
         File extension assumed when *query* is a bare filename
         without a suffix. Forwarded to :func:`format_query`.
-    **format_kwargs
-        Keyword substitutions applied to the template. Every value
-        must be stringifiable; Python inserts
-        ``str(value)`` at each matching ``{name}`` placeholder.
+    template_kwargs
+        Mapping of Jinja2 template variable names to their values.
+        When ``None`` or omitted the template is rendered with no
+        variables, which is only valid for templates that contain no
+        variable references.
 
     Returns
     -------
     str
         Fully rendered SQL string ready to be dispatched through a
         :class:`QueryReader`.
+        :class:`~jinja2.exceptions.UndefinedError` propagates from the
+        Jinja2 engine when the template references a variable not
+        present in ``template_kwargs``.
 
     Warns
     -----
@@ -432,6 +439,8 @@ def render_query(
     read_query : Primary caller that renders then executes the query.
     mayutils.data.queries.format_query : Filesystem lookup and
         templating backend.
+    mayutils.data.queries.templating.render_template : Jinja2
+        rendering engine used for inline templates.
     mayutils.objects.types.SQL : NewType distinguishing inline SQL
         from plain :class:`str`.
     QueryInputWarning : Warning emitted when the heuristic fires.
@@ -444,12 +453,11 @@ def render_query(
     --------
     >>> from mayutils.objects.types import SQL
     >>> from mayutils.data.read import render_query
-    >>> render_query(SQL("SELECT * FROM {table}"), table="loans")
+    >>> render_query(SQL("SELECT * FROM {{ table }}"), template_kwargs={"table": "loans"})
     'SELECT * FROM loans'
     >>> render_query(
-    ...     SQL("SELECT * FROM {table} WHERE product = {product!r}"),
-    ...     table="loans",
-    ...     product="personal",
+    ...     SQL("SELECT * FROM {{ table }} WHERE product = '{{ product }}'"),
+    ...     template_kwargs={"table": "loans", "product": "personal"},
     ... )
     "SELECT * FROM loans WHERE product = 'personal'"
     """
@@ -463,27 +471,34 @@ def render_query(
         )
         query = Path(query)
 
+    template_kwargs = dict(template_kwargs or {})
+
     if isinstance(query, Path):
-        logger.debug(f"Rendering query file {query} with arguments {sorted(format_kwargs)}")
+        logger.debug(f"Rendering query file {query} with arguments {sorted(template_kwargs)}")
 
         return format_query(
             query,
             queries_folders=queries_folders,
             default_suffix=default_suffix,
-            **format_kwargs,
+            template_kwargs=template_kwargs,
         )
 
-    logger.debug(f"Rendering inline SQL ({len(query)} chars) with arguments {sorted(format_kwargs)}")
+    logger.debug(f"Rendering inline SQL ({len(query)} chars) with arguments {sorted(template_kwargs)}")
 
-    return query.format(**format_kwargs)
+    return render_template(
+        query,
+        queries_folders=queries_folders,
+        template_kwargs=template_kwargs,
+    )
 
 
 def read_query[DataFrameType: DataFrames = pd.DataFrame](
     query: SQL | Path,
     /,
     *,
-    reader: QueryReader,
+    reader: QueryReader | None = None,
     backend: Backend[DataFrameType] | None = None,
+    parse_temporal: bool = True,
     suffix: str | None = None,
     persist: bool | None = False,
     ttl: Duration | None = None,
@@ -492,7 +507,7 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
     cache_folder: Path | str = CACHE_FOLDER,
     queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
     default_suffix: str = "sql",
-    **format_kwargs: SupportsStr,
+    template_kwargs: Mapping[str, object] | None = None,
 ) -> DataFrameType:
     r"""
     Execute a SQL query through *reader* with optional caching.
@@ -508,6 +523,12 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
         Callable that executes the rendered SQL and returns a DataFrame.
     backend
         DataFrame backend token. Defaults to pandas when ``None``.
+    parse_temporal
+        Whether to automatically convert string (and object) columns
+        that look like dates, times or datetimes into temporal dtypes
+        after the query result materialises. Applied after the cache
+        layer, so cached artefacts are also upgraded; parsing is
+        idempotent. Disable for strict schema stability.
     suffix
         Cache file extension. ``None`` infers from the result type.
     persist
@@ -526,8 +547,9 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
         Directories to search when *query* is a filename.
     default_suffix
         File extension assumed when *query* is a bare filename.
-    **format_kwargs
-        Template substitutions forwarded to :func:`render_query`.
+    template_kwargs
+        Jinja2 template substitutions forwarded to
+        :func:`render_query`.
 
     Returns
     -------
@@ -548,22 +570,29 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
     >>> df.shape  # doctest: +SKIP
     (1, 1)
     """
+    if reader is None:
+        from mayutils.interfaces.data import get_env_reader
+
+        reader = get_env_reader()
+
     backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
 
     rendered_query = render_query(
         query,
         queries_folders=queries_folders,
         default_suffix=default_suffix,
-        **format_kwargs,
+        template_kwargs=template_kwargs,
     )
 
     logger.debug(f"Executing query ({len(rendered_query)} chars) with backend={backend.name!r} and persist={persist!r}")
 
     if persist is None:
-        return reader(
+        result = reader(
             rendered_query,
             backend=backend,
         )
+
+        return parse_temporal_columns(result, backend=backend) if parse_temporal else result
 
     def execute(
         rendered: str,
@@ -625,28 +654,31 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
                     query,
                     cache_description=cache_description,
                     ttl=ttl,
-                    format_kwargs=format_kwargs,
+                    template_kwargs=dict(template_kwargs or {}),
                     cache_extra=cache_extra,
                     key="",
                 ),
             )(execute),
         )
 
-    return cached_execute(
+    result = cached_execute(
         rendered_query,
         _extra=dict(cache_extra) if cache_extra else None,
     )
+
+    return parse_temporal_columns(result, backend=backend) if parse_temporal else result
 
 
 def stream_query[DataFrameType: DataFrames = pd.DataFrame](
     query: SQL | Path,
     /,
     *,
-    streamer: QueryStreamer,
+    streamer: QueryStreamer | None = None,
     backend: Backend[DataFrameType] | None = None,
+    parse_temporal: bool = True,
     queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
     default_suffix: str = "sql",
-    **format_kwargs: SupportsStr,
+    template_kwargs: Mapping[str, object] | None = None,
 ) -> Iterator[DataFrameType]:
     r"""
     Stream a SQL query through *streamer* in DataFrame chunks.
@@ -654,7 +686,10 @@ def stream_query[DataFrameType: DataFrames = pd.DataFrame](
     Renders the query via :func:`render_query` and lazily yields the
     chunks produced by *streamer*. No caching is applied; each chunk is
     forwarded as soon as the underlying driver produces it, keeping
-    peak memory bounded for large result sets.
+    peak memory bounded for large result sets. Temporal parsing is
+    applied to each chunk independently, so the inferred temporal kinds
+    can differ between chunks; pass ``parse_temporal=False`` for strict
+    schema stability across chunks.
 
     Parameters
     ----------
@@ -665,12 +700,19 @@ def stream_query[DataFrameType: DataFrames = pd.DataFrame](
         chunks.
     backend
         DataFrame backend token. Defaults to pandas when ``None``.
+    parse_temporal
+        Whether to automatically convert string (and object) columns
+        that look like dates, times or datetimes into temporal dtypes
+        in each yielded chunk. Chunks are parsed independently, so the
+        inferred kinds can differ between chunks; parsing is
+        idempotent. Disable for strict schema stability.
     queries_folders
         Directories to search when *query* is a filename.
     default_suffix
         File extension assumed when *query* is a bare filename.
-    **format_kwargs
-        Template substitutions forwarded to :func:`render_query`.
+    template_kwargs
+        Jinja2 template substitutions forwarded to
+        :func:`render_query`.
 
     Yields
     ------
@@ -693,21 +735,27 @@ def stream_query[DataFrameType: DataFrames = pd.DataFrame](
     >>> chunks[0].shape
     (1, 1)
     """
+    if streamer is None:
+        from mayutils.interfaces.data import get_env_streamer
+
+        streamer = get_env_streamer()
+
     backend = backend if backend is not None else cast("Backend[DataFrameType]", default_backend())
 
     rendered_query = render_query(
         query,
         queries_folders=queries_folders,
         default_suffix=default_suffix,
-        **format_kwargs,
+        template_kwargs=template_kwargs,
     )
 
     logger.debug(f"Streaming query ({len(rendered_query)} chars) with backend={backend.name!r}")
 
-    yield from streamer(
+    for chunk in streamer(
         rendered_query,
         backend=backend,
-    )
+    ):
+        yield parse_temporal_columns(chunk, backend=backend) if parse_temporal else chunk
 
 
 def read_queries[DataFrameType: DataFrames = pd.DataFrame](
@@ -716,6 +764,7 @@ def read_queries[DataFrameType: DataFrames = pd.DataFrame](
     *,
     reader: QueryReader,
     backend: Backend[DataFrameType] | None = None,
+    parse_temporal: bool = True,
     suffix: str | None = None,
     persist: bool | None = False,
     ttl: Duration | None = None,
@@ -725,7 +774,7 @@ def read_queries[DataFrameType: DataFrames = pd.DataFrame](
     queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
     default_suffix: str = "sql",
     max_workers: int = 4,
-    **format_kwargs: SupportsStr,
+    template_kwargs: Mapping[str, object] | None = None,
 ) -> tuple[DataFrameType, ...]:
     r"""
     Execute multiple SQL queries concurrently through *reader*.
@@ -746,6 +795,12 @@ def read_queries[DataFrameType: DataFrames = pd.DataFrame](
         DataFrame.
     backend
         DataFrame backend token. Defaults to pandas when ``None``.
+    parse_temporal
+        Whether to automatically convert string (and object) columns
+        that look like dates, times or datetimes into temporal dtypes
+        in each query result. Forwarded to every :func:`read_query`
+        call; applied after the cache layer, so cached artefacts are
+        also upgraded. Disable for strict schema stability.
     suffix
         Cache file extension. ``None`` infers from the result type.
     persist
@@ -766,9 +821,9 @@ def read_queries[DataFrameType: DataFrames = pd.DataFrame](
         File extension assumed when a query is a bare filename.
     max_workers
         Maximum number of worker threads executing queries in parallel.
-    **format_kwargs
-        Template substitutions forwarded to every :func:`read_query`
-        call.
+    template_kwargs
+        Jinja2 template substitutions forwarded to every
+        :func:`read_query` call.
 
     Returns
     -------
@@ -804,6 +859,7 @@ def read_queries[DataFrameType: DataFrames = pd.DataFrame](
                 query,
                 reader=reader,
                 backend=backend,  # ty:ignore[invalid-argument-type]
+                parse_temporal=parse_temporal,
                 suffix=suffix,
                 persist=persist,
                 ttl=ttl,
@@ -812,7 +868,7 @@ def read_queries[DataFrameType: DataFrames = pd.DataFrame](
                 cache_folder=cache_folder,
                 queries_folders=queries_folders,
                 default_suffix=default_suffix,
-                **format_kwargs,
+                template_kwargs=template_kwargs,
             )
             for query in queries
         )

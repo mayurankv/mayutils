@@ -29,19 +29,20 @@ Examples
 >>> df = reader("SELECT 1 AS one")  # doctest: +SKIP
 """
 
-from collections.abc import Mapping
-from pathlib import Path
-from typing import Any, Literal
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Literal
 
 import pydantic
 
 from mayutils.core.extras import may_require_extras
-from mayutils.data.read import QueryReader, QueryStreamer
 from mayutils.environment.logging import Logger
-from mayutils.interfaces.data.snowflake import SnowflakeConfig
 
-with may_require_extras():
-    from snowflake.connector.errors import Error as SnowflakeError
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+    from pathlib import Path
+
+    from mayutils.data.read import QueryReader, QueryStreamer
 
 
 logger = Logger.spawn()
@@ -50,6 +51,7 @@ logger = Logger.spawn()
 def get_env_reader(
     *,
     env_file: Path | str | None | Literal[False] = ".env",
+    env_overrides: Mapping[str, Any] | None = None,
     platform: Literal["snowflake"] | None = None,
     connection_arguments: Mapping[str, Any] | None = None,
     lower_case: bool = True,
@@ -76,6 +78,9 @@ def get_env_reader(
         auto-discovers a ``.env`` file by walking upwards from the
         current working directory; ``False`` skips loading entirely and
         reads the existing environment.
+    env_overrides
+        Extra field values, keyed by field name or alias, overriding those
+        read from the environment.
     platform
         Restrict the search to a single platform; ``None`` tries every
         supported platform in turn.
@@ -112,9 +117,15 @@ def get_env_reader(
     >>> df = reader("SELECT 1 AS one")  # doctest: +SKIP
     """
     if platform is None or platform == "snowflake":
+        from mayutils.interfaces.data.snowflake import SnowflakeConfig
+
+        with may_require_extras():
+            from snowflake.connector.errors import Error as SnowflakeError
+
         try:
             connection = SnowflakeConfig.from_env(
                 env_file=env_file,
+                **(env_overrides or {}),
             ).to_connection(
                 connection_arguments=connection_arguments,
             )
@@ -198,6 +209,11 @@ def get_env_streamer(
     ...     print(chunk.shape)
     """
     if platform is None or platform == "snowflake":
+        from mayutils.interfaces.data.snowflake import SnowflakeConfig
+
+        with may_require_extras():
+            from snowflake.connector.errors import Error as SnowflakeError
+
         try:
             connection = SnowflakeConfig.from_env(
                 env_file=env_file,

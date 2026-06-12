@@ -1447,7 +1447,9 @@ def extract_class_own_methods(  # noqa: C901
     for node in ast.iter_child_nodes(tree):
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             import_texts.append(_collect_import_text(node))
-        elif isinstance(node, ast.With):
+        elif isinstance(node, ast.With) or (
+            isinstance(node, ast.If) and isinstance(node.test, ast.Name) and node.test.id == "TYPE_CHECKING"
+        ):
             import_texts.extend(_collect_import_text(child) for child in ast.walk(node) if isinstance(child, (ast.Import, ast.ImportFrom)))
 
     cleaned_imports: list[str] = []

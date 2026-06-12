@@ -164,7 +164,7 @@ class TestMakeCacheStem:
             SQL("SELECT * FROM loans"),
             cache_description=None,
             ttl=None,
-            format_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key="abc123",
         )
@@ -172,13 +172,13 @@ class TestMakeCacheStem:
 
     def test_path_query_uses_stem_without_suffix(self) -> None:
         """A Path query slugs its suffix-stripped path."""
-        from pathlib import Path  # noqa: PLC0415
+        from pathlib import Path
 
         stem = make_cache_stem(
             Path("queries/loans.sql"),
             cache_description=None,
             ttl=None,
-            format_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key="k",
         )
@@ -190,7 +190,7 @@ class TestMakeCacheStem:
             SQL("SELECT a FROM b"),
             cache_description="My Report",
             ttl=None,
-            format_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key="deadbeef",
         )
@@ -203,7 +203,7 @@ class TestMakeCacheStem:
             SQL("SELECT a FROM b"),
             cache_description="report",
             ttl=Duration(hours=6),
-            format_kwargs={"region": "london"},
+            template_kwargs={"region": "london"},
             cache_extra={"version": 2},
             key="deadbeef",
         )
@@ -215,7 +215,7 @@ class TestMakeCacheStem:
             SQL("SELECT 1"),
             cache_description=None,
             ttl=None,
-            format_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key="thehash",
         )

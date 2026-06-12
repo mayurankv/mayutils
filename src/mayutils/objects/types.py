@@ -61,10 +61,13 @@ Mark values that hold an inline SQL query at the type level.
 
 Used as an annotation to differentiate a raw SQL string from an
 arbitrary :class:`str` or a filesystem :class:`~pathlib.Path`
-pointing at a query template file. Because :func:`typing.NewType`
-does not create a runtime subclass, the overhead is zero while type
-checkers still treat it as a distinct type, catching accidental
-misuse where a file path is passed as a bare string.
+pointing at a query template file. Inline ``SQL`` values are treated
+as Jinja templates by :func:`mayutils.data.read.render_query`, with
+``{{ name }}`` placeholders substituted from ``template_kwargs``.
+Because :func:`typing.NewType` does not create a runtime subclass,
+the overhead is zero while type checkers still treat it as a
+distinct type, catching accidental misuse where a file path is
+passed as a bare string.
 
 See Also
 --------

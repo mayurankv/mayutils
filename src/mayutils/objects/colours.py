@@ -29,20 +29,89 @@ Examples
 'rgba(51, 102, 153, 0.5)'
 """
 
+from __future__ import annotations
+
 from colorsys import rgb_to_hls, rgb_to_hsv
 from dataclasses import dataclass
-from typing import Literal, Self
+from typing import TYPE_CHECKING, Literal, Self
 
 from mayutils.core.extras import may_require_extras
 from mayutils.objects.classes import (
     readonlyclassonlyproperty,
 )
 
-with may_require_extras():
-    from PIL.ImageColor import colormap, getrgb
+if TYPE_CHECKING:
     from pptx.dml.color import RGBColor
 
-reverse_colourmap: dict[str, str] = {value: key for key, value in colormap.items() if isinstance(value, str)}
+    reverse_colourmap: dict[str, str]
+    SPECTRUM: dict[str, Colour]
+
+
+def __getattr__(
+    name: str,
+) -> dict[str, str] | dict[str, Colour]:
+    """
+    Materialise the lazily built module attributes on first access.
+
+    ``reverse_colourmap`` (the inverted :data:`PIL.ImageColor.colormap`
+    lookup) and ``SPECTRUM`` (the parsed ``MAIN_COLOURSCALE`` palette)
+    both need Pillow's colour parser, so they are computed on first
+    attribute access (and cached back into the module globals) instead
+    of at import time, keeping the module importable without the
+    optional Pillow dependency. Because :func:`PIL.ImageColor.getrgb`
+    memoises parsed colours back into ``colormap`` as RGB tuples, the
+    inversion normalises tuple entries back to ``#rrggbb`` hex so the
+    mapping is identical no matter how many lookups preceded it.
+
+    Parameters
+    ----------
+    name
+        Attribute being looked up on the module.
+
+    Returns
+    -------
+        The hex-to-CSS-name mapping when *name* is
+        ``"reverse_colourmap"``, or the name-to-:class:`Colour` palette
+        when *name* is ``"SPECTRUM"``.
+
+    Raises
+    ------
+    AttributeError
+        If *name* is not a lazily materialised attribute.
+
+    See Also
+    --------
+    PIL.ImageColor.colormap : Source mapping that gets inverted.
+    Colour.css_map : Class-level accessor returning the same mapping.
+
+    Examples
+    --------
+    >>> from mayutils.objects.colours import reverse_colourmap
+    >>> reverse_colourmap["#ff0000"]
+    'red'
+    >>> from mayutils.objects.colours import SPECTRUM
+    >>> SPECTRUM["red"].to_str(method="hex")
+    '#ef553b'
+    """
+    if name == "reverse_colourmap":
+        with may_require_extras():
+            from PIL.ImageColor import colormap
+
+        mapping: dict[str, str] = {
+            (value if isinstance(value, str) else f"#{value[0]:02x}{value[1]:02x}{value[2]:02x}"): key for key, value in colormap.items()
+        }
+        globals()[name] = mapping
+
+        return mapping
+
+    if name == "SPECTRUM":
+        spectrum = {colour_name: Colour.parse(colour) for colour_name, colour in MAIN_COLOURSCALE.items()}
+        globals()[name] = spectrum
+
+        return spectrum
+
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
 
 
 MAIN_COLOURSCALE = {
@@ -183,15 +252,15 @@ class Colour:
 
         The mapping is derived once from :data:`PIL.ImageColor.colormap`
         by inverting it so that ``to_str(method="css")`` can resolve a
-        canonical CSS name for a given hex value. The inversion keeps
-        only entries whose value is a string, discarding any numeric
-        tuple aliases that PIL ships alongside the CSS names.
+        canonical CSS name for a given hex value. Entries that PIL has
+        memoised into RGB tuples (a side effect of
+        :func:`PIL.ImageColor.getrgb`) are normalised back to
+        ``#rrggbb`` hex during the inversion.
 
         Returns
         -------
             Hex strings in the form ``"#rrggbb"`` mapped to their CSS
-            name such as ``"red"``. Only entries whose underlying value
-            is a string (i.e. a real hex colour) are included.
+            name such as ``"red"``.
 
         See Also
         --------
@@ -204,6 +273,8 @@ class Colour:
         >>> "#ff0000" in Colour.css_map
         True
         """
+        from mayutils.objects.colours import reverse_colourmap
+
         return reverse_colourmap
 
     def __post_init__(
@@ -368,6 +439,9 @@ class Colour:
         >>> Colour.parse("#00ff00").g
         255
         """
+        with may_require_extras():
+            from PIL.ImageColor import getrgb
+
         alpha_length = 4
 
         split = colour.split(sep=",")
@@ -506,12 +580,12 @@ class Colour:
         >>> Colour(r=255, g=0, b=0).show()  # doctest: +SKIP
         """
         try:
-            from IPython.core.display import HTML  # noqa: PLC0415
-            from IPython.display import display  # pyright: ignore[reportUnknownVariableType] # noqa: PLC0415
+            from IPython.core.display import HTML
+            from IPython.display import display  # pyright: ignore[reportUnknownVariableType]
 
             display(HTML(data=self._html_show()))
         except ImportError:
-            import matplotlib.pyplot as plt  # noqa: PLC0415
+            import matplotlib.pyplot as plt
 
             fig, ax = plt.subplots(  # pyright: ignore[reportUnknownMemberType]
                 figsize=(1, 1),
@@ -974,6 +1048,9 @@ class Colour:
         >>> isinstance(Colour(r=255, g=128, b=64).pptx_colour, RGBColor)
         True
         """
+        with may_require_extras():
+            from pptx.dml.color import RGBColor
+
         return RGBColor(
             r=self.r,
             g=self.g,
@@ -1049,5 +1126,4 @@ def hex_to_rgba(
     raise ValueError(msg)
 
 
-TRANSPARENT = Colour.parse("rgba(0,0,0,0)")
-SPECTRUM = {name: Colour.parse(colour) for name, colour in MAIN_COLOURSCALE.items()}
+TRANSPARENT = Colour(r=0, g=0, b=0, a=0.0)

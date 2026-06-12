@@ -181,6 +181,8 @@ class SnowflakeConfig(BaseModel):
 
     DEFAULT_CONNECTION_ARGUMENTS: ClassVar[dict[str, Any]] = {
         "disable_ocsp_checks": True,
+        "client_session_keep_alive": True,
+        "client_store_temporary_credential": True,
         "session_parameters": {
             "QUERY_TAG": json.dumps({}),
         },
@@ -204,6 +206,7 @@ class SnowflakeConfig(BaseModel):
         cls,
         *,
         env_file: Path | str | None | Literal[False] = ".env",
+        **overrides: Any,  # noqa: ANN401
     ) -> Self:
         """
         Build a configuration from ``SNOWFLAKE_*`` environment variables.
@@ -221,6 +224,9 @@ class SnowflakeConfig(BaseModel):
         env_file
             Dotenv file loaded before reading the environment. ``None``
             reads the existing environment without loading a file.
+        **overrides
+            Extra field values, keyed by field name or alias, overriding those
+            read from the environment.
 
         Returns
         -------
@@ -248,7 +254,7 @@ class SnowflakeConfig(BaseModel):
 
         logger.debug(f"Loaded Snowflake settings {sorted(values)} from the environment")
 
-        return cls.model_validate(values)
+        return cls.model_validate(values).update(**overrides)
 
     def update(
         self,
@@ -489,7 +495,6 @@ class SnowflakeConfig(BaseModel):
 
         if self.authentication in (Authentication.private_key_pem, Authentication.private_key_der):
             kwargs["private_key"] = self.unencrypted_private_key
-            kwargs["client_session_keep_alive"] = True
 
         return kwargs
 
@@ -635,7 +640,7 @@ class SnowflakeConfig(BaseModel):
         >>> session = SnowflakeConfig.from_env().to_snowpark_session()  # doctest: +SKIP
         """
         with may_require_extras():
-            import snowflake.snowpark.modin.plugin  # pyright: ignore[reportUnusedImport] # noqa: F401, PLC0415
+            import snowflake.snowpark.modin.plugin  # pyright: ignore[reportUnusedImport] # noqa: F401
 
         default_session_kwargs = {
             "telemetry_enabled": False,

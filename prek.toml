@@ -14,7 +14,7 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/astral-sh/uv-pre-commit"
-rev = "0.11.19"
+rev = "0.11.20"
 hooks = [
   { id = "uv-lock" }
 ]
@@ -151,7 +151,7 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/numpy/numpydoc"
-rev = "v1.10.0"
+rev = "v1.11.0rc0"
 hooks = [
   {
     id = "numpydoc-validation",

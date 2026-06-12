@@ -34,6 +34,7 @@ from mayutils.objects.dataframes.pandas.dataframes import (
     DataframeUtilsAccessor,
     DatetimeKind,
     DtypeSpec,
+    parse_temporal_columns,
 )
 from mayutils.objects.dataframes.pandas.index import IndexUtilsAccessor
 from mayutils.objects.dataframes.pandas.series import SeriesUtilsAccessor
@@ -52,4 +53,5 @@ __all__ = [
     "SeriesUtilsAccessor",
     "StyleMap",
     "Styler",
+    "parse_temporal_columns",
 ]

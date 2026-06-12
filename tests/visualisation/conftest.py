@@ -26,7 +26,7 @@ def ip() -> InteractiveShell:
         :func:`IPython.testing.globalipapp.start_ipython`.
     """
     pytest.importorskip("IPython")
-    from IPython.testing.globalipapp import start_ipython  # noqa: PLC0415
+    from IPython.testing.globalipapp import start_ipython
 
     shell = start_ipython()
     if shell is None:
