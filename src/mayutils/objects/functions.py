@@ -35,7 +35,27 @@ class Unset:
     """
     Marker type for intentionally missing values.
 
-    This class is used to signal that a value is deliberately not provided.
+    This class is used to signal that a value is deliberately not provided,
+    so that ``None`` and other falsy values can still be passed explicitly
+    without being treated as "no value supplied".
+
+    See Also
+    --------
+    UNSET : Shared sentinel instance of this marker type.
+    null : No-op callable used as a placeholder default.
+    typing.Optional : Standard annotation when ``None`` is an acceptable value.
+
+    Examples
+    --------
+    >>> from mayutils.objects.functions import UNSET, Unset
+    >>> isinstance(UNSET, Unset)
+    True
+    >>> def f(value=UNSET):
+    ...     return "default" if value is UNSET else value
+    >>> f()
+    'default'
+    >>> f(0)
+    0
     """
 
 
@@ -43,17 +63,105 @@ UNSET: Final = Unset()
 
 
 class Lazy[T]:
+    """
+    Defer construction of a value until it is first used.
+
+    Wraps a zero-argument ``factory`` and invokes it only the first time
+    the wrapped value is accessed (via :meth:`get`, attribute access, or a
+    call), caching the result for subsequent use. This is useful for
+    expensive objects, or for values whose construction needs an optional
+    dependency that may be absent at import time but present once the value
+    is actually required. Attribute access and calls are transparently
+    forwarded to the underlying value.
+
+    Parameters
+    ----------
+    factory
+        Zero-argument callable that builds and returns the wrapped value
+        the first time it is needed. It is invoked at most once.
+
+    See Also
+    --------
+    null : No-op callable used as a placeholder default.
+    functools.cached_property : Standard-library equivalent for instance attributes.
+    mayutils.core.extras.may_require_extras : Defers optional-dependency import errors.
+
+    Examples
+    --------
+    >>> from mayutils.objects.functions import Lazy
+    >>> created = []
+    >>> def build():
+    ...     created.append("built")
+    ...     return {"ready": True}
+    >>> lazy = Lazy(build)
+    >>> created
+    []
+    >>> lazy.get()
+    {'ready': True}
+    >>> created
+    ['built']
+    """
+
     def __init__(
         self,
         factory: Callable[[], T],
         /,
     ) -> None:
+        """
+        Store the factory without invoking it.
+
+        Records the zero-argument ``factory`` and initialises the cached
+        value so that the wrapped object is constructed lazily on first
+        access rather than at construction time.
+
+        Parameters
+        ----------
+        factory
+            Zero-argument callable that produces the wrapped value when it
+            is first required.
+
+        See Also
+        --------
+        Lazy.get : Materialise and cache the wrapped value.
+
+        Examples
+        --------
+        >>> from mayutils.objects.functions import Lazy
+        >>> lazy = Lazy(lambda: 42)
+        >>> lazy.get()
+        42
+        """
         self._factory = factory
         self._obj: T | None = None
 
     def get(
         self,
     ) -> T:
+        """
+        Return the wrapped value, building it once on first access.
+
+        Invokes the stored factory the first time it is called and caches
+        the result, so repeated calls return the same object without
+        re-running the factory.
+
+        Returns
+        -------
+            The value produced by the factory, created on the first call
+            and reused on every subsequent call.
+
+        See Also
+        --------
+        Lazy : Container that defers construction until this method runs.
+
+        Examples
+        --------
+        >>> from mayutils.objects.functions import Lazy
+        >>> lazy = Lazy(lambda: [1, 2, 3])
+        >>> lazy.get()
+        [1, 2, 3]
+        >>> lazy.get() is lazy.get()
+        True
+        """
         if self._obj is None:
             self._obj = self._factory()
 
@@ -63,6 +171,34 @@ class Lazy[T]:
         self,
         name: str,
     ) -> Any:  # noqa: ANN401
+        """
+        Forward attribute access to the wrapped value.
+
+        Triggered only for attributes not found on the :class:`Lazy`
+        wrapper itself, this materialises the wrapped value (if needed) and
+        returns the requested attribute from it, so the proxy behaves like
+        the underlying object for attribute lookups.
+
+        Parameters
+        ----------
+        name
+            Name of the attribute to retrieve from the wrapped value.
+
+        Returns
+        -------
+            The attribute ``name`` resolved on the wrapped value.
+
+        See Also
+        --------
+        Lazy.get : Used to materialise the value before delegating.
+
+        Examples
+        --------
+        >>> from mayutils.objects.functions import Lazy
+        >>> lazy = Lazy(lambda: "hello")
+        >>> lazy.upper()
+        'HELLO'
+        """
         return getattr(self.get(), name)
 
     def __call__(
@@ -70,6 +206,43 @@ class Lazy[T]:
         *args: Any,  # noqa: ANN401
         **kwargs: Any,  # noqa: ANN401
     ) -> Any:  # noqa: ANN401
+        """
+        Invoke the wrapped value as a callable.
+
+        Materialises the wrapped value (if needed) and calls it with the
+        supplied arguments, raising :class:`TypeError` when it is not
+        callable and re-raising any error from the call wrapped in a
+        :class:`RuntimeError`.
+
+        Parameters
+        ----------
+        *args
+            Positional arguments forwarded to the wrapped callable.
+        **kwargs
+            Keyword arguments forwarded to the wrapped callable.
+
+        Returns
+        -------
+            Whatever the wrapped callable returns for the given arguments.
+
+        Raises
+        ------
+        TypeError
+            If the wrapped value is not callable.
+        RuntimeError
+            If the wrapped callable raises during invocation.
+
+        See Also
+        --------
+        Lazy.get : Used to materialise the value before calling it.
+
+        Examples
+        --------
+        >>> from mayutils.objects.functions import Lazy
+        >>> double = Lazy(lambda: lambda x: x * 2)
+        >>> double(21)
+        42
+        """
         _obj = self.get()
         if not callable(_obj):
             msg = f"Lazy object of type {type(_obj).__name__} is not callable"
