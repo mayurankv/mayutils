@@ -3,9 +3,9 @@ Configure Snowflake connections and expose them to the ``mayutils`` data layer.
 
 This module is the Snowflake adapter within
 :mod:`mayutils.interfaces.data`. It centralises connection identity and
-authentication in a :class:`SnowflakeConfig` model — built directly from
+authentication in a :class:`SnowflakeConfig` model u2014 built directly from
 explicit values or, via :meth:`SnowflakeConfig.from_env`, from
-``SNOWFLAKE_*`` environment variables — and bridges that configuration
+``SNOWFLAKE_*`` environment variables u2014 and bridges that configuration
 into the rest of the library: :meth:`SnowflakeConfig.to_engine_wrapper`
 hands back a :class:`~mayutils.environment.databases.EngineWrapper` built
 through ``snowflake.sqlalchemy.URL``, while :meth:`SnowflakeConfig.reader`
@@ -17,7 +17,7 @@ Snowpark and Modin direct-table helpers (:meth:`SnowflakeConfig.create_snowpark_
 :func:`get_table`, :class:`Table`) are also provided; their heavy,
 optional dependencies are imported lazily so the module stays importable
 without them. No account, warehouse, role or database default is baked
-in — every connection parameter comes from the caller, explicitly or
+in u2014 every connection parameter comes from the caller, explicitly or
 through :meth:`SnowflakeConfig.from_env`.
 
 See Also
@@ -65,7 +65,9 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     from polars._typing import SchemaDict
-    from pyarrow import Table as ArrowTable  # pyright: ignore[reportMissingModuleSource]
+    from pyarrow import (
+        Table as ArrowTable,
+    )  # pyright: ignore[reportMissingModuleSource]
     from snowflake.connector.cursor import SnowflakeCursor
 
     from mayutils.data.read import QueryReader, QueryStreamer
@@ -210,7 +212,7 @@ class SnowflakeConfig(BaseModel):
 
         Loads *env_file* into the process environment (when given) and then
         reads one variable per field, prefixed with ``SNOWFLAKE_`` and
-        upper-cased — so ``account`` is read from ``SNOWFLAKE_ACCOUNT`` and
+        upper-cased u2014 so ``account`` is read from ``SNOWFLAKE_ACCOUNT`` and
         ``schema`` (the ``schema_`` alias) from ``SNOWFLAKE_SCHEMA``. Empty
         or unset variables are skipped, leaving field defaults in place, and
         the same validation as direct construction applies, so a missing
@@ -303,8 +305,8 @@ class SnowflakeConfig(BaseModel):
         """
         Decrypt and normalise the configured private key.
 
-        Reads the key material from :attr:`private_key` — inline or from a
-        file path — decrypts it with :attr:`private_key_password` according
+        Reads the key material from :attr:`private_key` u2014 inline or from a
+        file path u2014 decrypts it with :attr:`private_key_password` according
         to the configured :class:`Authentication` member, and re-serialises
         it as unencrypted PKCS#8 DER, the form the Snowflake connector
         expects. When no private key is configured, as under browser
@@ -497,7 +499,10 @@ class SnowflakeConfig(BaseModel):
         """
         kwargs = self.DEFAULT_CONNECTION_ARGUMENTS | kwargs
 
-        if self.authentication in (Authentication.private_key_pem, Authentication.private_key_der):
+        if self.authentication in (
+            Authentication.private_key_pem,
+            Authentication.private_key_der,
+        ):
             kwargs["private_key"] = self.unencrypted_private_key
 
         return kwargs
@@ -796,7 +801,7 @@ class SnowflakeExtendedConnection(SnowflakeConnection):
 
         Creates the instance with ``__new__`` and copies the base
         connection's state across, so the already-open connection is reused
-        as-is — no new session, login or network round-trip occurs. The
+        as-is u2014 no new session, login or network round-trip occurs. The
         recorded construction keyword arguments are set from ``kwargs``
         rather than recovered from the base connection.
 
@@ -1077,7 +1082,9 @@ class SnowflakeExtendedConnection(SnowflakeConnection):
         >>> table = connection.read_arrow("SELECT 1 AS one")  # doctest: +SKIP
         """
         with may_require_extras():
-            from pyarrow import Table as ArrowTable  # pyright: ignore[reportUnknownVariableType]
+            from pyarrow import (
+                Table as ArrowTable,
+            )  # pyright: ignore[reportUnknownVariableType]
         default_read_kwargs: dict[str, Any] = {
             "force_return_table": True,
         }
@@ -1679,8 +1686,8 @@ class SnowparkExtendedSession(SnowparkSession):
         Wrap an existing base Snowpark session in the extended subclass.
 
         Creates the instance with ``__new__`` and copies the base session's
-        state across, so the live session — including its underlying
-        connection — is reused as-is and no new session is established.
+        state across, so the live session u2014 including its underlying
+        connection u2014 is reused as-is and no new session is established.
         This is how :meth:`SnowflakeConfig.to_snowpark_session` retypes the
         session produced by the Snowpark builder.
 
@@ -1783,6 +1790,9 @@ class SnowparkExtendedSession(SnowparkSession):
         /,
         *,
         lower_case: bool = True,
+        index_col: str | Sequence[str] | None = None,
+        columns: Sequence[str] | None = None,
+        enforce_ordering: bool = True,
     ) -> mpd.DataFrame:
         """
         Run a query and return the result as a Modin dataframe.
@@ -1799,6 +1809,14 @@ class SnowparkExtendedSession(SnowparkSession):
             SQL text, or a bare table name, to read.
         lower_case
             Whether to lower-case the returned column names.
+        index_col
+            Column name or names to use as the dataframe index; ``None``
+            leaves the default integer index in place.
+        columns
+            Subset of column names to include in the result; ``None``
+            returns all columns.
+        enforce_ordering
+            Whether to enforce the result ordering from Snowflake.
 
         Returns
         -------
@@ -1818,7 +1836,20 @@ class SnowparkExtendedSession(SnowparkSession):
         with may_require_extras():
             import modin.pandas as mpd
 
-        df = cast("mpd.DataFrame", mpd.read_snowflake(query))  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
+        if index_col is not None and not isinstance(index_col, str):
+            index_col = list(map(str.lower, index_col)) if lower_case else list(index_col)
+        if columns is not None:
+            columns = list(map(str.lower, columns)) if lower_case else list(columns)
+
+        df = cast(
+            "mpd.DataFrame",
+            mpd.read_snowflake(  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
+                query,
+                index_col=index_col,
+                columns=columns,
+                enforce_ordering=enforce_ordering,
+            ),
+        )
 
         if lower_case:
             df.columns = df.columns.str.lower()
@@ -1831,6 +1862,9 @@ class SnowparkExtendedSession(SnowparkSession):
         /,
         *,
         lower_case: bool = True,
+        index_col: str | Sequence[str] | None = None,
+        columns: Sequence[str] | None = None,
+        enforce_ordering: bool = True,
     ) -> mpd.DataFrame:
         """
         Read a whole table as a Modin dataframe.
@@ -1846,6 +1880,14 @@ class SnowparkExtendedSession(SnowparkSession):
             Name of the table to read.
         lower_case
             Whether to lower-case the returned column names.
+        index_col
+            Column name or names to use as the dataframe index; ``None``
+            leaves the default integer index in place.
+        columns
+            Subset of column names to include in the result; ``None``
+            returns all columns.
+        enforce_ordering
+            Whether to enforce the result ordering from Snowflake.
 
         Returns
         -------
@@ -1864,6 +1906,9 @@ class SnowparkExtendedSession(SnowparkSession):
         return self.query_to_dataframe(
             table,
             lower_case=lower_case,
+            index_col=index_col,
+            columns=columns,
+            enforce_ordering=enforce_ordering,
         )
 
     def read_concurrent_queries(
