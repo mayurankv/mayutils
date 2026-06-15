@@ -771,7 +771,7 @@ class Presentation:
                 matrix = Matrix(zoom, zoom)
                 for index in requested:
                     page = document[index - 1]
-                    pixmap = page.get_pixmap(matrix=matrix)
+                    pixmap = page.get_pixmap(matrix=matrix)  # pyright: ignore[reportUnknownMemberType]
                     yield index, pixmap.tobytes(output="png")
             finally:
                 document.close()
