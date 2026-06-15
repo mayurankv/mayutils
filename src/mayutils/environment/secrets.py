@@ -29,9 +29,14 @@ True
 >>> result = load_secrets(env_file=".env.local")  # doctest: +SKIP
 """
 
-from pathlib import Path
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from mayutils.core.extras import may_require_extras
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def load_secrets(

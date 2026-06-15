@@ -32,6 +32,8 @@ pipeline started
 True
 """
 
+from __future__ import annotations
+
 import logging
 import time
 from collections.abc import Callable
@@ -39,12 +41,14 @@ from functools import update_wrapper
 from inspect import currentframe, getmodule
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from types import TracebackType
-from typing import Any, Literal, Self, cast
+from typing import TYPE_CHECKING, Any, Literal, Self, cast
 
 from mayutils.core.extras import may_require_extras
 from mayutils.environment.filesystem import get_root
 from mayutils.objects.decorators import flexwrap
+
+if TYPE_CHECKING:
+    from types import TracebackType
 
 PredefinedLevel = Literal["NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 Level = PredefinedLevel | int

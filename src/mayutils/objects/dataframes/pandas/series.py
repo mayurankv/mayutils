@@ -30,14 +30,16 @@ Examples
 (3,)
 """
 
-from pathlib import Path
-from typing import NoReturn
+from __future__ import annotations
 
-from mayutils.core.extras import may_require_extras
-from mayutils.objects.datetime import Date, DateTime, Interval
+from typing import TYPE_CHECKING, NoReturn
 
-with may_require_extras():
+if TYPE_CHECKING:
+    from pathlib import Path
+
     from pandas import Series
+
+    from mayutils.objects.datetime import Date, DateTime, Interval
 
 
 class SeriesUtilsAccessor:

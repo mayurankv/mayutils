@@ -49,7 +49,6 @@ from mayutils.interfaces.filetypes.pptx.units import Length
 from mayutils.objects.colours import Colour
 
 with may_require_extras():
-    from lxml.etree import SubElement, _Element  # pyright: ignore[reportPrivateUsage]
     from pptx.oxml import register_element_cls
     from pptx.oxml.ns import qn
     from pptx.oxml.simpletypes import ST_Coordinate32
@@ -58,6 +57,7 @@ with may_require_extras():
     from pptx.util import Pt
 
 if TYPE_CHECKING:
+    from lxml.etree import _Element  # pyright: ignore[reportPrivateUsage]
     from pptx.text.text import TextFrame, _Paragraph, _Run  # pyright: ignore[reportPrivateUsage]
 
 
@@ -284,6 +284,9 @@ def set_run_formatting(  # noqa: C901
     ...     font_colour=Colour.parse("#FF0000"),
     ... )
     """
+    with may_require_extras():
+        from lxml.etree import SubElement
+
     if bold is not None:
         run.font.bold = bold
     if italic is not None:
@@ -654,6 +657,9 @@ def add_bullet_subelement(
     >>> element.get("char")
     '*'
     """
+    with may_require_extras():
+        from lxml.etree import SubElement
+
     element = SubElement(_parent=parent, _tag=qn(namespace_prefixed_tag=tagname))
 
     for key, value in kwargs.items():
@@ -867,6 +873,9 @@ def set_paragraph_task(
     >>> paragraph.add_run().text = "buy milk"
     >>> set_paragraph_task(paragraph, checked=True, level=0)
     """
+    with may_require_extras():
+        from lxml.etree import SubElement
+
     # Set the indentation level
     paragraph.level = level
 

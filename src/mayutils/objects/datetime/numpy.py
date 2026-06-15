@@ -27,11 +27,11 @@ from pydantic_core import core_schema
 
 from mayutils.core.extras import may_require_extras
 
-if TYPE_CHECKING:
-    from datetime import date, datetime
-
 with may_require_extras():
     import numpy as np
+
+if TYPE_CHECKING:
+    from datetime import date, datetime
 
 
 def coerce_datetime64(

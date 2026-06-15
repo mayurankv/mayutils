@@ -34,23 +34,20 @@ Examples
 True
 """
 
+from __future__ import annotations
+
 import re
-from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 from mayutils.core.extras import may_require_extras
+from mayutils.objects.functions import UNSET, Unset
 
-with may_require_extras():
-    import mistune
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from mistune import InlineParser, InlineState, Markdown
     from mistune.plugins import Plugin
-    from mistune.plugins.footnotes import footnotes
-    from mistune.plugins.formatting import (
-        mark,
-        strikethrough,
-        subscript,
-        superscript,
-    )
-    from mistune.plugins.task_lists import task_lists
+
 
 EMOJI_MAP = {
     "smile": "😊",
@@ -429,22 +426,10 @@ def plugin_emoji(
     )
 
 
-DEFAULT_PLUGINS = [
-    strikethrough,
-    footnotes,
-    task_lists,
-    mark,
-    superscript,
-    subscript,
-    plugin_underline,
-    plugin_emoji,
-]
-
-
 def create_markdown_parser(
     *,
     renderer: None = None,
-    plugins: Iterable[str | Plugin] | None = DEFAULT_PLUGINS,
+    plugins: Iterable[str | Plugin] | Unset | None = UNSET,
 ) -> Markdown:
     """
     Build a :class:`mistune.Markdown` parser with the project defaults.
@@ -500,6 +485,24 @@ def create_markdown_parser(
     >>> minimal("plain paragraph")[0]["type"]
     'paragraph'
     """
+    with may_require_extras():
+        import mistune
+        from mistune.plugins.footnotes import footnotes
+        from mistune.plugins.formatting import mark, strikethrough, subscript, superscript
+        from mistune.plugins.task_lists import task_lists
+
+    if isinstance(plugins, Unset):
+        plugins = [
+            strikethrough,
+            footnotes,
+            task_lists,
+            mark,
+            superscript,
+            subscript,
+            plugin_underline,
+            plugin_emoji,
+        ]
+
     return mistune.create_markdown(
         renderer=renderer,
         plugins=plugins,

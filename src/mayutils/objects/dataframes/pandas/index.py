@@ -24,12 +24,16 @@ Examples
 [['a', 1], ['a', 2], ['b', 1]]
 """
 
-from collections.abc import Hashable
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from mayutils.core.extras import may_require_extras
 
-with may_require_extras():
-    from pandas import Index, MultiIndex
+if TYPE_CHECKING:
+    from collections.abc import Hashable
+
+    from pandas import Index
 
 
 class IndexUtilsAccessor:
@@ -169,6 +173,9 @@ class IndexUtilsAccessor:
         >>> IndexUtilsAccessor(mi).get_multiindex(transpose=True)
         [['a', 'a', 'b'], [1, 2, 1]]
         """
+        with may_require_extras():
+            from pandas import MultiIndex
+
         if not isinstance(self.index, MultiIndex):
             msg = "Index is not of type MultiIndex"
             raise TypeError(msg)

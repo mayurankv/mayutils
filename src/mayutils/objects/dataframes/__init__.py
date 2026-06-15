@@ -25,11 +25,16 @@ Examples
 True
 """
 
+from __future__ import annotations
+
 import functools
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from mayutils.core.extras import may_require_extras
 from mayutils.export import OUTPUT_FOLDER
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 DATA_FOLDER: Path = OUTPUT_FOLDER / "Data"
 """Default on-disk root for DataFrame artifacts."""

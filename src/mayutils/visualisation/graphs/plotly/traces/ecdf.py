@@ -1,13 +1,14 @@
 """Empirical cumulative distribution function trace."""
 
-from typing import Any, ClassVar, Literal
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 
 from mayutils.core.extras import may_require_extras
 from mayutils.visualisation.graphs.plotly.traces.line import Line
 from mayutils.visualisation.graphs.plotly.traces.types import TraceType
 
-with may_require_extras():
-    import numpy as np
+if TYPE_CHECKING:
     from numpy.typing import ArrayLike
 
 
@@ -108,6 +109,9 @@ class Ecdf(Line):
         --------
         >>> trace = Ecdf(x=[1, 2, 3], norm="percentage")
         """
+        with may_require_extras():
+            import numpy as np
+
         x_arr = np.asarray(x)
         idx = np.argsort(x_arr)
 

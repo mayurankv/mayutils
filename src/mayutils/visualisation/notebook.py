@@ -27,6 +27,8 @@ Examples
 >>> Notebook.write_markdown("# Heading", "A paragraph with *emphasis*.")  # doctest: +SKIP
 """
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Literal
 
 from mayutils.core.extras import may_require_extras
@@ -93,7 +95,7 @@ class Notebook:
     __slots__ = ()
 
     @staticmethod
-    def get_shell() -> "InteractiveShell":
+    def get_shell() -> InteractiveShell:
         """
         Return the active IPython shell or raise if one is not running.
 

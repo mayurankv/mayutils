@@ -48,8 +48,6 @@ if TYPE_CHECKING:
 
     import numpy as np
     from numpy.typing import NDArray
-
-with may_require_extras():
     from packaging.version import Version
 
 logger = Logger.spawn()
@@ -123,6 +121,9 @@ def bump_version_string(
     >>> str(bump_version_string("2.0.0a1", bump="patch"))
     '2.0.1'
     """
+    with may_require_extras():
+        from packaging.version import Version
+
     if isinstance(version, str):
         version = Version(version)
 

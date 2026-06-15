@@ -1,9 +1,10 @@
 """Plotly template registration and management for consistent chart styling."""
 
+from __future__ import annotations
+
 import warnings
-from collections.abc import Generator, Sequence
 from contextlib import contextmanager
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from mayutils.core.extras import may_require_extras
 from mayutils.objects.colours import (
@@ -13,9 +14,11 @@ from mayutils.objects.colours import (
     hex_to_rgba,
 )
 
+if TYPE_CHECKING:
+    from collections.abc import Generator, Sequence
+
 with may_require_extras():
     import plotly.graph_objects as go
-    import plotly.io as pio
 
 
 TRANSPARENT = "rgba(0,0,0,0)"
@@ -45,6 +48,9 @@ def get_default_template_name() -> str:
     >>> isinstance(get_default_template_name(), str)
     True
     """
+    with may_require_extras():
+        import plotly.io as pio
+
     return cast("str", pio.templates.default)  # pyright: ignore[reportUnknownVariableType, reportUnknownMemberType, reportAttributeAccessIssue]
 
 
@@ -79,6 +85,9 @@ def get_template(
     >>> get_template() is not None
     True
     """
+    with may_require_extras():
+        import plotly.io as pio
+
     if template_name is None:
         template_name = get_default_template_name()
 
@@ -112,6 +121,9 @@ def set_template(
     >>> pio.templates.default
     'base'
     """
+    with may_require_extras():
+        import plotly.io as pio
+
     pio.templates.default = template  # pyright: ignore[reportAttributeAccessIssue]
 
 
@@ -142,6 +154,9 @@ def set_renderer(
     >>> pio.renderers.default
     'vscode'
     """
+    with may_require_extras():
+        import plotly.io as pio
+
     pio.renderers.default = renderer  # pyright: ignore[reportAttributeAccessIssue]
 
 
@@ -344,6 +359,9 @@ def register_template(
     >>> from plotly.graph_objs.layout import Template  # type: ignore[import]
     >>> register_template("my_template", template=Template())
     """
+    with may_require_extras():
+        import plotly.io as pio
+
     pio.templates[name] = template  # pyright: ignore[reportInvalidTypeArguments, reportGeneralTypeIssues]
 
 

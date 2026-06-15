@@ -23,7 +23,63 @@ Examples
 {'x': 1}
 """
 
-from typing import Any, Protocol
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Final, Protocol
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+
+class Unset:
+    """
+    Marker type for intentionally missing values.
+
+    This class is used to signal that a value is deliberately not provided.
+    """
+
+
+UNSET: Final = Unset()
+
+
+class Lazy[T]:
+    def __init__(
+        self,
+        factory: Callable[[], T],
+        /,
+    ) -> None:
+        self._factory = factory
+        self._obj: T | None = None
+
+    def get(
+        self,
+    ) -> T:
+        if self._obj is None:
+            self._obj = self._factory()
+
+        return self._obj
+
+    def __getattr__(
+        self,
+        name: str,
+    ) -> Any:  # noqa: ANN401
+        return getattr(self.get(), name)
+
+    def __call__(
+        self,
+        *args: Any,  # noqa: ANN401
+        **kwargs: Any,  # noqa: ANN401
+    ) -> Any:  # noqa: ANN401
+        _obj = self.get()
+        if not callable(_obj):
+            msg = f"Lazy object of type {type(_obj).__name__} is not callable"
+            raise TypeError(msg)
+
+        try:
+            return _obj(*args, **kwargs)  # ty:ignore[call-top-callable]
+        except Exception as err:
+            msg = f"Error calling lazy object of type {type(_obj).__name__}: {err}"
+            raise RuntimeError(msg) from err
 
 
 class SupportsSetItem(Protocol):

@@ -24,7 +24,7 @@ from pathlib import Path
 from mayutils.core.extras import may_require_extras
 
 with may_require_extras():
-    from typer import Argument, Exit, Option, Typer
+    from typer import Argument, Option, Typer
 
 from mayutils.visualisation.console import CONSOLE
 
@@ -2739,6 +2739,9 @@ def generate(
     --------
     >>> generate()  # doctest: +SKIP
     """
+    with may_require_extras():
+        from typer import Exit
+
     if generate_stubs(traces_dir=traces_dir, dry_run=dry_run) == 0:
         raise Exit
 

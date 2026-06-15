@@ -6,9 +6,10 @@ Provides the :class:`Plot` class, a thin wrapper around
 layout composition, and convenience methods for common chart enhancements.
 """
 
+from __future__ import annotations
+
 import datetime
 from collections.abc import Callable, Iterator, Mapping, Sequence, Sized
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Self, cast, final
 
 from mayutils.core.extras import may_require_extras
@@ -44,20 +45,18 @@ from mayutils.visualisation.graphs.plotly.traces import (
     is_trace_3d,
 )
 
-if TYPE_CHECKING:
-    from numpy.typing import NDArray
-
-    from mayutils.objects.datetime import Date, DateTime, Interval
-
-
 with may_require_extras():
     import numpy as np
     import plotly.graph_objects as go
-    from pandas import Series
-    from pandas import to_datetime as to_pandas_datetime
-    from plotly._subplots import _build_subplot_title_annotations  # pyright: ignore[reportPrivateUsage]  # ty:ignore[unresolved-import]
     from plotly.graph_objects import Layout
-    from scipy.stats import norm
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from numpy.typing import NDArray
+    from pandas import Series
+
+    from mayutils.objects.datetime import Date, DateTime, Interval
 
 logger = Logger.spawn()
 
@@ -394,7 +393,7 @@ class Plot(go.Figure):
     @classmethod
     def from_existing(
         cls,
-        plot: "Plot",
+        plot: Plot,
         /,
         *,
         description: str,
@@ -713,6 +712,11 @@ class Plot(go.Figure):
         >>> plot = Plot.empty(description="demo")
         >>> plot = plot.add_title("Secondary Y")
         """
+        with may_require_extras():
+            from plotly._subplots import (  # ty:ignore[unresolved-import]
+                _build_subplot_title_annotations,  # pyright: ignore[reportPrivateUsage]
+            )
+
         annotations = _build_subplot_title_annotations(
             subplot_titles=[title],
             list_of_domains=[x_domain, y_domain],
@@ -1291,6 +1295,9 @@ class Plot(go.Figure):
         >>> plot = Plot.from_traces(go.Histogram(x=np.random.normal(size=1000)), description="demo")
         >>> plot = plot.add_histogram_gaussians()
         """
+        with may_require_extras():
+            from scipy.stats import norm
+
         for idx, trace in enumerate(self):
             if isinstance(trace, go.Histogram):
                 self.add_trace(
@@ -1974,7 +1981,7 @@ class Plot(go.Figure):
 
     def add_interval(
         self,
-        interval: "Interval[Date] | Interval[DateTime] | None",
+        interval: Interval[Date] | Interval[DateTime] | None,
         /,
         **kwargs: Any,  # noqa: ANN401
     ) -> Self:
@@ -2116,6 +2123,10 @@ class Plot(go.Figure):
         ... )
         >>> plot = plot.set_visible_y_range(y_padding=0.1)
         """
+        with may_require_extras():
+            from pandas import Series
+            from pandas import to_datetime as to_pandas_datetime
+
         xaxis_range: tuple[Any, Any] | None = getattr(self.layout.xaxis, "range", None)
         if xaxis_range is None:
             msg = "X-axis range must be set to determine visible y-axis range"
