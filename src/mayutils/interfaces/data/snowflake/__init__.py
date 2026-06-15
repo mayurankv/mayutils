@@ -1783,6 +1783,9 @@ class SnowparkExtendedSession(SnowparkSession):
         /,
         *,
         lower_case: bool = True,
+        index_col: str | Sequence[str] | None = None,
+        columns: Sequence[str] | None = None,
+        enforce_ordering: bool = True,
     ) -> mpd.DataFrame:
         """
         Run a query and return the result as a Modin dataframe.
@@ -1799,6 +1802,14 @@ class SnowparkExtendedSession(SnowparkSession):
             SQL text, or a bare table name, to read.
         lower_case
             Whether to lower-case the returned column names.
+        index_col
+            Column name or names to use as the dataframe index; ``None``
+            leaves the default integer index in place.
+        columns
+            Subset of column names to include in the result; ``None``
+            returns all columns.
+        enforce_ordering
+            Whether to enforce the result ordering from Snowflake.
 
         Returns
         -------
@@ -1818,7 +1829,20 @@ class SnowparkExtendedSession(SnowparkSession):
         with may_require_extras():
             import modin.pandas as mpd
 
-        df = cast("mpd.DataFrame", mpd.read_snowflake(query))  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
+        if index_col is not None and not isinstance(index_col, str):
+            index_col = list(map(str.lower, index_col)) if lower_case else list(index_col)
+        if columns is not None:
+            columns = list(map(str.lower, columns)) if lower_case else list(columns)
+
+        df = cast(
+            "mpd.DataFrame",
+            mpd.read_snowflake(  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
+                query,
+                index_col=index_col,
+                columns=columns,
+                enforce_ordering=enforce_ordering,
+            ),
+        )
 
         if lower_case:
             df.columns = df.columns.str.lower()
@@ -1831,6 +1855,9 @@ class SnowparkExtendedSession(SnowparkSession):
         /,
         *,
         lower_case: bool = True,
+        index_col: str | Sequence[str] | None = None,
+        columns: Sequence[str] | None = None,
+        enforce_ordering: bool = True,
     ) -> mpd.DataFrame:
         """
         Read a whole table as a Modin dataframe.
@@ -1846,6 +1873,14 @@ class SnowparkExtendedSession(SnowparkSession):
             Name of the table to read.
         lower_case
             Whether to lower-case the returned column names.
+        index_col
+            Column name or names to use as the dataframe index; ``None``
+            leaves the default integer index in place.
+        columns
+            Subset of column names to include in the result; ``None``
+            returns all columns.
+        enforce_ordering
+            Whether to enforce the result ordering from Snowflake.
 
         Returns
         -------
