@@ -44,12 +44,10 @@ from mayutils.objects.dataframes.backends import Backend, DataFrames
 from mayutils.objects.types import SQL
 
 with requires_extras("notebook"):
-    from IPython.core.getipython import get_ipython
     from IPython.core.magic import Magics, line_cell_magic, magics_class
     from IPython.core.magic_arguments import (
         argument,
         magic_arguments,
-        parse_argstring,  # pyright: ignore[reportUnknownVariableType]
     )
 
 if TYPE_CHECKING:
@@ -473,6 +471,11 @@ class MagicUtils(Magics):
         >>> MagicUtils.sql.__name__
         'sql'
         """
+        with requires_extras("notebook"):
+            from IPython.core.magic_arguments import (
+                parse_argstring,  # pyright: ignore[reportUnknownVariableType]
+            )
+
         if self.shell is None:
             msg = "No IPython shell found"
             raise RuntimeError(msg)
@@ -543,6 +546,9 @@ def setup_magic() -> None:
     >>> from mayutils.interfaces.code.notebooks.jupyter import setup_magic
     >>> setup_magic()  # doctest: +SKIP
     """
+    with requires_extras("notebook"):
+        from IPython.core.getipython import get_ipython
+
     ipython = get_ipython()
     if ipython is None:
         msg = "No running IPython shell found to register magics on"

@@ -6,6 +6,8 @@ Thin wrapper around :class:`plotly.graph_objects.Scatter` that defaults to
 identification.
 """
 
+from __future__ import annotations
+
 from typing import Any, ClassVar
 
 from mayutils.core.extras import may_require_extras

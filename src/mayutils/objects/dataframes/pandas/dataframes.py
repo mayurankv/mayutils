@@ -32,36 +32,28 @@ Examples
 'row'
 """
 
-from collections.abc import Callable, Hashable, Mapping, Sequence
+from __future__ import annotations
+
 from datetime import date, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, cast, get_args
 
 from mayutils.core.extras import may_require_extras
-from mayutils.objects.dataframes.pandas.stylers import Styler
 from mayutils.objects.dataframes.temporal import (
     TEMPORAL_SAMPLE_SIZE,
     DatetimeKind,
     detect_temporal_kind,
 )
-from mayutils.objects.datetime import Date, DateTime, Interval
-
-with may_require_extras():
-    import numpy as np
-    from great_tables import GT
-    from itables import show
-    from pandas import (
-        DataFrame,
-        ExcelWriter,
-        Index,
-        Series,
-        StringDtype,
-        to_datetime,
-        to_numeric,
-    )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Hashable, Mapping, Sequence
+
+    from great_tables import GT
+    from pandas import DataFrame, Index, Series
     from pandas._typing import DtypeObj
+
+    from mayutils.objects.dataframes.pandas.stylers import Styler
+    from mayutils.objects.datetime import Date, DateTime, Interval
 
 
 type DtypeSpec = DatetimeKind | Literal["numeric"] | DtypeObj
@@ -273,6 +265,9 @@ class DataframeUtilsAccessor:
             )
 
         elif path.suffix == ".xlsx":
+            with may_require_extras():
+                from pandas import ExcelWriter
+
             default_kwargs = {
                 "index": True,
             }
@@ -341,6 +336,8 @@ class DataframeUtilsAccessor:
         >>> result is None
         True
         """
+        with may_require_extras():
+            from itables import show
         return show(
             df=self.df,
             caption=caption,
@@ -408,6 +405,9 @@ class DataframeUtilsAccessor:
         >>> accessor.max_abs(0.0)
         3.0
         """
+        with may_require_extras():
+            import numpy as np
+
         values = self.df if columns is None else self.df[columns]
         deviations = np.asarray(values - reference_value, dtype=float)
         min_neg: float = min(float(deviations.min()), 0.0)
@@ -640,6 +640,9 @@ class DataframeUtilsAccessor:
         >>> isinstance(accessor.styler, Styler)
         True
         """
+        with may_require_extras():
+            from mayutils.objects.dataframes.pandas.stylers import Styler
+
         return Styler(data=self.df)
 
     @property
@@ -681,6 +684,9 @@ class DataframeUtilsAccessor:
         >>> isinstance(accessor.gt, GT)
         True
         """
+        with may_require_extras():
+            from great_tables import GT
+
         return GT(data=self.df)
 
     def map_dtypes(
@@ -761,6 +767,8 @@ class DataframeUtilsAccessor:
         >>> accessor.df["f"].tolist()
         [1.5, 2.5]
         """
+        with may_require_extras():
+            from pandas import to_numeric
 
         def convert_datetime(
             series: Series,
@@ -823,6 +831,9 @@ class DataframeUtilsAccessor:
             >>> [str(v) for v in accessor.df["d"].tolist()]
             ['2024-01-01', '2024-01-02']
             """
+            with may_require_extras():
+                from pandas import to_datetime
+
             if datetime_type == "datetime":
                 return to_datetime(series, format=datetime_format)
             if datetime_type == "date":
@@ -1047,6 +1058,9 @@ def parse_temporal_columns(
     >>> parse_temporal_columns(frame)["d"].dtype
     dtype('<M8[ns]')
     """
+    with may_require_extras():
+        from pandas import StringDtype
+
     replacements: dict[Hashable, Series] = {}
     for column in frame.columns:
         series = frame[column]
@@ -1057,6 +1071,9 @@ def parse_temporal_columns(
             continue
 
         try:
+            with may_require_extras():
+                from pandas import to_datetime
+
             if all(isinstance(value, date) and not isinstance(value, datetime) for value in sample):
                 replacements[column] = to_datetime(series)
                 continue

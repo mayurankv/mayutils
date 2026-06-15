@@ -35,20 +35,15 @@ from typing import TYPE_CHECKING, Self, cast, overload
 from mayutils.core.extras import may_require_extras
 
 with may_require_extras():
-    from pendulum import (
-        Date as PendulumDate,
-    )
-    from pendulum import (
-        DateTime as PendulumDateTime,
-    )
-    from pendulum import (
-        Interval as PendulumInterval,
-    )
+    from pendulum import Interval as PendulumInterval
 
 from mayutils.objects.datetime.datetime import Date, DateTime
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
+
+    from pendulum import Date as PendulumDate
+    from pendulum import DateTime as PendulumDateTime
 
 
 class Interval[IntervalType: (Date, DateTime)](PendulumInterval[IntervalType]):
@@ -352,6 +347,9 @@ class Interval[IntervalType: (Date, DateTime)](PendulumInterval[IntervalType]):
         >>> isinstance(promoted, Date)
         True
         """
+        with may_require_extras():
+            from pendulum import DateTime as PendulumDateTime
+
         if isinstance(instance, DateTime):
             return cast("IntervalType", instance)
         if isinstance(instance, PendulumDateTime):

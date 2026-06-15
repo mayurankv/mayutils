@@ -55,20 +55,17 @@ from mayutils.environment.secrets import load_secrets
 from mayutils.objects.dataframes.backends import Backend, DataFrames, default_backend
 
 with may_require_extras():
-    import modin.pandas as mpd
-    import pandas as pd
-    import polars as pl
-    from cryptography.hazmat.backends.openssl import backend
-    from cryptography.hazmat.primitives import serialization
-    from pyarrow import Table as ArrowTable  # pyright: ignore[reportMissingModuleSource]
     from snowflake.connector import SnowflakeConnection
     from snowflake.snowpark.session import Session as SnowparkSession
-    from snowflake.sqlalchemy import URL  # pyright: ignore[reportUnknownVariableType, reportAttributeAccessIssue]
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterator, Mapping, Sequence
 
+    import modin.pandas as mpd
+    import pandas as pd
+    import polars as pl
     from polars._typing import SchemaDict
+    from pyarrow import Table as ArrowTable  # pyright: ignore[reportMissingModuleSource]
     from snowflake.connector.cursor import SnowflakeCursor
 
     from mayutils.data.read import QueryReader, QueryStreamer
@@ -335,6 +332,10 @@ class SnowflakeConfig(BaseModel):
         >>> config.unencrypted_private_key is None
         True
         """
+        with may_require_extras():
+            from cryptography.hazmat.backends.openssl import backend
+            from cryptography.hazmat.primitives import serialization
+
         if self.private_key is None:
             return None
 
@@ -449,6 +450,9 @@ class SnowflakeConfig(BaseModel):
         >>> config.url.startswith("snowflake://")
         True
         """
+        with may_require_extras():
+            from snowflake.sqlalchemy import URL  # pyright: ignore[reportUnknownVariableType, reportAttributeAccessIssue]
+
         return cast(
             "str",
             URL(
@@ -1072,6 +1076,8 @@ class SnowflakeExtendedConnection(SnowflakeConnection):
         >>> connection = SnowflakeConfig.from_env().to_connection()  # doctest: +SKIP
         >>> table = connection.read_arrow("SELECT 1 AS one")  # doctest: +SKIP
         """
+        with may_require_extras():
+            from pyarrow import Table as ArrowTable  # pyright: ignore[reportUnknownVariableType]
         default_read_kwargs: dict[str, Any] = {
             "force_return_table": True,
         }
@@ -1139,6 +1145,9 @@ class SnowflakeExtendedConnection(SnowflakeConnection):
         >>> connection = SnowflakeConfig.from_env().to_connection()  # doctest: +SKIP
         >>> df = connection.read_polars("SELECT 1 AS one")  # doctest: +SKIP
         """
+        with may_require_extras():
+            import polars as pl
+
         table = self.read_arrow(
             query,
             lower_case=lower_case,
@@ -1486,6 +1495,9 @@ class SnowflakeExtendedConnection(SnowflakeConnection):
         >>> for df in connection.stream_polars("SELECT 1 AS one"):  # doctest: +SKIP
         ...     print(df.shape)
         """
+        with may_require_extras():
+            import polars as pl
+
         for table in self.stream_arrow(
             query,
             lower_case=lower_case,
@@ -1803,6 +1815,9 @@ class SnowparkExtendedSession(SnowparkSession):
         >>> session = SnowflakeConfig.from_env().to_snowpark_session()  # doctest: +SKIP
         >>> df = session.query_to_dataframe("SELECT 1 AS one")  # doctest: +SKIP
         """
+        with may_require_extras():
+            import modin.pandas as mpd
+
         df = cast("mpd.DataFrame", mpd.read_snowflake(query))  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
 
         if lower_case:

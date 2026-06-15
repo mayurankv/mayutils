@@ -14,46 +14,41 @@ import subprocess
 import sys
 from pathlib import Path
 
-# The 36 modules structurally blocked by optional-library base classes,
+# The 31 modules structurally blocked by optional-library base classes,
 # import-time decorators, or module-level instances that cannot be deferred.
 EXPECTED_BLOCKED: frozenset[str] = frozenset(
     {
-        "mayutils.export.html",
-        "mayutils.interfaces.filetypes.markdown",
-        "mayutils.interfaces.filetypes.pptx",
-        "mayutils.interfaces.filetypes.pptx.markdown",
-        "mayutils.interfaces.filetypes.pptx.units",
-        "mayutils.interfaces.data.snowflake",
-        "mayutils.mathematics.numba",
-        "mayutils.objects.dataframes.pandas",
-        "mayutils.objects.dataframes.pandas.dataframes",
-        "mayutils.objects.dataframes.pandas.index",
-        "mayutils.objects.dataframes.pandas.series",
-        "mayutils.objects.dataframes.pandas.stylers",
-        "mayutils.visualisation.graphs.plotly.traces.ecdf",
-        "mayutils.visualisation.graphs.plotly.traces.kde",
-        "mayutils.visualisation.graphs.plotly.traces.line",
-        "mayutils.visualisation.graphs.plotly.traces.mesh3d",
-        "mayutils.visualisation.graphs.plotly.traces.null",
-        "mayutils.objects.datetime",
-        "mayutils.objects.datetime.constants",
-        "mayutils.objects.datetime.datetime",
-        "mayutils.objects.datetime.interval",
-        "mayutils.objects.datetime.numpy",
-        "mayutils.objects.datetime.timezone",
-        "mayutils.objects.datetime.traveller",
-        "mayutils.visualisation.graphs.plotly.charts.plot",
-        "mayutils.visualisation.graphs.plotly.charts.subplot",
-        "mayutils.visualisation.graphs.plotly.templates",
-        "mayutils.visualisation.graphs.plotly.traces.icicle",
-        "mayutils.visualisation.graphs.plotly.traces.scatter",
-        "mayutils.interfaces.code.tui.textual",
-        "mayutils.interfaces.code.tui.tuiplot",
-        "mayutils.interfaces.websites.streamlit.views.forbidden",
-        "mayutils.interfaces.websites.streamlit.views.login",
-        "mayutils.scripts.clear_cache",
-        "mayutils.scripts.generate_plotly_stubs",
-        "mayutils.scripts.refresh_stubs",
+        "mayutils.export.html",  # html2image
+        "mayutils.interfaces.filetypes.pptx",  # pptx (imports pptx.units / pptx.markdown)
+        "mayutils.interfaces.filetypes.pptx.markdown",  # pptx
+        "mayutils.interfaces.filetypes.pptx.units",  # pptx (class Length(BaseLength))
+        "mayutils.interfaces.data.snowflake",  # snowflake (subclasses connection/session)
+        "mayutils.mathematics.numba",  # numba, numpy (@njit at import)
+        "mayutils.objects.dataframes.pandas.stylers",  # pandas (class Styler(Style))
+        "mayutils.visualisation.graphs.plotly.traces.ecdf",  # plotly (imports line.py)
+        "mayutils.visualisation.graphs.plotly.traces.kde",  # plotly (imports line.py)
+        "mayutils.visualisation.graphs.plotly.traces.line",  # plotly.graph_objects
+        "mayutils.visualisation.graphs.plotly.traces.mesh3d",  # plotly.graph_objects
+        "mayutils.visualisation.graphs.plotly.traces.null",  # plotly.graph_objects
+        "mayutils.objects.datetime",  # pendulum
+        "mayutils.objects.datetime.constants",  # pendulum
+        "mayutils.objects.datetime.datetime",  # pendulum
+        "mayutils.objects.datetime.interval",  # pendulum
+        "mayutils.objects.datetime.numpy",  # numpy
+        "mayutils.objects.datetime.timezone",  # pendulum
+        "mayutils.objects.datetime.traveller",  # pendulum
+        "mayutils.visualisation.graphs.plotly.charts.plot",  # plotly.graph_objects, numpy
+        "mayutils.visualisation.graphs.plotly.charts.subplot",  # plotly (imports plot/templates)
+        "mayutils.visualisation.graphs.plotly.templates",  # plotly.graph_objects
+        "mayutils.visualisation.graphs.plotly.traces.icicle",  # plotly.graph_objects
+        "mayutils.visualisation.graphs.plotly.traces.scatter",  # plotly.graph_objects
+        "mayutils.interfaces.code.tui.textual",  # textual
+        "mayutils.interfaces.code.tui.tuiplot",  # textual, textual_image, rich, typer
+        "mayutils.interfaces.websites.streamlit.views.forbidden",  # streamlit
+        "mayutils.interfaces.websites.streamlit.views.login",  # streamlit
+        "mayutils.scripts.clear_cache",  # typer
+        "mayutils.scripts.generate_plotly_stubs",  # typer
+        "mayutils.scripts.refresh_stubs",  # typer
     }
 )
 

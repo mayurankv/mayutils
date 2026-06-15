@@ -35,18 +35,10 @@ from mayutils.core.extras import may_require_extras
 from mayutils.objects.colours import Colour
 
 with may_require_extras():
-    import numpy as np
-    from dataframe_image._pandas_accessor import (
-        disable_max_image_pixels,
-        generate_html,  # pyright: ignore[reportUnknownVariableType]
-        prepare_converter,  # pyright: ignore[reportUnknownVariableType]
-        save_image,  # pyright: ignore[reportUnknownVariableType]
-    )
-    from itables import show
     from pandas.io.formats.style import Styler as Style
-    from pandas.io.formats.style_render import Subset
 
 if TYPE_CHECKING:
+    import numpy as np
     from pandas import DataFrame, Index
     from pandas._typing import Axis, Level
     from pandas.io.formats.style_render import Subset
@@ -273,6 +265,9 @@ class Styler(Style):
             >>> style_map(1.0)
             ''
             """
+            with may_require_extras():
+                import numpy as np
+
             return (
                 "color: rgba(0,0,0,0); background-color: rgba(0, 0, 0, 0);"
                 if isinstance(value, (float, int, np.floating, np.integer)) and np.isnan(value)
@@ -535,6 +530,9 @@ class Styler(Style):
         >>> styled.interact()  # doctest: +SKIP
         >>> styled.interact(caption="Summary table")  # doctest: +SKIP
         """
+        with may_require_extras():
+            from itables import show
+
         return show(
             df=self,
             caption=caption,
@@ -677,6 +675,14 @@ class Styler(Style):
         >>> result.exists()  # doctest: +SKIP
         True
         """
+        with may_require_extras():
+            from dataframe_image._pandas_accessor import (
+                disable_max_image_pixels,
+                generate_html,  # pyright: ignore[reportUnknownVariableType]
+                prepare_converter,  # pyright: ignore[reportUnknownVariableType]
+                save_image,  # pyright: ignore[reportUnknownVariableType]
+            )
+
         path = Path(path)
         table_conversion = "selenium"
         chrome_path = None

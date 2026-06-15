@@ -45,7 +45,6 @@ from typing import TYPE_CHECKING, Self
 from mayutils.core.extras import may_require_extras
 
 with may_require_extras():
-    import numpy as np
     from pendulum import (
         Date as PendulumDate,
     )
@@ -54,19 +53,16 @@ with may_require_extras():
     )
     from pendulum import (
         FixedTimezone,
-        local_timezone,
     )
     from pendulum import (
         Time as PendulumTime,
-    )
-    from pendulum import (
-        parse as pendulum_parse,
     )
 
 from mayutils.objects.datetime.constants import DAY_SECONDS, FORMATTER
 from mayutils.objects.datetime.timezone import UTC, Tz
 
 if TYPE_CHECKING:
+    import numpy as np
     from pendulum import Duration
 
 
@@ -192,6 +188,9 @@ class DateNumericMixin(PendulumDate):
         >>> isinstance(Date(year=2026, month=4, day=22).to_numpy(), np.datetime64)
         True
         """
+        with may_require_extras():
+            import numpy as np
+
         return np.datetime64(self)
 
 
@@ -1452,6 +1451,9 @@ class DateTime(DateNumericMixin, PendulumDateTime):
         >>> dt.year, dt.hour
         (2026, 9)
         """
+        with may_require_extras():
+            from pendulum import local_timezone
+
         return cls.create(
             year=year,
             month=month,
@@ -1762,6 +1764,11 @@ def parse(
     >>> isinstance(parse("2026-04-22T09:30:00+00:00"), DateTime)
     True
     """
+    with may_require_extras():
+        from pendulum import (
+            parse as pendulum_parse,
+        )
+
     output = pendulum_parse(text=dt) if isinstance(dt, str) else dt
 
     if isinstance(output, PendulumDateTime):

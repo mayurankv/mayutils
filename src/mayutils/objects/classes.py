@@ -29,10 +29,14 @@ Examples
 'Registry'
 """
 
-from collections.abc import Callable
+from __future__ import annotations
+
 from functools import wraps
 from types import FunctionType
-from typing import NoReturn, Protocol
+from typing import TYPE_CHECKING, NoReturn, Protocol
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class ChainedMethod[Object, Value](Protocol):

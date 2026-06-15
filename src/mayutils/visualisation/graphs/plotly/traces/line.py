@@ -1,17 +1,21 @@
 """Line trace with optional text labels and confidence bands."""
 
+from __future__ import annotations
+
 import itertools
 import re
-from collections.abc import Sequence
-from typing import Any, ClassVar, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 from mayutils.core.extras import may_require_extras
 from mayutils.objects.colours import Colour
 from mayutils.visualisation.graphs.plotly.traces.types import TraceType
 
 with may_require_extras():
-    import numpy as np
     import plotly.graph_objects as go
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from numpy.typing import ArrayLike
     from pandas import DataFrame, Series
 
@@ -210,6 +214,9 @@ class Line(go.Scatter):
         ...     y_lower=[[3, 4, 5]],
         ... )
         """
+        with may_require_extras():
+            import numpy as np
+
         if len(y_lower) != len(y_upper):
             msg = "Asymmetric bounds provided"
             raise ValueError(msg)
