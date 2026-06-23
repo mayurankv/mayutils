@@ -36,6 +36,8 @@ from hashlib import sha256
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from pendulum import DateTime as PendulumDateTime
 
     from mayutils.objects.datetime import DateTime
@@ -177,3 +179,99 @@ def hash_inputs(
             default=serialise,
         ).encode()
     ).hexdigest()
+
+
+def hash_callable(
+    call: Callable,  # pyright: ignore[reportMissingTypeArgument, reportUnknownParameterType]
+    /,
+) -> str:
+    """
+    Compute a SHA-256 fingerprint of a callable's code object and bound values.
+
+    For plain :class:`types.FunctionType` instances the fingerprint covers the
+    code object's bytecode, constants, names, variable counts, and closure
+    structure, combined with the function's default argument values and the
+    current cell contents of any closure. This guards against the common case
+    where two lambdas or inner functions share identical bytecode but capture
+    different values — without the bound-value payload such callables would
+    produce the same digest and return stale cached results. For all other
+    callables (``functools.partial``, callable objects, built-ins) the
+    fingerprint falls back to a digest of the callable's ``repr``, which is
+    stable for builtins and partials whose arguments are simple types but
+    identity-based for arbitrary objects. In all cases the returned digest is a
+    stable 64-character hexadecimal string suitable for use as a cache key.
+
+    Parameters
+    ----------
+    call
+        The callable whose identity should be fingerprinted. Must be either a
+        plain Python function (:class:`types.FunctionType`) or any callable with
+        a stable :func:`repr`. Closures over unmarshallable objects fall back to
+        per-object identity hashing.
+
+    Returns
+    -------
+        A 64-character lowercase hexadecimal SHA-256 digest uniquely identifying
+        the callable's code and captured state for the lifetime of the
+        interpreter session.
+
+    See Also
+    --------
+    hash_inputs : Sibling helper producing digests from argument values rather than callables.
+    hashlib.sha256 : Underlying digest algorithm.
+    marshal : Used to serialise the code tuple and bound-value payload.
+    mayutils.environment.memoisation : Cache layer that uses this digest to key callable-based entries.
+
+    Examples
+    --------
+    >>> from mayutils.objects.hashing import hash_callable
+    >>> def add(x, y):
+    ...     return x + y
+    >>> digest = hash_callable(add)
+    >>> len(digest)
+    64
+    >>> digest == hash_callable(add)
+    True
+    """
+    import hashlib
+    import marshal
+    from types import FunctionType
+
+    if isinstance(call, FunctionType):
+        code = call.__code__
+        code_identity = (
+            code.co_code,
+            code.co_consts,
+            code.co_names,
+            code.co_varnames,
+            code.co_freevars,
+            code.co_argcount,
+            code.co_posonlyargcount,
+            code.co_kwonlyargcount,
+        )
+
+        # Values that change behaviour but live outside the bytecode: default arguments
+        # and closure cell contents (e.g. the `col` captured by `lambda d: d[col]` when
+        # built in a loop). Without these, two lambdas with identical bytecode but
+        # different captures collide and return wrong cached results.
+        bound_values = (
+            call.__defaults__,
+            call.__kwdefaults__,
+            tuple(cell.cell_contents for cell in (call.__closure__ or ())),
+        )
+
+        try:
+            bound_payload = marshal.dumps(bound_values)
+        except (ValueError, TypeError):
+            # Unmarshalable captures (arbitrary objects): fall back to per-object identity,
+            # which is stable for the lifetime of the in-memory cache and collision-free
+            # (at the cost of not deduplicating equal-but-distinct captured objects).
+            bound_payload = repr([id(value) for value in bound_values]).encode()
+
+        return hashlib.sha256(marshal.dumps(code_identity) + bound_payload).hexdigest()
+
+    # functools.partial, callable instances, builtins, etc. have no __code__ to
+    # fingerprint. Fall back to a digest of the repr: stable for builtins and
+    # partials of simple args, identity-tinged otherwise — acceptable for an
+    # in-process cache because it avoids collisions between distinct callables.
+    return hashlib.sha256(repr(call).encode()).hexdigest()  # pyright: ignore[reportUnknownArgumentType]
