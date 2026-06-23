@@ -1161,6 +1161,31 @@ class Intervals[IntervalType: (Date, DateTime)]:
     def __hash__(
         self,
     ) -> int:
+        """
+        Hash the collection using its underlying sorted interval tuple.
+
+        Forwards the internal ``intervals`` tuple directly to the builtin
+        :func:`hash`. Because the tuple is canonical after each :meth:`sort`
+        call, equal collections always produce the same hash, satisfying the
+        hash-equality contract.
+
+        Returns
+        -------
+            Integer hash of the sorted interval tuple.
+
+        See Also
+        --------
+        Intervals.__eq__ : Equality check whose contract is paired with this hash.
+        Intervals.sort : Ensures the tuple is canonical before hashing.
+
+        Examples
+        --------
+        >>> from mayutils.objects.datetime.datetime import Date
+        >>> from mayutils.objects.datetime.interval import Interval, Intervals
+        >>> collection = Intervals(Interval(start=Date(2024, 1, 1), end=Date(2024, 1, 31)))
+        >>> isinstance(hash(collection), int)
+        True
+        """
         return hash(self.intervals)
 
     def __iter__(
