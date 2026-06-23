@@ -586,6 +586,79 @@ class Interval[IntervalType: (Date, DateTime)](PendulumInterval[IntervalType]):
             absolute=self._absolute,
         )
 
+    def __hash__(
+        self,
+    ) -> int:
+        """
+        Hash the interval using the endpoint type name and both endpoint values.
+
+        Constructs a key tuple of ``(type(self.start).__name__, self.start,
+        self.end)`` and forwards it to the builtin :func:`hash`. Including the
+        runtime class name of the start endpoint ensures that date-backed and
+        datetime-backed intervals with otherwise identical boundary values do not
+        collide in hash tables.
+
+        Returns
+        -------
+            Integer hash derived from the start-type name and both endpoints.
+
+        See Also
+        --------
+        Interval.__eq__ : Equality check whose contract is paired with this hash.
+
+        Examples
+        --------
+        >>> from mayutils.objects.datetime.datetime import Date
+        >>> from mayutils.objects.datetime.interval import Interval
+        >>> interval = Interval(start=Date(2024, 1, 1), end=Date(2024, 1, 31))
+        >>> isinstance(hash(interval), int)
+        True
+        """
+        return hash((type(self.start).__name__, self.start, self.end))
+
+    def __eq__(
+        self,
+        other: object,
+    ) -> bool:
+        """
+        Test structural equality between two intervals of the same type.
+
+        Compares the runtime class name of the start endpoint together with both
+        ``start`` and ``end`` values so that a date-backed interval never
+        compares equal to a datetime-backed interval with the same calendar
+        boundaries. Returns :data:`NotImplemented` when ``other`` is not an
+        instance of the same concrete type, delegating further comparison to the
+        opposite operand.
+
+        Parameters
+        ----------
+        other
+            Object to compare against; equality is only evaluated when ``other``
+            is an instance of the exact same runtime type as ``self``.
+
+        Returns
+        -------
+            ``True`` when ``other`` is the same type and has identical ``start``
+            and ``end`` values at the same resolution; ``False`` otherwise.
+
+        See Also
+        --------
+        Interval.__hash__ : Hash function whose contract is paired with this method.
+
+        Examples
+        --------
+        >>> from mayutils.objects.datetime.datetime import Date
+        >>> from mayutils.objects.datetime.interval import Interval
+        >>> a = Interval(start=Date(2024, 1, 1), end=Date(2024, 1, 31))
+        >>> b = Interval(start=Date(2024, 1, 1), end=Date(2024, 1, 31))
+        >>> a == b
+        True
+        """
+        if not isinstance(other, type(self)):
+            return NotImplemented
+
+        return (type(self.start).__name__, self.start, self.end) == (type(other.start).__name__, other.start, other.end)
+
     def count_weekdays(
         self,
     ) -> tuple[int, int]:
@@ -1041,6 +1114,79 @@ class Intervals[IntervalType: (Date, DateTime)]:
         True
         """
         return f"Intervals(\n\t{'\n\t'.join([repr(interval) for interval in self.intervals])}\n)"
+
+    def __eq__(
+        self,
+        other: object,
+    ) -> bool:
+        """
+        Test structural equality between two interval collections.
+
+        Delegates to tuple equality on the underlying ``intervals`` attribute so
+        that two collections are equal only when they contain the same intervals
+        in the same order. Returns :data:`NotImplemented` when ``other`` is not
+        an instance of the same concrete type so the reflected operator on
+        ``other`` gets a chance to respond.
+
+        Parameters
+        ----------
+        other
+            Object to compare against; equality is only evaluated when ``other``
+            is the same runtime type as ``self``.
+
+        Returns
+        -------
+            ``True`` when both collections hold equal intervals in the same
+            sorted order; ``False`` otherwise.
+
+        See Also
+        --------
+        Intervals.__hash__ : Hash function whose contract is paired with this method.
+        Intervals.sort : Establishes the canonical ordering compared here.
+
+        Examples
+        --------
+        >>> from mayutils.objects.datetime.datetime import Date
+        >>> from mayutils.objects.datetime.interval import Interval, Intervals
+        >>> a = Intervals(Interval(start=Date(2024, 1, 1), end=Date(2024, 1, 31)))
+        >>> b = Intervals(Interval(start=Date(2024, 1, 1), end=Date(2024, 1, 31)))
+        >>> a == b
+        True
+        """
+        if not isinstance(other, type(self)):
+            return NotImplemented
+
+        return self.intervals == other.intervals
+
+    def __hash__(
+        self,
+    ) -> int:
+        """
+        Hash the collection using its underlying sorted interval tuple.
+
+        Forwards the internal ``intervals`` tuple directly to the builtin
+        :func:`hash`. Because the tuple is canonical after each :meth:`sort`
+        call, equal collections always produce the same hash, satisfying the
+        hash-equality contract.
+
+        Returns
+        -------
+            Integer hash of the sorted interval tuple.
+
+        See Also
+        --------
+        Intervals.__eq__ : Equality check whose contract is paired with this hash.
+        Intervals.sort : Ensures the tuple is canonical before hashing.
+
+        Examples
+        --------
+        >>> from mayutils.objects.datetime.datetime import Date
+        >>> from mayutils.objects.datetime.interval import Interval, Intervals
+        >>> collection = Intervals(Interval(start=Date(2024, 1, 1), end=Date(2024, 1, 31)))
+        >>> isinstance(hash(collection), int)
+        True
+        """
+        return hash(self.intervals)
 
     def __iter__(
         self,
