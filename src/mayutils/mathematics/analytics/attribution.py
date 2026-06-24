@@ -48,12 +48,12 @@ from dataclasses import dataclass
 from enum import StrEnum
 from itertools import combinations
 from math import factorial
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from mayutils.core.extras import may_require_extras
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable, Mapping, Sequence
 
     import pandas as pd
     import polars as pl
@@ -233,6 +233,238 @@ def naive_attribution[T](
     interaction = total - sum(contributions.values())
 
     return contributions, interaction
+
+
+def reduce_total(
+    value: object,
+    /,
+) -> float:
+    """
+    Reduce a scalar or per-segment factor value to a float total.
+
+    Sum the value across segments when it exposes a ``sum`` method (a
+    pandas or polars Series, or a numpy array) and pass a plain scalar
+    through unchanged, so the segmented and single-value cases share one
+    reduction without importing a dataframe library at module load.
+
+    Parameters
+    ----------
+    value
+        A scalar factor value, or a Series-like of per-segment values
+        exposing a ``sum`` method.
+
+    Returns
+    -------
+        The value summed across segments as a float.
+
+    See Also
+    --------
+    weighted_total_metric : Builds a metric that reduces with this helper.
+    weighted_mean_metric : Builds a metric that reduces with this helper.
+
+    Examples
+    --------
+    >>> reduce_total(5.0)
+    5.0
+    """
+    summed = cast("Any", value).sum() if hasattr(value, "sum") else value
+
+    return float(cast("Any", summed))
+
+
+def product_metric(
+    **factors: float,
+) -> float:
+    """
+    Multiply factor values into a single product metric.
+
+    Return the product of every supplied factor, the canonical
+    multiplicative metric for an unweighted product of rates with no
+    segmentation (for example a funnel rate built from per-stage
+    conversion rates). Pass it straight to :class:`Attribution` as the
+    bound metric.
+
+    Parameters
+    ----------
+    **factors
+        Factor values keyed by name; their product is the metric.
+
+    Returns
+    -------
+        The product of all supplied factor values.
+
+    See Also
+    --------
+    weighted_mean_metric : Builds a volume-weighted mean rate metric.
+    weighted_total_metric : Builds a volume-weighted total metric.
+    Attribution : Front end that binds a metric for decomposition.
+
+    Examples
+    --------
+    >>> product_metric(quote_rate=0.5, click_rate=0.4)
+    0.2
+    """
+    product = 1.0
+    for value in factors.values():
+        product = product * value
+
+    return float(product)
+
+
+def weighted_total_metric(
+    *,
+    weight: str,
+    rates: Sequence[str],
+) -> Callable[..., float]:
+    """
+    Build a volume-weighted total metric over segments.
+
+    Return a metric evaluating ``sum_s w_s * prod_k r_{k,s}``: the
+    ``weight`` factor multiplied by every factor named in ``rates`` per
+    segment, then summed across segments. With scalar factors it reduces
+    to a single-segment total such as the classic price-times-volume
+    revenue, and the weight participates in the attribution as the volume
+    effect.
+
+    Parameters
+    ----------
+    weight
+        Name of the factor holding per-segment volumes.
+    rates
+        Names of the rate factors multiplied into each segment's total.
+
+    Returns
+    -------
+        A metric taking the named factors as keyword arguments and
+        returning their volume-weighted total.
+
+    See Also
+    --------
+    weighted_mean_metric : Volume-weighted mean rate counterpart.
+    product_metric : Unweighted product of factor values.
+    Attribution.from_segments : Decomposes a segmented metric change.
+
+    Examples
+    --------
+    >>> metric = weighted_total_metric(weight="volume", rates=["price"])
+    >>> metric(volume=100.0, price=10.0)
+    1000.0
+    """
+
+    def metric(
+        **factors: object,
+    ) -> float:
+        """
+        Evaluate the volume-weighted total for one scenario.
+
+        Multiply the bound weight factor by each bound rate factor per
+        segment and sum the products across segments.
+
+        Parameters
+        ----------
+        **factors
+            Factor values keyed by name, supplied by the attribution
+            engine for the baseline or comparison scenario.
+
+        Returns
+        -------
+            The volume-weighted total across segments.
+
+        See Also
+        --------
+        weighted_total_metric : Builder that produces this metric.
+
+        Examples
+        --------
+        >>> weighted_total_metric(weight="volume", rates=["price"])(volume=100.0, price=10.0)
+        1000.0
+        """
+        product = factors[weight]
+        for rate in rates:
+            product = cast("Any", product) * factors[rate]
+
+        return reduce_total(product)
+
+    return metric
+
+
+def weighted_mean_metric(
+    *,
+    weight: str,
+    rates: Sequence[str],
+) -> Callable[..., float]:
+    """
+    Build a volume-weighted mean rate metric over segments.
+
+    Return a metric evaluating ``sum_s w_s * prod_k r_{k,s} / sum_s w_s``:
+    the ``weight`` factor multiplied by every factor named in ``rates``
+    per segment, summed across segments, then divided by the total
+    weight. The weight enters the attribution as the mix effect, since
+    uniform scaling of the weights cancels in the ratio and only their
+    relative distribution moves the metric. With scalar factors it
+    reduces to the unweighted product of rates.
+
+    Parameters
+    ----------
+    weight
+        Name of the factor holding per-segment volumes.
+    rates
+        Names of the rate factors multiplied into each segment's value.
+
+    Returns
+    -------
+        A metric taking the named factors as keyword arguments and
+        returning their volume-weighted mean rate.
+
+    See Also
+    --------
+    weighted_total_metric : Volume-weighted total counterpart.
+    product_metric : Unweighted product of factor values.
+    Attribution.from_segments : Decomposes a segmented metric change.
+
+    Examples
+    --------
+    >>> metric = weighted_mean_metric(weight="volume", rates=["rate"])
+    >>> metric(volume=100.0, rate=0.2)
+    0.2
+    """
+
+    def metric(
+        **factors: object,
+    ) -> float:
+        """
+        Evaluate the volume-weighted mean rate for one scenario.
+
+        Multiply the bound weight factor by each bound rate factor per
+        segment, sum across segments, and divide by the total weight.
+
+        Parameters
+        ----------
+        **factors
+            Factor values keyed by name, supplied by the attribution
+            engine for the baseline or comparison scenario.
+
+        Returns
+        -------
+            The volume-weighted mean rate across segments.
+
+        See Also
+        --------
+        weighted_mean_metric : Builder that produces this metric.
+
+        Examples
+        --------
+        >>> weighted_mean_metric(weight="volume", rates=["rate"])(volume=100.0, rate=0.2)
+        0.2
+        """
+        weights = factors[weight]
+        product = weights
+        for rate in rates:
+            product = cast("Any", product) * factors[rate]
+
+        return reduce_total(product) / reduce_total(weights)
+
+    return metric
 
 
 class AttributionMethod(StrEnum):
@@ -630,6 +862,118 @@ class Attribution:
                 polars_rows.append({**result.contributions, "interaction": result.interaction})
 
             return cast("DataFrameType", pl.DataFrame(data=polars_rows))
+
+        msg = f"Unsupported backend: {resolved_backend.name}"
+        raise ValueError(msg)
+
+    def from_segments[DataFrameType: DataFrames = pd.DataFrame](
+        self,
+        *,
+        baseline: DataFrameType,
+        comparison: DataFrameType,
+        backend: Backend[DataFrameType] | None = None,
+    ) -> AttributionResult:
+        """
+        Attribute the change in an aggregate metric across segments.
+
+        Treat each column as a single factor whose value is the whole
+        column, a vector of per-segment values, and decompose the bound
+        metric once over all segments at once rather than row by row as
+        :meth:`from_dataframe` does. The metric must reduce its
+        per-segment factor vectors to a scalar, as the builders
+        :func:`weighted_total_metric` and :func:`weighted_mean_metric` do.
+        Baseline and comparison are aligned on the union of their segment
+        labels with missing entries filled with zero, so the Shapley
+        sweep's mixed scenarios never align mismatched segments into NaNs.
+        The dataframe library is dispatched on the
+        :class:`~mayutils.objects.dataframes.backends.Backend` token,
+        inferred from ``baseline`` when not supplied.
+
+        Parameters
+        ----------
+        baseline
+            Reference scenario with one row per segment and one column per
+            factor. Column names must be valid keyword names of the bound
+            metric.
+        comparison
+            Scenario being explained. Must share the columns of
+            ``baseline``; under pandas its segment labels need not match,
+            as both frames are aligned on the union of segments.
+        backend
+            Backend token selecting the dataframe library. When ``None``,
+            the backend is inferred from the concrete type of ``baseline``.
+
+        Returns
+        -------
+            Record holding the per-factor contributions and the
+            interaction term; their sum equals the total metric change.
+
+        Raises
+        ------
+        ValueError
+            If the frames do not share their columns, if a polars pair
+            differs in height, or if the backend is not supported.
+
+        See Also
+        --------
+        Attribution.from_dataframe : Row-wise per-segment variant.
+        Attribution.from_dict : Single-scenario mapping variant.
+        weighted_mean_metric : Builds a metric suited to this method.
+
+        Examples
+        --------
+        >>> import pandas as pd
+        >>> from mayutils.mathematics.analytics.attribution import (
+        ...     Attribution,
+        ...     weighted_total_metric,
+        ... )
+        >>> segments = ["A", "B"]
+        >>> baseline = pd.DataFrame(
+        ...     {"volume": [100.0, 50.0], "rate": [0.2, 0.4]},
+        ...     index=segments,
+        ... )
+        >>> comparison = pd.DataFrame(
+        ...     {"volume": [110.0, 60.0], "rate": [0.25, 0.45]},
+        ...     index=segments,
+        ... )
+        >>> result = Attribution(
+        ...     weighted_total_metric(weight="volume", rates=["rate"]),
+        ... ).from_segments(baseline=baseline, comparison=comparison)
+        >>> round(result.total, 4)
+        14.5
+        """
+        with may_require_extras():
+            from mayutils.objects.dataframes.backends import Backend
+
+        resolved_backend = Backend.infer(baseline) if backend is None else backend
+
+        if resolved_backend.name == "pandas":
+            baseline_pd = cast("pd.DataFrame", baseline)
+            comparison_pd = cast("pd.DataFrame", comparison)
+            if not baseline_pd.columns.equals(comparison_pd.columns):
+                msg = "Baseline and comparison frames must share the same columns"
+                raise ValueError(msg)
+
+            segments = baseline_pd.index.union(comparison_pd.index)
+            aligned_baseline = baseline_pd.reindex(index=segments).fillna(value=0)
+            aligned_comparison = comparison_pd.reindex(index=segments).fillna(value=0)
+
+            return self.from_dict(
+                baseline={str(column): aligned_baseline[column] for column in aligned_baseline.columns},
+                comparison={str(column): aligned_comparison[column] for column in aligned_comparison.columns},
+            )
+
+        if resolved_backend.name == "polars":
+            baseline_pl = cast("pl.DataFrame", baseline)
+            comparison_pl = cast("pl.DataFrame", comparison)
+            if baseline_pl.columns != comparison_pl.columns or baseline_pl.height != comparison_pl.height:
+                msg = "Baseline and comparison frames must share the same columns and height"
+                raise ValueError(msg)
+
+            return self.from_dict(
+                baseline={column: baseline_pl[column] for column in baseline_pl.columns},
+                comparison={column: comparison_pl[column] for column in comparison_pl.columns},
+            )
 
         msg = f"Unsupported backend: {resolved_backend.name}"
         raise ValueError(msg)

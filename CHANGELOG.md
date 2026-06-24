@@ -4,6 +4,12 @@ All notable changes to `mayutils` will be documented here.
 
 This project follows [Semantic Versioning](https://semver.org/) and the [Keep a Changelog](https://keepachangelog.com/) conventions. Releases are produced by [commitizen](https://commitizen-tools.github.io/commitizen/) from [Conventional Commits](https://www.conventionalcommits.org/) — `feat` bumps the minor version, `fix` bumps the patch, and a `!` or `BREAKING CHANGE:` footer bumps the major.
 
+## v3.5.0 (2026-06-24)
+
+### Feat
+
+- **src/mayutils/mathenatics/analytics/attribution**: Add grouped attribution
+
 ## v3.4.0 (2026-06-23)
 
 ### Feat
