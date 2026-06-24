@@ -264,7 +264,7 @@ def reduce_total(
 
     Examples
     --------
-    >>> _aggregate(5.0)
+    >>> reduce_total(5.0)
     5.0
     """
     summed = cast("Any", value).sum() if hasattr(value, "sum") else value
