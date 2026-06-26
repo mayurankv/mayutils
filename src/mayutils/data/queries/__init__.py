@@ -106,10 +106,11 @@ def get_queries_folders() -> tuple[Path, ...]:
     True
     """
     root = get_root()
+    src = root / "src"
 
     return (
         root / "queries",
-        *[root / "src" / module.name / "data" / "queries" for module in (root / "src").iterdir() if module.is_dir()],
+        *src.glob("*/data/queries"),
         Path(__file__).parent,
     )
 
