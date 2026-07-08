@@ -227,6 +227,7 @@ def format_query(
     queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
     default_suffix: str = "sql",
     template_kwargs: Mapping[str, object] | None = None,
+    strip_trailing_semicolon: bool = True,
 ) -> str:
     """
     Load a named SQL query and render its Jinja2 placeholders.
@@ -264,6 +265,9 @@ def format_query(
         variables, which is only valid for templates that contain no
         variable references; otherwise
         :class:`~jinja2.exceptions.UndefinedError` is raised.
+    strip_trailing_semicolon
+        Whether to remove the trailing semicolon from the rendered SQL string.
+        Defaults to ``True``.
 
     Returns
     -------
@@ -332,4 +336,5 @@ def format_query(
         unformatted_query,
         queries_folders=queries_folders,
         template_kwargs=template_kwargs,
+        strip_trailing_semicolon=strip_trailing_semicolon,
     )

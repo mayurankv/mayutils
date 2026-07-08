@@ -375,6 +375,7 @@ def render_query(
     queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
     default_suffix: str = "sql",
     template_kwargs: Mapping[str, object] | None = None,
+    strip_trailing_semicolon: bool = True,
 ) -> str:
     r"""
     Render a query template to a concrete SQL string.
@@ -418,6 +419,9 @@ def render_query(
         When ``None`` or omitted the template is rendered with no
         variables, which is only valid for templates that contain no
         variable references.
+    strip_trailing_semicolon
+        Whether to remove the trailing semicolon from the rendered SQL string.
+        Defaults to ``True``.
 
     Returns
     -------
@@ -481,6 +485,7 @@ def render_query(
             queries_folders=queries_folders,
             default_suffix=default_suffix,
             template_kwargs=template_kwargs,
+            strip_trailing_semicolon=strip_trailing_semicolon,
         )
 
     logger.debug(f"Rendering inline SQL ({len(query)} chars) with arguments {sorted(template_kwargs)}")
@@ -489,6 +494,7 @@ def render_query(
         query,
         queries_folders=queries_folders,
         template_kwargs=template_kwargs,
+        strip_trailing_semicolon=strip_trailing_semicolon,
     )
 
 

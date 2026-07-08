@@ -40,7 +40,7 @@ class TemplateStyleWarning(UserWarning):
     Emitted by :func:`render_template` when the original template text
     contains at least one ``{name}`` substring that matches a key that
     was passed in ``template_kwargs``. This indicates an unmigrated
-    :meth:`str.format` template — the placeholder was never expanded
+    :meth:`str.format` template u2014 the placeholder was never expanded
     because Jinja2 does not recognise single-brace syntax, so the
     caller's intent was likely not fulfilled.
 
@@ -123,6 +123,7 @@ def render_template(
     *,
     queries_folders: tuple[Path, ...] = (),
     template_kwargs: Mapping[str, object] | None = None,
+    strip_trailing_semicolon: bool = True,
 ) -> str:
     """
     Render a Jinja2 SQL template string and return the expanded text.
@@ -155,6 +156,9 @@ def render_template(
         which is only valid for templates that contain no variable
         references (otherwise :class:`~jinja2.exceptions.UndefinedError`
         is raised).
+    strip_trailing_semicolon
+        Whether to remove the trailing semicolon from the rendered SQL string.
+        Defaults to ``True``.
 
     Returns
     -------
@@ -203,6 +207,9 @@ def render_template(
     template_kwargs = dict(template_kwargs or {})
 
     rendered = get_environment(queries_folders).from_string(source=text).render(**template_kwargs)
+
+    if strip_trailing_semicolon:
+        rendered = rendered.rstrip().removesuffix(";")
 
     legacy = [name for name in template_kwargs if f"{{{name}}}" in text]
     if legacy:
