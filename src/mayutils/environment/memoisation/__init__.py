@@ -30,7 +30,12 @@ from mayutils.environment.memoisation.files import (
     get_serialiser,
     make_cache_stem,
 )
-from mayutils.environment.memoisation.memory import MemoryStore
+from mayutils.environment.memoisation.memory import (
+    SHARED_STORES,
+    MemoryStore,
+    clear_shared_stores,
+    get_shared_store,
+)
 from mayutils.environment.memoisation.types import (
     MISSING,
     CacheStore,
@@ -45,14 +50,17 @@ from mayutils.environment.memoisation.utilities import (
 __all__ = [
     "CACHE_FOLDER",
     "MISSING",
+    "SHARED_STORES",
     "CacheStore",
     "FileStore",
     "MemoryStore",
     "cache",
     "clear_cache",
+    "clear_shared_stores",
     "expiry",
     "format_ttl",
     "get_serialiser",
+    "get_shared_store",
     "is_expired",
     "lru_cache",
     "make_cache_key",

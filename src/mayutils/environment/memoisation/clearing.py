@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any
 from mayutils.core.extras import may_require_extras
 from mayutils.data import CACHE_FOLDER
 from mayutils.environment.filesystem import is_file_stale
+from mayutils.environment.memoisation.memory import clear_shared_stores
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -83,6 +84,7 @@ def clear_cache(
     []
     """
     if not dry_run:
+        clear_shared_stores()
         for store in stores:
             store.clear()
 

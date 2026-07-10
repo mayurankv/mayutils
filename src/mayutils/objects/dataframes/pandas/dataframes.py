@@ -1061,9 +1061,9 @@ def parse_temporal_columns(
     with may_require_extras():
         from pandas import StringDtype
 
-    replacements: dict[Hashable, Series] = {}
-    for column in frame.columns:
-        series = frame[column]
+    replacements: dict[int, Series] = {}
+    for position in range(frame.shape[1]):
+        series = frame.iloc[:, position]
         if not (series.dtype == object or isinstance(series.dtype, StringDtype)):
             continue
         sample = series.dropna().head(n=sample_size)
@@ -1075,14 +1075,14 @@ def parse_temporal_columns(
                 from pandas import to_datetime
 
             if all(isinstance(value, date) and not isinstance(value, datetime) for value in sample):
-                replacements[column] = to_datetime(series)
+                replacements[position] = to_datetime(series)
                 continue
 
             kind = detect_temporal_kind(tuple(sample))
             if kind in {"date", "datetime"}:
-                replacements[column] = to_datetime(series, format="ISO8601")
+                replacements[position] = to_datetime(series, format="ISO8601")
             elif kind == "time":
-                replacements[column] = to_datetime(series, format="mixed").dt.time
+                replacements[position] = to_datetime(series, format="mixed").dt.time
         except (ValueError, TypeError):
             continue
 
@@ -1090,8 +1090,8 @@ def parse_temporal_columns(
         return frame
 
     converted = frame.copy()
-    for column, series in replacements.items():
-        converted[column] = series
+    for position, series in replacements.items():
+        converted.isetitem(position, series.to_numpy())
 
     return converted
 

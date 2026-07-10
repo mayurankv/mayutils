@@ -713,6 +713,15 @@ def infer_suffix(
     return ".pkl"
 
 
+MAX_SECTION_LENGTH = 64
+"""Max length of an individual human-readable cache-stem section (e.g. kwargs)."""
+
+MAX_STEM_LENGTH = 150
+"""Max length of a cache stem. ``cache.func_key`` still appends the full content hash
+downstream, so truncating the readable prefix here never risks a collision; the bound keeps
+the eventual ``prefix--hash.suffix`` filename well under the macOS ``NAME_MAX`` of 255 bytes."""
+
+
 def make_cache_stem(
     query: SQL | Path,
     /,
@@ -780,17 +789,26 @@ def make_cache_stem(
         sections.append(String.to_slug(" ".join(query.split()[:3])))
 
     if template_kwargs:
-        sections.append(String.to_slug("_".join(flatten_dict(template_kwargs))))
+        sections.append(String.to_slug("_".join(flatten_dict(template_kwargs)))[:MAX_SECTION_LENGTH])
 
     if cache_extra:
-        sections.append(String.to_slug("_".join(flatten_dict(cache_extra))))
+        sections.append(String.to_slug("_".join(flatten_dict(cache_extra)))[:MAX_SECTION_LENGTH])
 
     if ttl is not None:
         sections.append(format_ttl(ttl))
 
     sections.append(key)
 
-    return "--".join(sections)
+    stem = "--".join(sections)
+
+    if len(stem) > MAX_STEM_LENGTH:
+        if key:
+            budget = max(MAX_STEM_LENGTH - len(key) - len("--"), 0)
+            stem = f"{'--'.join(sections[:-1])[:budget]}--{key}"
+        else:
+            stem = stem[:MAX_STEM_LENGTH]
+
+    return stem
 
 
 class FileStore[CacheObjectType: CacheObjects]:

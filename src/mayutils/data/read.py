@@ -645,6 +645,7 @@ def read_query[DataFrameType: DataFrames = pd.DataFrame](
             "QueryExecutor[DataFrameType]",
             cache(
                 ttl=ttl,
+                shared=True,
             )(execute),
         )
     else:

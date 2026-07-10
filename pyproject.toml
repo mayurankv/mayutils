@@ -46,7 +46,7 @@ maintainers = [{email = "mayuran.k.v@gmail.com", name = "Mayuran Visakan"}]
 name = "mayutils"
 readme = "README.md"
 requires-python = ">=3.13,<4.0"
-version = "3.6.0"
+version = "3.7.0"
 
 [project.optional-dependencies]
 all = [
@@ -210,7 +210,7 @@ pre_bump_hooks = [
 push = true
 tag_format = "v$version"
 update_changelog_on_bump = true
-version = "3.6.0"
+version = "3.7.0"
 version_files = ["pyproject.toml:^version"]
 
 [tool.mdformat]
