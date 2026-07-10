@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from mayutils.data import CACHE_FOLDER
 from mayutils.environment.memoisation.files import FileStore
-from mayutils.environment.memoisation.memory import MemoryStore
+from mayutils.environment.memoisation.memory import MemoryStore, get_shared_store
 from mayutils.environment.memoisation.types import Missing
 from mayutils.environment.memoisation.utilities import make_cache_key
 from mayutils.objects.decorators import flexwrap
@@ -354,6 +354,10 @@ class cache[CacheObjectType]:  # noqa: N801
         file-backed caches to produce readable filenames.
     backend
         DataFrame backend token for DataFile formats.
+    shared
+        Memory mode only. When ``True``, share a process-global store across
+        decorations of the same callable (see :meth:`__init__`). Mutually
+        exclusive with ``path``.
 
     See Also
     --------
@@ -389,6 +393,7 @@ class cache[CacheObjectType]:  # noqa: N801
         maxsize: int | None = None,
         key_prefix: str | None = None,
         backend: Backend[Any] | None = None,
+        shared: bool = False,
     ) -> None:
         """
         Bind the wrapped callable and configure the cache backend.
@@ -420,6 +425,18 @@ class cache[CacheObjectType]:  # noqa: N801
             file-backed caches to produce readable filenames.
         backend
             DataFrame backend token for DataFile formats.
+        shared
+            Memory mode only. When ``True``, resolve a process-global store
+            keyed by the callable's ``module.__qualname__`` (via
+            :func:`~mayutils.environment.memoisation.memory.get_shared_store`)
+            instead of a fresh per-instance store, so independently-constructed
+            decorators of the same callable memoise against one another. Mutually
+            exclusive with ``path``.
+
+        Raises
+        ------
+        ValueError
+            If ``shared`` is combined with ``path`` (they are mutually exclusive).
 
         See Also
         --------
@@ -438,6 +455,7 @@ class cache[CacheObjectType]:  # noqa: N801
         """
         self.func = func
         self._key_prefix: str | None = key_prefix
+        self._persist_path: Path | None = None
 
         if suffix is not None or persist:
             self.store: CacheStore[CacheObjectType] = FileStore(
@@ -447,13 +465,28 @@ class cache[CacheObjectType]:  # noqa: N801
                 ttl=ttl,
                 backend=backend,
             )
-        else:
-            if path is not None:
-                self.store = MemoryStore.load(path, ttl=ttl, maxsize=maxsize)
-            else:
-                self.store = MemoryStore(ttl=ttl, maxsize=maxsize)
 
-            self._persist_path: Path | None = Path(path) if path is not None else None
+        elif path is not None:
+            if shared:
+                msg = "cache(shared=True) is incompatible with path= (pickle warm-start)."
+                raise ValueError(msg)
+
+            self.store = MemoryStore.load(
+                path,
+                ttl=ttl,
+                maxsize=maxsize,
+            )
+            self._persist_path = Path(path)
+
+        elif shared:
+            self.store = get_shared_store(
+                f"{getattr(func, '__module__', '')}.{getattr(func, '__qualname__', type(func).__name__)}",
+                ttl=ttl,
+                maxsize=maxsize,
+            )
+
+        else:
+            self.store = MemoryStore(ttl=ttl, maxsize=maxsize)
 
         update_wrapper(wrapper=self, wrapped=func)
 

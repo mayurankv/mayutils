@@ -18,7 +18,7 @@ import pickle
 from collections import OrderedDict
 from functools import _CacheInfo as CacheInfo  # pyright: ignore[reportPrivateUsage]
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from mayutils.environment.memoisation.types import MISSING, Missing
 from mayutils.environment.memoisation.utilities import expiry, is_expired
@@ -383,6 +383,99 @@ class MemoryStore[CacheObjectType]:
         )
 
 
+SHARED_STORES: dict[str, MemoryStore[Any]] = {}
+
+
+def get_shared_store(
+    namespace: str,
+    /,
+    *,
+    ttl: Duration | None = None,
+    maxsize: int | None = None,
+) -> MemoryStore[Any]:
+    """
+    Return the process-global :class:`MemoryStore` for *namespace*.
+
+    Unlike a bare :class:`MemoryStore` (a fresh per-instance
+    :class:`~collections.OrderedDict`), stores handed out here are shared
+    across callers by *namespace*, so independently constructed decorators
+    that resolve to the same namespace memoise against one another. The
+    first request for a namespace creates the store (with the given ``ttl``
+    and ``maxsize``); later requests return that same instance and ignore
+    their ``ttl``/``maxsize`` arguments.
+
+    Parameters
+    ----------
+    namespace
+        Stable identifier for the logical cache. Callers that should share
+        entries must pass the same string (e.g. a callable's
+        module-qualified ``__qualname__``).
+    ttl
+        Lifetime of each entry, applied only when the store is first created.
+    maxsize
+        LRU bound, applied only when the store is first created.
+
+    Returns
+    -------
+        The shared store registered under ``namespace``.
+
+    See Also
+    --------
+    clear_shared_stores : Drop every shared store.
+    MemoryStore : The per-instance backend returned here.
+
+    Examples
+    --------
+    >>> from mayutils.environment.memoisation.memory import (
+    ...     clear_shared_stores,
+    ...     get_shared_store,
+    ... )
+    >>> clear_shared_stores()
+    >>> get_shared_store("ns") is get_shared_store("ns")
+    True
+    >>> get_shared_store("other") is get_shared_store("ns")
+    False
+    """
+    store: MemoryStore[Any] | None = SHARED_STORES.get(namespace)
+    if store is None:
+        store = MemoryStore[Any](ttl=ttl, maxsize=maxsize)
+        SHARED_STORES[namespace] = store
+
+    return store
+
+
+def clear_shared_stores() -> None:
+    """
+    Drop every process-global shared in-memory store.
+
+    Empties :data:`SHARED_STORES` so subsequent :func:`get_shared_store`
+    calls rebuild fresh stores. Used by :func:`~mayutils.environment.memoisation.clearing.clear_cache`
+    and by tests to reset shared state between cases.
+
+    See Also
+    --------
+    get_shared_store : Accessor that populates the registry.
+
+    Examples
+    --------
+    >>> from mayutils.environment.memoisation.memory import (
+    ...     SHARED_STORES,
+    ...     clear_shared_stores,
+    ...     get_shared_store,
+    ... )
+    >>> _ = get_shared_store("ns")
+    >>> bool(SHARED_STORES)
+    True
+    >>> clear_shared_stores()
+    >>> bool(SHARED_STORES)
+    False
+    """
+    SHARED_STORES.clear()
+
+
 __all__ = [
+    "SHARED_STORES",
     "MemoryStore",
+    "clear_shared_stores",
+    "get_shared_store",
 ]

@@ -13,15 +13,15 @@ from mayutils.objects.types import (
 
 
 class TestSQL:
-    """Tests for :data:`SQL` — a :class:`str` NewType for inline SQL."""
+    """Tests for :data:`SQL` — a :class:`str` alias for inline SQL."""
 
     def test_constructs_from_str(self) -> None:
-        """The NewType constructor returns the underlying ``str`` value unchanged."""
+        """The alias constructor returns the underlying ``str`` value unchanged."""
         raw = "SELECT 1"
         assert SQL(raw) == raw
 
     def test_value_is_instance_of_str(self) -> None:
-        """Instances returned by the NewType are plain :class:`str` at runtime."""
+        """Values created via the alias are plain :class:`str` at runtime."""
         assert isinstance(SQL("SELECT 1"), str)
 
 

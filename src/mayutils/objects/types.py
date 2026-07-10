@@ -5,8 +5,8 @@ This module defines reusable typing constructs used across ``mayutils`` for
 representing JSON payloads, SQL queries, recursively nested mappings and
 lightweight structural protocols. ``JsonString``, ``JsonValue`` and
 ``JsonParsed`` distinguish the raw serialised form of JSON from its
-parsed Python representation at the type level, ``SQL`` separates
-inline query strings from filesystem paths, while :class:`RecursiveDict`
+parsed Python representation at the type level, ``SQL`` marks
+inline query strings (as opposed to filesystem paths), while :class:`RecursiveDict`
 models tree-shaped data whose leaves share a common value type. The
 :class:`SupportsStr` protocol is used to constrain inputs to anything
 that can be coerced to ``str`` via ``__str__``.
@@ -55,26 +55,25 @@ Examples
 True
 """
 
-SQL = NewType("SQL", str)
+SQL = str
 """
-Mark values that hold an inline SQL query at the type level.
+Mark a value as an inline SQL query string.
 
-Used as an annotation to differentiate a raw SQL string from an
-arbitrary :class:`str` or a filesystem :class:`~pathlib.Path`
-pointing at a query template file. Inline ``SQL`` values are treated
-as Jinja templates by :func:`mayutils.data.read.render_query`, with
-``{{ name }}`` placeholders substituted from ``template_kwargs``.
-Because :func:`typing.NewType` does not create a runtime subclass,
-the overhead is zero while type checkers still treat it as a
-distinct type, catching accidental misuse where a file path is
-passed as a bare string.
+An alias of :class:`str` used in annotations (typically ``SQL | Path``)
+to document that an argument is an inline SQL query rather than a
+filesystem :class:`~pathlib.Path` pointing at a query template file.
+Inline ``SQL`` values are treated as Jinja templates by
+:func:`mayutils.data.read.render_query`, with ``{{ name }}`` placeholders
+substituted from ``template_kwargs``. Because it is a plain alias, any
+:class:`str` is accepted wherever ``SQL`` appears; the inline-versus-path
+decision is made at runtime by
+:func:`mayutils.data.read.looks_like_sql_path`, not at the type level.
 
 See Also
 --------
 JsonString : Companion NewType for serialised JSON payloads.
-typing.NewType : Standard helper used to build this distinct subtype.
 mayutils.data.read.render_query : Primary consumer that dispatches
-    on ``SQL`` vs :class:`~pathlib.Path`.
+    on :class:`str` vs :class:`~pathlib.Path`.
 mayutils.data.read.read_query : Query executor accepting ``SQL``
     or :class:`~pathlib.Path`.
 
