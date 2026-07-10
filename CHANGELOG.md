@@ -4,6 +4,12 @@ All notable changes to `mayutils` will be documented here.
 
 This project follows [Semantic Versioning](https://semver.org/) and the [Keep a Changelog](https://keepachangelog.com/) conventions. Releases are produced by [commitizen](https://commitizen-tools.github.io/commitizen/) from [Conventional Commits](https://www.conventionalcommits.org/) — `feat` bumps the minor version, `fix` bumps the patch, and a `!` or `BREAKING CHANGE:` footer bumps the major.
 
+## v3.7.0 (2026-07-10)
+
+### Feat
+
+- **repo**: Fix up query reading and parsing issues
+
 ## v3.6.0 (2026-07-08)
 
 ### Feat
