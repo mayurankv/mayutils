@@ -1,0 +1,5 @@
+# Configuration file for `ty`, Astral's Python type checker.
+# See https://docs.astral.sh/ty/reference/configuration/ for more information.
+
+[src]
+exclude = ["typings/"]

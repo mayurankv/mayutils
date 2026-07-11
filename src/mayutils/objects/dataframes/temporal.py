@@ -152,7 +152,7 @@ def detect_temporal_kind(
         ("time", TIME_PATTERN),
     ):
         if all(pattern.match(string=value) for value in strings):
-            return cast("DatetimeKind", kind)
+            return kind  # pyright: ignore[reportReturnType]
 
     return None
 
