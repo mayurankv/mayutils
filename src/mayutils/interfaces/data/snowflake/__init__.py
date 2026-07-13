@@ -1658,9 +1658,10 @@ class SnowparkExtendedSession(SnowparkSession):
     queries and tables (:meth:`query_to_dataframe`,
     :meth:`table_to_dataframe`), concurrent fan-out of multiple reads
     (:meth:`read_concurrent_queries`), temporary switching of role,
-    warehouse, database and schema (:meth:`using`) and bridges back to the
-    connector and configuration layers (:meth:`to_connection`,
-    :meth:`to_config`). Instances are normally produced by
+    warehouse, database and schema (:meth:`using`), bridges into the shared
+    ``read``/``stream`` data layer (:meth:`to_reader`, :meth:`to_streamer`)
+    and bridges back to the connector and configuration layers
+    (:meth:`to_connection`, :meth:`to_config`). Instances are normally produced by
     :meth:`SnowflakeConfig.to_snowpark_session`, which retypes the session
     built by the Snowpark builder via :meth:`from_base`.
 
@@ -1909,6 +1910,120 @@ class SnowparkExtendedSession(SnowparkSession):
             index_col=index_col,
             columns=columns,
             enforce_ordering=enforce_ordering,
+        )
+
+    def to_reader(
+        self,
+        /,
+        *,
+        lower_case: bool = True,
+        read_kwargs: Mapping[str, Any] | None = None,
+        execute_kwargs: Mapping[str, Any] | None = None,
+        **kwargs: Any,  # noqa: ANN401
+    ) -> QueryReader:
+        """
+        Build a backend-aware query reader bound to this session.
+
+        Delegates to the session's underlying connection via
+        :meth:`to_connection`, returning the reader built by
+        :meth:`SnowflakeExtendedConnection.to_reader`. Because the wrapped
+        connection shares this session's live connection, reads honour any
+        role, warehouse, database or schema set inside a :meth:`using`
+        block, and the reader plugs straight into
+        :func:`mayutils.data.read.read_query`. Results come back as pandas
+        or polars frames — the flavours the shared reader supports — so
+        reach for :meth:`query_to_dataframe` when a Modin frame is wanted.
+
+        Parameters
+        ----------
+        lower_case
+            Whether to lower-case the column names of returned frames.
+        read_kwargs
+            Extra keyword arguments forwarded to the underlying fetches.
+        execute_kwargs
+            Extra keyword arguments forwarded to the cursor's ``execute``.
+        **kwargs
+            Backend-specific options such as ``schema_overrides`` for Polars.
+
+        Returns
+        -------
+            A reader executing queries on this session's connection.
+
+        See Also
+        --------
+        SnowflakeExtendedConnection.to_reader : Underlying reader factory delegated to.
+        SnowparkExtendedSession.to_streamer : Streaming counterpart of this method.
+        mayutils.data.read.read_query : Cached query execution consuming the reader.
+
+        Examples
+        --------
+        >>> from mayutils.interfaces.data.snowflake import SnowflakeConfig
+        >>> reader = SnowflakeConfig.from_env().to_snowpark_session().to_reader()  # doctest: +SKIP
+        >>> df = reader("SELECT 1")  # doctest: +SKIP
+        """
+        return self.to_connection().to_reader(
+            lower_case=lower_case,
+            read_kwargs=read_kwargs,
+            execute_kwargs=execute_kwargs,
+            **kwargs,
+        )
+
+    def to_streamer(
+        self,
+        /,
+        *,
+        lower_case: bool = True,
+        read_kwargs: Mapping[str, Any] | None = None,
+        execute_kwargs: Mapping[str, Any] | None = None,
+        **kwargs: Any,  # noqa: ANN401
+    ) -> QueryStreamer:
+        """
+        Build a backend-aware query streamer bound to this session.
+
+        Streaming sibling of :meth:`to_reader`: delegates to the session's
+        underlying connection via :meth:`to_connection` and returns the
+        streamer built by :meth:`SnowflakeExtendedConnection.to_streamer`.
+        Because the wrapped connection shares this session's live
+        connection, streamed reads honour any role, warehouse, database or
+        schema set inside a :meth:`using` block, and the streamer feeds
+        incremental consumers such as
+        :class:`mayutils.data.live.StreamingQuery`. Batches come back as
+        pandas or polars frames — the flavours the shared streamer
+        supports — rather than Modin.
+
+        Parameters
+        ----------
+        lower_case
+            Whether to lower-case the column names of streamed frames.
+        read_kwargs
+            Extra keyword arguments forwarded to the underlying fetches.
+        execute_kwargs
+            Extra keyword arguments forwarded to the cursor's ``execute``.
+        **kwargs
+            Backend-specific options such as ``schema_overrides`` for Polars.
+
+        Returns
+        -------
+            A streamer yielding dataframe batches for a query.
+
+        See Also
+        --------
+        SnowflakeExtendedConnection.to_streamer : Underlying streamer factory delegated to.
+        SnowparkExtendedSession.to_reader : Eager counterpart of this method.
+        mayutils.data.live.StreamingQuery : Incremental consumer of the streamer.
+
+        Examples
+        --------
+        >>> from mayutils.interfaces.data.snowflake import SnowflakeConfig
+        >>> streamer = SnowflakeConfig.from_env().to_snowpark_session().to_streamer()  # doctest: +SKIP
+        >>> for df in streamer("SELECT 1"):  # doctest: +SKIP
+        ...     print(df.shape)
+        """
+        return self.to_connection().to_streamer(
+            lower_case=lower_case,
+            read_kwargs=read_kwargs,
+            execute_kwargs=execute_kwargs,
+            **kwargs,
         )
 
     def read_concurrent_queries(
