@@ -26,7 +26,7 @@ from mayutils.data import CACHE_FOLDER
 from mayutils.environment.memoisation.files import FileStore
 from mayutils.environment.memoisation.memory import MemoryStore, get_shared_store
 from mayutils.environment.memoisation.types import Missing
-from mayutils.environment.memoisation.utilities import make_cache_key
+from mayutils.environment.memoisation.utilities import format_ttl, make_cache_key
 from mayutils.objects.decorators import flexwrap
 
 if TYPE_CHECKING:
@@ -356,8 +356,8 @@ class cache[CacheObjectType]:  # noqa: N801
         DataFrame backend token for DataFile formats.
     shared
         Memory mode only. When ``True``, share a process-global store across
-        decorations of the same callable (see :meth:`__init__`). Mutually
-        exclusive with ``path``.
+        decorations with the same callable and store options (see
+        :meth:`__init__`). Mutually exclusive with ``path``.
 
     See Also
     --------
@@ -427,11 +427,12 @@ class cache[CacheObjectType]:  # noqa: N801
             DataFrame backend token for DataFile formats.
         shared
             Memory mode only. When ``True``, resolve a process-global store
-            keyed by the callable's ``module.__qualname__`` (via
-            :func:`~mayutils.environment.memoisation.memory.get_shared_store`)
+            keyed by the callable's ``module.__qualname__`` together with the
+            store options (``ttl``, ``maxsize``), via
+            :func:`~mayutils.environment.memoisation.memory.get_shared_store`,
             instead of a fresh per-instance store, so independently-constructed
-            decorators of the same callable memoise against one another. Mutually
-            exclusive with ``path``.
+            decorators of the same callable and options memoise against one
+            another. Mutually exclusive with ``path``.
 
         Raises
         ------
@@ -479,11 +480,9 @@ class cache[CacheObjectType]:  # noqa: N801
             self._persist_path = Path(path)
 
         elif shared:
-            self.store = get_shared_store(
-                f"{getattr(func, '__module__', '')}.{getattr(func, '__qualname__', type(func).__name__)}",
-                ttl=ttl,
-                maxsize=maxsize,
-            )
+            identity = f"{getattr(func, '__module__', '')}.{getattr(func, '__qualname__', type(func).__name__)}"
+            namespace = f"{identity}#ttl={format_ttl(ttl) if ttl is not None else 'none'}#maxsize={maxsize}"
+            self.store = get_shared_store(namespace, ttl=ttl, maxsize=maxsize)
 
         else:
             self.store = MemoryStore(ttl=ttl, maxsize=maxsize)

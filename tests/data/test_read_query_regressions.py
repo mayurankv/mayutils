@@ -14,6 +14,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 
 import pandas as pd
+from pendulum import Duration
 
 from mayutils.data.read import read_query
 from mayutils.environment.memoisation import (
@@ -27,6 +28,8 @@ from mayutils.objects.dataframes.pandas.dataframes import parse_temporal_columns
 from mayutils.objects.types import SQL
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from mayutils.data.read import QueryReader
     from mayutils.objects.dataframes.backends import Backend, DataFrames
 
@@ -61,6 +64,16 @@ class TestSharedCache:
 
         cache(counter.double)(3)
         cache(counter.double)(3)
+
+        assert counter.calls == 2  # noqa: PLR2004
+
+    def test_different_ttl_uses_separate_store(self) -> None:
+        """Different ``ttl`` values route to separate shared stores (per-call ttl)."""
+        clear_shared_stores()
+        counter = _Counter()
+
+        cache(shared=True, ttl=Duration(seconds=1))(counter.double)(3)
+        cache(shared=True, ttl=Duration(hours=9))(counter.double)(3)
 
         assert counter.calls == 2  # noqa: PLR2004
 
@@ -180,3 +193,54 @@ class TestParseTemporalColumnsDuplicates:
         assert list(result.index) == [10, 20]
         # input is not mutated
         assert frame["enquiry_created"].dtype == object
+
+
+class TestPersistDiskReadback:
+    """Bug D: ``read_query(persist=True)`` with an inferred suffix reads back across calls."""
+
+    @staticmethod
+    def _counting_reader(counter: dict[str, int]) -> QueryReader:
+        def reader[DataFrameType: DataFrames = pd.DataFrame](
+            query: str,  # noqa: ARG001
+            /,
+            *,
+            backend: Backend[DataFrameType] | None = None,  # noqa: ARG001
+        ) -> DataFrameType:
+            counter["n"] += 1
+            return cast("DataFrameType", pd.DataFrame({"x": [1]}))
+
+        return reader
+
+    def test_persist_true_reads_back(self, tmp_path: Path) -> None:
+        """Three identical ``persist=True`` calls (suffix inferred) hit the reader once."""
+        counter = {"n": 0}
+        reader = self._counting_reader(counter)
+        for _ in range(3):
+            read_query(
+                SQL("SELECT 1 AS x"),
+                reader=reader,
+                persist=True,
+                parse_temporal=False,
+                cache_folder=tmp_path,
+            )
+        assert counter["n"] == 1
+
+    def test_distinct_queries_miss(self, tmp_path: Path) -> None:
+        """Distinct queries write and read distinct cache entries."""
+        counter = {"n": 0}
+        reader = self._counting_reader(counter)
+        read_query(
+            SQL("SELECT 1 AS x"),
+            reader=reader,
+            persist=True,
+            parse_temporal=False,
+            cache_folder=tmp_path,
+        )
+        read_query(
+            SQL("SELECT 2 AS y"),
+            reader=reader,
+            persist=True,
+            parse_temporal=False,
+            cache_folder=tmp_path,
+        )
+        assert counter["n"] == 2  # noqa: PLR2004

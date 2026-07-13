@@ -367,3 +367,22 @@ class TestFileStoreDeleteClear:
         store.put("a", value={"v": 1})
         store.put("b", value={"v": 2})
         assert store.cache_info().currsize == 2  # noqa: PLR2004
+
+
+class TestFileStoreInferredSuffixReadback:
+    """Tests that inferred-suffix stores read back across fresh instances (Bug D)."""
+
+    def test_fresh_instance_reads_back(self, tmp_path: Path) -> None:
+        """A fresh store with no explicit suffix reads an entry a prior store wrote."""
+        writer = FileStore[pd.DataFrame]("fn", cache_folder=tmp_path)
+        writer.put("k", value=pd.DataFrame({"a": [1]}))
+
+        result = FileStore[pd.DataFrame]("fn", cache_folder=tmp_path).get("k")
+
+        assert isinstance(result, pd.DataFrame)
+        assert result["a"].tolist() == [1]
+
+    def test_empty_folder_misses(self, tmp_path: Path) -> None:
+        """With nothing cached, an inferred-suffix store still returns MISSING."""
+        store = FileStore[pd.DataFrame]("fn", cache_folder=tmp_path)
+        assert store.get("k") is MISSING

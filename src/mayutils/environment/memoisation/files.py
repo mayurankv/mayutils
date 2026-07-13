@@ -1031,6 +1031,61 @@ class FileStore[CacheObjectType: CacheObjects]:
 
         return self.function_folder / f"{key}{self.suffix}"
 
+    def _resolve_from_disk(
+        self,
+    ) -> None:
+        """
+        Resolve an inferred suffix from an existing cache file, if present.
+
+        Inferred-suffix stores (``suffix=None``) set their serialiser only on the
+        first :meth:`put`, so a freshly constructed store — a new process, or the
+        fresh instance :func:`~mayutils.data.read.read_query` builds per call —
+        cannot read a previously written entry: :meth:`get` would short-circuit to
+        :data:`MISSING`. This recovers the suffix from any existing file in
+        :attr:`function_folder` (all entries for a function share one suffix) and
+        resolves the serialiser so those reads hit. A no-op once resolved, when a
+        suffix was given up front, or when the folder holds no cached files.
+
+        See Also
+        --------
+        FileStore.resolve : Object-based resolution used on the first put.
+        FileStore.get : Caller that invokes this before a lookup.
+
+        Examples
+        --------
+        >>> import tempfile
+        >>> import pandas as pd
+        >>> from mayutils.environment.memoisation.files import FileStore
+        >>> with tempfile.TemporaryDirectory() as tmp:
+        ...     FileStore("f", cache_folder=tmp).put("k", value=pd.DataFrame({"a": [1]}))
+        ...     FileStore("f", cache_folder=tmp).get("k")["a"].tolist()
+        [1]
+        """
+        if self._resolved or self.suffix is not None:
+            return
+
+        folder = self.function_folder
+        if not folder.is_dir():
+            return
+
+        existing = next(
+            (path for path in sorted(folder.iterdir()) if path.is_file() and path.suffix),
+            None,
+        )
+        if existing is None:
+            return
+
+        self.suffix = existing.suffix
+        register_datafile(self.suffix)
+        if self.backend is None:
+            self.backend = default_backend() if self.suffix in DataFile.registry else False
+
+        self.serialiser = get_serialiser(
+            self.suffix,
+            backend=self.backend if self.backend is not False else None,
+        )
+        self._resolved = True
+
     def get(
         self,
         key: str,
@@ -1069,6 +1124,9 @@ class FileStore[CacheObjectType: CacheObjects]:
         ...     store.get("k") is MISSING
         True
         """
+        if not self._resolved:
+            self._resolve_from_disk()
+
         if not self._resolved:
             self.misses += 1
             return MISSING
