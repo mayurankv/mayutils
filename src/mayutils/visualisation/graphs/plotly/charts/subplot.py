@@ -23,7 +23,7 @@ from mayutils.visualisation.graphs.plotly.traces import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Mapping, MutableMapping
 
 
 class SubPlot(Plot):
@@ -217,9 +217,9 @@ class SubPlot(Plot):
         if line_title_offsets is None:
             line_title_offsets = (22.5, 22.5)
 
-        xaxis_title = pop_axis_config_title(self._config.main_axis_configs.xaxis.config)
+        xaxis_title = pop_axis_config_title(cast("MutableMapping[str, Any]", self._config.main_axis_configs.xaxis.config))
         yaxes_titles = [
-            pop_axis_config_title(self._config.main_axis_configs.yaxes[idx].config)
+            pop_axis_config_title(cast("MutableMapping[str, Any]", self._config.main_axis_configs.yaxes[idx].config))
             for idx in range(len(self._config.main_axis_configs.yaxes))
         ]
 

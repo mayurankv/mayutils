@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import datetime
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping, MutableMapping, Sequence
 from dataclasses import dataclass, field
 from math import ceil, isqrt
 from typing import TYPE_CHECKING, Any, Literal, Self, cast
@@ -794,14 +794,15 @@ class SubPlotConfig:
 
 
 def pop_axis_config_title(
-    config: Mapping[str, Any],
+    config: MutableMapping[str, Any],
     /,
 ) -> str | None:
     """
     Extract and remove the title string from an axis config mapping.
 
     Looks for ``title_text``, then a string ``title``, then ``title.text``,
-    popping the first match found.
+    popping the first match found. Mutates *config* in place so the caller's
+    stored config no longer carries a title once it has been extracted.
 
     Parameters
     ----------
@@ -823,8 +824,6 @@ def pop_axis_config_title(
     >>> pop_axis_config_title({"title_text": "Price"})
     'Price'
     """
-    config = dict(config)
-
     title: str | None = config.pop("title_text", None)
 
     if title is not None:
