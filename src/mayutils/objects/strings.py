@@ -586,6 +586,11 @@ class String:
         """
         Join a sequence of strings with a delimiter, using a different final delimiter.
 
+        This is a convenience wrapper around the built-in :meth:`str.join` that
+        allows for a different delimiter to be used between the last two elements
+        of the sequence. If ``final_delimiter`` is ``None``, the regular delimiter
+        is used for all elements.
+
         Parameters
         ----------
         string
