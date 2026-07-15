@@ -679,6 +679,7 @@ def register_templates() -> None:
                     },
                     "title": {
                         "x": 0.5,
+                        "automargin": True,
                         "pad": {"b": 40},
                         "font": {
                             "size": 28,

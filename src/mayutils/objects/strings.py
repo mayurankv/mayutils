@@ -574,3 +574,47 @@ class String:
         'hello'
         """
         return string or None
+
+    @staticmethod
+    def join(
+        string: str,
+        /,
+        *,
+        delimiter: str = ", ",
+        final_delimiter: str | None = " and ",
+    ) -> str:
+        """
+        Join a sequence of strings with a delimiter, using a different final delimiter.
+
+        Parameters
+        ----------
+        string
+            Sequence of strings to join.
+        delimiter
+            Delimiter to use between all elements except the last.
+        final_delimiter
+            Delimiter to use between the last two elements. If ``None``, the regular
+            delimiter is used for all elements.
+
+        Returns
+        -------
+        str
+            The joined string.
+
+        See Also
+        --------
+        str.join : Built-in string method for joining sequences of strings.
+
+        Examples
+        --------
+        >>> String.join(["apple", "banana", "cherry"])
+        'apple, banana and cherry'
+        >>> String.join(["apple", "banana", "cherry"], final_delimiter=", and ")
+        'apple, banana, and cherry'
+        >>> String.join(["apple", "banana", "cherry"], final_delimiter=None)
+        'apple, banana, cherry'
+        """
+        if final_delimiter is None:
+            return delimiter.join(string)
+
+        return delimiter.join(string[:-1]) + final_delimiter + string[-1]
