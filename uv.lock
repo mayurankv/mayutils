@@ -2695,7 +2695,7 @@ wheels = [
 
 [[package]]
 name = "mayutils"
-version = "3.8.1"
+version = "3.9.0"
 source = { editable = "." }
 dependencies = [
     { name = "jinja2" },
