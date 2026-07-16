@@ -246,6 +246,7 @@ def use_template(
 
 
 axis_structure_dict = {
+    "automargin": True,
     "showgrid": True,
     "gridwidth": 2,
     "zeroline": True,

@@ -151,7 +151,17 @@ class Plot(go.Figure):
         callback: Callable[[Any | None], Any],
         fallback: bool = False,
     ) -> Self: ...
-    def shift_title(self, offset: int) -> Self: ...
+    def shift_title(
+        self,
+        *,
+        offset: int | None = None,
+        estimate: bool = True,
+    ) -> Self: ...
+    def top_legend_height(
+        self,
+        *,
+        estimate: bool,
+    ) -> int: ...
     def show(  # pyright: ignore[reportIncompatibleMethodOverride] # ty:ignore[invalid-method-override]
         self,
         *,
