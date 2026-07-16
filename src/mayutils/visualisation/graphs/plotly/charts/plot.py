@@ -1053,7 +1053,7 @@ class Plot(go.Figure):
 
         Examples
         --------
-        >>> Plot.empty(description="demo")._top_legend_height(estimate=True)
+        >>> Plot.empty(description="demo").top_legend_height(estimate=True)
         0
         """
         if self.get_layout_value(["showlegend"], fallback=True) is False:
