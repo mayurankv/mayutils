@@ -157,6 +157,11 @@ class Plot(go.Figure):
         offset: int | None = None,
         estimate: bool = True,
     ) -> Self: ...
+    def wrap_title(
+        self,
+        *,
+        width: int | None = None,
+    ) -> Self: ...
     def top_legend_height(
         self,
         *,

@@ -73,6 +73,7 @@ TRACE_IDENTIFIERS = {
 TITLE_LEGEND_GAP = 10  # px between the legend top and the title bottom
 TITLE_TOP_GAP = 10  # px of headroom above the title top
 TITLE_LINE_FACTOR = 1.3  # title line height as a multiple of the font size
+TITLE_CHAR_FACTOR = 0.56  # approx title glyph width as a multiple of the title font size
 LEGEND_DEFAULT_WIDTH = 700  # assumed render width when the figure sets none
 LEGEND_ROW_FACTOR = 1.9  # legend row height as a multiple of the legend font size
 LEGEND_PAD_FACTOR = 1.0  # legend box vertical padding as a multiple of the font size
@@ -957,13 +958,77 @@ class Plot(go.Figure):
 
         return self
 
+    def wrap_title(
+        self,
+        *,
+        width: int | None = None,
+    ) -> Self:
+        """
+        Wrap the main title onto multiple lines to fit the plot width.
+
+        Inserts ``<br>`` breaks so no title line exceeds the usable plot width,
+        estimating text width from the character count and title font size.
+        Existing ``<br>`` breaks are preserved (each segment is wrapped
+        independently) and words are never split. Pairs naturally with
+        :meth:`shift_title`, which places the resulting multi-line title above
+        the legend.
+
+        Parameters
+        ----------
+        width
+            Target width in pixels to wrap within. Defaults to the figure width
+            (or a fallback) minus the left and right margins.
+
+        Returns
+        -------
+        Self
+            The instance for fluent chaining.
+
+        See Also
+        --------
+        Plot.shift_title : Place the (possibly multi-line) title above the legend.
+
+        Examples
+        --------
+        >>> plot = Plot.empty(description="demo").update_layout({"title_text": "A very long chart title that should wrap"})
+        >>> plot = plot.wrap_title(width=200)
+        >>> "<br>" in str(plot.layout.title.text)
+        True
+        """
+        title_text = self.get_layout_value(["title", "text"], fallback=True)
+        if not title_text:
+            return self
+
+        font_size = self.get_layout_value(["title", "font", "size"], fallback=True) or 28
+        fig_width = width or self.get_layout_value(["width"], fallback=True) or LEGEND_DEFAULT_WIDTH
+        margin_l = self.get_layout_value(["margin", "l"], fallback=True) or 0
+        margin_r = self.get_layout_value(["margin", "r"], fallback=True) or 0
+        usable = max(fig_width - margin_l - margin_r, 1)
+        max_chars = max(int(usable / (font_size * TITLE_CHAR_FACTOR)), 1)
+
+        lines: list[str] = []
+        for segment in str(title_text).split("<br>"):
+            current = ""
+            for word in segment.split():
+                if current and len(current) + 1 + len(word) > max_chars:
+                    lines.append(current)
+                    current = word
+                else:
+                    current = f"{current} {word}" if current else word
+            if current:
+                lines.append(current)
+
+        self.update_layout(title_text="<br>".join(lines))
+
+        return self
+
     def top_legend_height(  # noqa: C901, PLR0911, PLR0912
         self,
         *,
         estimate: bool,
     ) -> int:
         """
-        Pixels reserved above the plot by a top horizontal legend.
+        Count the pixels reserved above the plot by a top horizontal legend.
 
         Returns ``0`` when there is no legend, there are no legend entries, or
         the legend is not a top-anchored horizontal legend (so the title simply
