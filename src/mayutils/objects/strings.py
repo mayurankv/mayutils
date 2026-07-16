@@ -42,6 +42,10 @@ True
 from __future__ import annotations
 
 from re import sub
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 class String:
@@ -577,7 +581,7 @@ class String:
 
     @staticmethod
     def join(
-        string: str,
+        strings: Sequence[str],
         /,
         *,
         delimiter: str = ", ",
@@ -593,7 +597,7 @@ class String:
 
         Parameters
         ----------
-        string
+        strings
             Sequence of strings to join.
         delimiter
             Delimiter to use between all elements except the last.
@@ -620,6 +624,6 @@ class String:
         'apple, banana, cherry'
         """
         if final_delimiter is None:
-            return delimiter.join(string)
+            return delimiter.join(strings)
 
-        return delimiter.join(string[:-1]) + final_delimiter + string[-1]
+        return delimiter.join(strings[:-1]) + final_delimiter + strings[-1]

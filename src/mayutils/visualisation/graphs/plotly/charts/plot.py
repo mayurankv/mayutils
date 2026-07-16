@@ -9,6 +9,7 @@ layout composition, and convenience methods for common chart enhancements.
 from __future__ import annotations
 
 import datetime
+import re
 from collections.abc import Callable, Iterator, Mapping, Sequence, Sized
 from typing import TYPE_CHECKING, Any, Literal, Self, cast, final
 
@@ -68,6 +69,17 @@ TRACE_IDENTIFIERS = {
     TraceType.SCATTER: Scatter,
     "histogram": go.Histogram,
 }
+
+TITLE_LEGEND_GAP = 10  # px between the legend top and the title bottom
+TITLE_TOP_GAP = 10  # px of headroom above the title top
+TITLE_LINE_FACTOR = 1.3  # title line height as a multiple of the font size
+TITLE_CHAR_FACTOR = 0.56  # approx title glyph width as a multiple of the title font size
+LEGEND_DEFAULT_WIDTH = 700  # assumed render width when the figure sets none
+LEGEND_ROW_FACTOR = 1.9  # legend row height as a multiple of the legend font size
+LEGEND_PAD_FACTOR = 1.0  # legend box vertical padding as a multiple of the font size
+LEGEND_CHAR_FACTOR = 0.56  # approx glyph width as a multiple of the legend font size
+LEGEND_ITEM_GAP_FACTOR = 1.2  # gap after each legend item as a multiple of the font size
+LEGEND_TOP_Y_THRESHOLD = 0.98  # paper-y at/above which a legend counts as top-anchored
 
 
 class Plot(go.Figure):
@@ -876,18 +888,34 @@ class Plot(go.Figure):
 
     def shift_title(
         self,
-        offset: int,
+        *,
+        offset: int | None = None,
+        estimate: bool = True,
     ) -> Self:
         """
-        Shift the main title downward by increasing top padding.
+        Position the main title relative to the top legend.
 
-        Adjusts both the title bottom padding and the top margin by *offset*
-        pixels so the title moves without clipping.
+        With an explicit *offset*, push the title up by that many pixels
+        (increasing both ``title.pad.b`` and ``margin.t``) -- the original
+        manual behaviour. With ``offset=None`` (the default), place the title
+        automatically so its bottom sits a small, fixed gap above the top
+        horizontal legend. Because Plotly always grows a multi-line title
+        downward, the line count is compensated for, so the title bottom stays
+        put and extra lines extend upward rather than down into the plot. The
+        legend height is estimated from the legend entries when *estimate* is
+        ``True`` (no render), or measured from a one-off render when ``False``
+        (robust to legend groups and multi-row wrapping).
 
         Parameters
         ----------
         offset
-            Number of pixels to shift the title downward.
+            Number of pixels to push the title up. ``None`` (the default)
+            auto-places the title instead; *estimate* then selects how the
+            legend height is obtained.
+        estimate
+            When auto-placing, obtain the legend height by estimation (``True``,
+            the default, no render) or by measuring a rendered image
+            (``False``). Ignored when *offset* is given.
 
         Returns
         -------
@@ -901,17 +929,210 @@ class Plot(go.Figure):
         Examples
         --------
         >>> plot = Plot.empty(description="demo")
-        >>> plot = plot.shift_title(20)
+        >>> plot = plot.shift_title(offset=20)
+        >>> plot = plot.shift_title()
         """
-        self.adjust_layout(
-            ["title", "pad", "b"],
-            callback=lambda current_value: (current_value or 0) + offset,
-        ).adjust_layout(
-            ["margin", "t"],
-            callback=lambda current_value: (current_value or 0) + offset,
+        if offset is not None:
+            return self.adjust_layout(
+                ["title", "pad", "b"],
+                callback=lambda current_value: (current_value or 0) + offset,
+            ).adjust_layout(
+                ["margin", "t"],
+                callback=lambda current_value: (current_value or 0) + offset,
+            )
+
+        title_text = self.get_layout_value(["title", "text"], fallback=True)
+        if not title_text:
+            return self
+
+        legend_height = self.top_legend_height(estimate=estimate)
+        lines = str(title_text).count("<br>") + 1
+        font_size = self.get_layout_value(["title", "font", "size"], fallback=True) or 28
+        line_height = round(font_size * TITLE_LINE_FACTOR)
+
+        self.update_layout(
+            title_yanchor="bottom",
+            title_pad_b=legend_height + TITLE_LEGEND_GAP + (lines - 1) * line_height,
+            margin_t=legend_height + TITLE_LEGEND_GAP + lines * line_height + TITLE_TOP_GAP,
         )
 
         return self
+
+    def wrap_title(
+        self,
+        *,
+        width: int | None = None,
+    ) -> Self:
+        """
+        Wrap the main title onto multiple lines to fit the plot width.
+
+        Inserts ``<br>`` breaks so no title line exceeds the usable plot width,
+        estimating text width from the character count and title font size.
+        Existing ``<br>`` breaks are preserved (each segment is wrapped
+        independently) and words are never split. Pairs naturally with
+        :meth:`shift_title`, which places the resulting multi-line title above
+        the legend.
+
+        Parameters
+        ----------
+        width
+            Target width in pixels to wrap within. Defaults to the figure width
+            (or a fallback) minus the left and right margins.
+
+        Returns
+        -------
+        Self
+            The instance for fluent chaining.
+
+        See Also
+        --------
+        Plot.shift_title : Place the (possibly multi-line) title above the legend.
+
+        Examples
+        --------
+        >>> plot = Plot.empty(description="demo").update_layout({"title_text": "A very long chart title that should wrap"})
+        >>> plot = plot.wrap_title(width=200)
+        >>> "<br>" in str(plot.layout.title.text)
+        True
+        """
+        title_text = self.get_layout_value(["title", "text"], fallback=True)
+        if not title_text:
+            return self
+
+        font_size = self.get_layout_value(["title", "font", "size"], fallback=True) or 28
+        fig_width = width or self.get_layout_value(["width"], fallback=True) or LEGEND_DEFAULT_WIDTH
+        margin_l = self.get_layout_value(["margin", "l"], fallback=True) or 0
+        margin_r = self.get_layout_value(["margin", "r"], fallback=True) or 0
+        usable = max(fig_width - margin_l - margin_r, 1)
+        max_chars = max(int(usable / (font_size * TITLE_CHAR_FACTOR)), 1)
+
+        lines: list[str] = []
+        for segment in str(title_text).split("<br>"):
+            current = ""
+            for word in segment.split():
+                if current and len(current) + 1 + len(word) > max_chars:
+                    lines.append(current)
+                    current = word
+                else:
+                    current = f"{current} {word}" if current else word
+            if current:
+                lines.append(current)
+
+        self.update_layout(title_text="<br>".join(lines))
+
+        return self
+
+    def top_legend_height(  # noqa: C901, PLR0911, PLR0912
+        self,
+        *,
+        estimate: bool,
+    ) -> int:
+        """
+        Count the pixels reserved above the plot by a top horizontal legend.
+
+        Returns ``0`` when there is no legend, there are no legend entries, or
+        the legend is not a top-anchored horizontal legend (so the title simply
+        sits above the plot). Otherwise the height is estimated from the entries
+        or, when *estimate* is ``False``, measured from the legend's rendered
+        bounding box, falling back to the estimate if the render is unavailable.
+
+        Parameters
+        ----------
+        estimate
+            Estimate the height (``True``) or measure it from a render
+            (``False``).
+
+        Returns
+        -------
+        int
+            The legend height in pixels, or ``0`` when no top legend applies.
+
+        See Also
+        --------
+        Plot.shift_title : Consumer of this height for title placement.
+
+        Examples
+        --------
+        >>> Plot.empty(description="demo").top_legend_height(estimate=True)
+        0
+        """
+        if self.get_layout_value(["showlegend"], fallback=True) is False:
+            return 0
+
+        orientation = self.get_layout_value(["legend", "orientation"], fallback=True)
+        legend_y = self.get_layout_value(["legend", "y"], fallback=True)
+        legend_yanchor = self.get_layout_value(["legend", "yanchor"], fallback=True)
+        is_top_legend = (
+            orientation == "h"
+            and (legend_y is None or legend_y >= LEGEND_TOP_Y_THRESHOLD)
+            and legend_yanchor in (None, "auto", "bottom", "top")
+        )
+        if not is_top_legend:
+            return 0
+
+        entries = [trace for trace in self.data if getattr(trace, "showlegend", None) is not False and getattr(trace, "name", None)]
+        if not entries:
+            return 0
+
+        font_size = self.get_layout_value(["legend", "font", "size"], fallback=True) or 10
+        item_width = self.get_layout_value(["legend", "itemwidth"], fallback=True) or 30
+        group_gap = self.get_layout_value(["legend", "tracegroupgap"], fallback=True)
+        group_gap = 10 if group_gap is None else group_gap
+        width = self.get_layout_value(["width"], fallback=True) or LEGEND_DEFAULT_WIDTH
+        margin_l = self.get_layout_value(["margin", "l"], fallback=True) or 0
+        margin_r = self.get_layout_value(["margin", "r"], fallback=True) or 0
+        usable = max(width - margin_l - margin_r, 1)
+
+        char_width = font_size * LEGEND_CHAR_FACTOR
+        item_lead = item_width + font_size * LEGEND_ITEM_GAP_FACTOR
+        row_height = round(font_size * LEGEND_ROW_FACTOR)
+
+        groups: dict[Any, list[Any]] = {}
+        titled_groups: set[Any] = set()
+        for trace in entries:
+            group = getattr(trace, "legendgroup", None) or None
+            groups.setdefault(group, []).append(trace)
+            group_title = getattr(trace, "legendgrouptitle", None)
+            if group is not None and getattr(group_title, "text", None):
+                titled_groups.add(group)
+
+        rows = 0
+        for group, group_traces in groups.items():
+            if group in titled_groups:
+                rows += 1
+            used = 0.0
+            group_rows = 1
+            for trace in group_traces:
+                extent = item_lead + len(str(trace.name)) * char_width
+                if used + extent > usable and used > 0:
+                    group_rows += 1
+                    used = extent
+                else:
+                    used += extent
+            rows += group_rows
+
+        estimated = round(font_size * LEGEND_PAD_FACTOR) + rows * row_height + max(len(groups) - 1, 0) * group_gap
+        if estimate:
+            return estimated
+
+        try:
+            svg = self.to_image(format="svg", width=int(width)).decode()
+        except Exception as error:  # noqa: BLE001 - any render failure falls back to the estimate
+            logger.warning(f"Legend measurement failed; using estimate ({error!r})")
+            return estimated
+
+        legend_match = re.search(
+            r'<g class="legend".*?<rect[^>]*class="bg"[^>]*>',
+            svg,
+            re.DOTALL,
+        )
+        if legend_match is None:
+            return estimated
+        height_match = re.search(r'height="([\d.]+)"', legend_match.group(0))
+        if height_match is None:
+            return estimated
+
+        return round(float(height_match.group(1)))
 
     def show(  # pyright: ignore[reportIncompatibleMethodOverride] # ty:ignore[invalid-method-override]
         self,

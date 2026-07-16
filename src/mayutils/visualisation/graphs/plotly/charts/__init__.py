@@ -331,6 +331,66 @@ class Titles:
             )
         )
 
+    @classmethod
+    def flat(
+        cls,
+        plots: tuple[str | None, ...],
+        /,
+        *,
+        num_cols: int,
+        main: str = "",
+        rows: tuple[str, ...] | None = None,
+        cols: tuple[str, ...] | None = None,
+        cols_top: bool = False,
+    ) -> Self:
+        """
+        Arrange a flat sequence of plot titles into a grid with automatic row wrapping.
+
+        Distributes titles row-by-row into a rectangular grid, padding with
+        ``None`` where necessary to fill the last row.
+
+        Parameters
+        ----------
+        plots
+            Flat sequence of per-cell titles (``None`` for untitled cells).
+        num_cols
+            Number of columns to wrap the flat sequence into.
+        main
+            The overall chart title.
+        rows
+            Optional per-row annotation titles.
+        cols
+            Optional per-column annotation titles.
+        cols_top
+            Whether column titles appear above the plot area.
+
+        Returns
+        -------
+        Titles
+            A grid-shaped ``Titles`` instance.
+
+        See Also
+        --------
+        SubPlotConfig.flat : Analogous row-wrapping for a flat sequence of plots.
+
+        Examples
+        --------
+        >>> from mayutils.visualisation.graphs.plotly.charts import Titles
+        >>> titles = Titles.flat(("A", "B", "C"), num_cols=2)
+        >>> titles.plots
+        (('A', 'B'), ('C', ''))
+        """
+        num_rows = ceil(len(plots) / num_cols)
+        padded_plots = list(plots) + [None] * (num_cols * num_rows - len(plots))
+
+        return cls(
+            main=main,
+            rows=rows,
+            cols=cols,
+            plots=tuple(tuple(padded_plots[idx : idx + num_cols]) for idx in range(0, len(padded_plots), num_cols)),
+            cols_top=cols_top,
+        )
+
 
 @dataclass
 class MainAxisConfig:
