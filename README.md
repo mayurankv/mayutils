@@ -1,6 +1,6 @@
 # mayutils
 
-[![CI](https://github.com/mayuran-visakan/mayutils/actions/workflows/ci.yaml/badge.svg)](https://github.com/mayuran-visakan/mayutils/actions/workflows/ci.yaml) [![Documentation](https://img.shields.io/badge/Documentation-mkdocs%20material-indigo.svg)](https://mayuran-visakan.github.io/mayutils/) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/mayurankv/mayutils/ci.yaml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI)](https://github.com/mayurankv/mayutils/actions/workflows/ci.yaml) [![PyPI](https://img.shields.io/pypi/v/mayutils?style=for-the-badge&logo=pypi&logoColor=white&label=PyPI&color=3775A9)](https://pypi.org/project/mayutils/) [![Python](https://img.shields.io/badge/python-3.13%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/downloads/) [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge&logo=opensourceinitiative&logoColor=white)](./LICENSE) [![Docs](https://img.shields.io/badge/docs-mkdocs--material-3F51B5?style=for-the-badge&logo=materialformkdocs&logoColor=white)](https://mayurankv.github.io/mayutils/)
 
 Utilities for Python — plotting helpers, dataframe adapters, Snowflake/SQL glue, PowerPoint/PDF export, notebook display tweaks, OAuth helpers, and a fistful of miscellaneous object helpers. Heavy dependencies are grouped behind extras so the core install stays small.
 
@@ -56,7 +56,7 @@ Full details: [docs/guides/dependency-groups.md](docs/guides/dependency-groups.m
 - [Documentation](docs/guides/documentation.md)
 - [Roadmap](docs/roadmap.md) — translated from the legacy `.todo` file
 - [Changelog](docs/changelog.md)
-- [API Reference](https://mayuran-visakan.github.io/mayutils/reference/) — auto-generated from docstrings
+- [API Reference](https://mayurankv.github.io/mayutils/reference/) — auto-generated from docstrings
 
 ## Contributing
 

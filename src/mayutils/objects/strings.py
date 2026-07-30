@@ -42,6 +42,10 @@ True
 from __future__ import annotations
 
 from re import sub
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 class String:
@@ -574,3 +578,52 @@ class String:
         'hello'
         """
         return string or None
+
+    @staticmethod
+    def join(
+        strings: Sequence[str],
+        /,
+        *,
+        delimiter: str = ", ",
+        final_delimiter: str | None = " and ",
+    ) -> str:
+        """
+        Join a sequence of strings with a delimiter, using a different final delimiter.
+
+        This is a convenience wrapper around the built-in :meth:`str.join` that
+        allows for a different delimiter to be used between the last two elements
+        of the sequence. If ``final_delimiter`` is ``None``, the regular delimiter
+        is used for all elements.
+
+        Parameters
+        ----------
+        strings
+            Sequence of strings to join.
+        delimiter
+            Delimiter to use between all elements except the last.
+        final_delimiter
+            Delimiter to use between the last two elements. If ``None``, the regular
+            delimiter is used for all elements.
+
+        Returns
+        -------
+        str
+            The joined string.
+
+        See Also
+        --------
+        str.join : Built-in string method for joining sequences of strings.
+
+        Examples
+        --------
+        >>> String.join(["apple", "banana", "cherry"])
+        'apple, banana and cherry'
+        >>> String.join(["apple", "banana", "cherry"], final_delimiter=", and ")
+        'apple, banana, and cherry'
+        >>> String.join(["apple", "banana", "cherry"], final_delimiter=None)
+        'apple, banana, cherry'
+        """
+        if final_delimiter is None:
+            return delimiter.join(strings)
+
+        return delimiter.join(strings[:-1]) + final_delimiter + strings[-1]

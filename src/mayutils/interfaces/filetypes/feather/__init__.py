@@ -41,15 +41,11 @@ from mayutils.core.extras import may_require_extras
 from mayutils.interfaces.filetypes import DataFile
 from mayutils.objects.dataframes.backends import DataFrames
 
-with may_require_extras():
-    import pandas as pd
-    import polars as pl
-    import pyarrow.ipc as pa_ipc
-    from pandas import DataFrame
-    from pyarrow import feather
-
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+    import pandas as pd
+    import polars as pl
 
 
 class Feather[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType]):
@@ -146,12 +142,18 @@ class Feather[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType])
         (2, 2)
         """
         if self.backend.name == "polars":
+            with may_require_extras():
+                import polars as pl
+
             return self.backend.cast(
                 pl.read_ipc(
                     source=self.path,
                     **kwargs,
                 ),
             )
+
+        with may_require_extras():
+            import pandas as pd
 
         return self.backend.cast(
             pd.read_feather(
@@ -220,6 +222,9 @@ class Feather[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType])
         True
         """
         if self.backend.name == "pandas":
+            with may_require_extras():
+                from pandas import DataFrame
+
             if not isinstance(df, DataFrame):
                 msg = f"Expected a pandas DataFrame for writing with backend 'pandas', but got {type(df).__name__!r} instead."
                 raise TypeError(
@@ -232,6 +237,9 @@ class Feather[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType])
             )
 
         elif self.backend.name == "polars":
+            with may_require_extras():
+                import polars as pl
+
             if not isinstance(df, pl.DataFrame):
                 msg = f"Expected a polars DataFrame for writing with backend 'polars', but got {type(df).__name__!r} instead."
                 raise TypeError(
@@ -283,6 +291,9 @@ class Feather[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType])
         ...     sorted(schema.keys())
         ['id', 'value']
         """
+        with may_require_extras():
+            from pyarrow import feather
+
         arrow_schema = feather.read_table(source=self.path, columns=[]).schema  # pyright: ignore[reportUnknownMemberType]
 
         return {name: arrow_schema.field(name).type for name in arrow_schema.names}  # pyright: ignore[reportUnknownMemberType]
@@ -324,6 +335,9 @@ class Feather[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType])
         ...     handle.row_count()
         4
         """
+        with may_require_extras():
+            import pyarrow.ipc as pa_ipc
+
         with pa_ipc.open_file(source=str(self.path)) as reader:
             return sum(reader.get_batch(index).num_rows for index in range(reader.num_record_batches))
 
@@ -381,12 +395,18 @@ class Feather[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType])
         ...     [chunk.shape for chunk in chunks]
         [(2, 1), (2, 1), (1, 1)]
         """
+        with may_require_extras():
+            from pyarrow import feather
+
         table = feather.read_table(source=self.path, **kwargs)  # pyright: ignore[reportUnknownMemberType]
 
         for start in range(0, table.num_rows, chunk_size):
             sliced_table = table.slice(offset=start, length=chunk_size)
 
             if self.backend.name == "polars":
+                with may_require_extras():
+                    import polars as pl
+
                 df = self.backend.cast(cast("pl.DataFrame", pl.from_arrow(data=sliced_table)))  # pyright: ignore[reportUnknownMemberType]
 
             df = self.backend.cast(sliced_table.to_pandas())  # pyright: ignore[reportUnknownMemberType]

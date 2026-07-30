@@ -1,11 +1,10 @@
 """Tests for ``mayutils.objects.dataframes.polars.dataframes``.
 
-The polars dataframe module is currently a documentation/re-export surface with
-no public transformation helpers yet (see its module docstring). These tests
-pin that contract: the module and its package import cleanly under the
-``polars`` extra and expose no public callables, so a regression that adds an
-untested helper here is surfaced. Real transformation tests should be added
-alongside any future helpers.
+These tests pin the module-surface contract: the module and its package
+import cleanly under the ``polars`` extra and declare exactly the expected
+public helpers via ``__all__``, so a regression that adds an untested helper
+here is surfaced. Behavioural coverage for ``parse_temporal_columns`` lives
+in ``test_temporal.py`` alongside this file.
 """
 
 from __future__ import annotations
@@ -24,7 +23,7 @@ import mayutils.objects.dataframes.polars.dataframes as polars_dataframes
 
 
 class TestModuleSurface:
-    """Tests for the current (empty) public surface of the polars module."""
+    """Tests for the declared public surface of the polars module."""
 
     def test_module_imports(self) -> None:
         """The polars dataframe module imports under the polars extra."""
@@ -34,10 +33,11 @@ class TestModuleSurface:
         """The polars subpackage namespace resolves to its dotted path."""
         assert polars_pkg.__name__ == "mayutils.objects.dataframes.polars"
 
-    def test_no_public_callables_yet(self) -> None:
-        """No public (non-dunder) helpers are defined in the module yet."""
-        public = [name for name in vars(polars_dataframes) if not name.startswith("_")]
-        assert public == []
+    def test_declared_public_surface(self) -> None:
+        """Module and package both export exactly ``parse_temporal_columns``."""
+        assert polars_dataframes.__all__ == ["parse_temporal_columns"]
+        assert polars_pkg.__all__ == ["parse_temporal_columns"]
+        assert polars_pkg.parse_temporal_columns is polars_dataframes.parse_temporal_columns
 
 
 class TestPolarsBaseline:

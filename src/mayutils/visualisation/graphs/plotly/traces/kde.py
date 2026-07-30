@@ -1,15 +1,15 @@
 """Kernel density estimate trace."""
 
-from typing import Any, ClassVar, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from mayutils.core.extras import may_require_extras
 from mayutils.visualisation.graphs.plotly.traces.line import Line
 from mayutils.visualisation.graphs.plotly.traces.types import TraceType
 
-with may_require_extras():
-    import numpy as np
+if TYPE_CHECKING:
     from numpy.typing import ArrayLike, NDArray
-    from scipy.stats import gaussian_kde
 
 
 class Kde(Line):
@@ -73,6 +73,10 @@ class Kde(Line):
         --------
         >>> trace = Kde(x=[1, 2, 3], bandwidth=0.5)
         """
+        with may_require_extras():
+            import numpy as np
+            from scipy.stats import gaussian_kde
+
         x_arr = np.asarray(x)
         kde = gaussian_kde(dataset=x_arr, bw_method=bandwidth)
 

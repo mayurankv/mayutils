@@ -34,7 +34,7 @@ SEEDED_COUNTER = 5
 
 
 def _initialise_script() -> None:
-    from mayutils.interfaces.websites.streamlit import StreamlitManager  # noqa: PLC0415
+    from mayutils.interfaces.websites.streamlit import StreamlitManager
 
     StreamlitManager.initialise(
         counter=0,
@@ -43,23 +43,23 @@ def _initialise_script() -> None:
 
 
 def _email_script() -> None:
-    import streamlit as st  # noqa: PLC0415
+    import streamlit as st
 
-    from mayutils.interfaces.websites.streamlit import StreamlitManager  # noqa: PLC0415
+    from mayutils.interfaces.websites.streamlit import StreamlitManager
 
     st.session_state.resolved_email = StreamlitManager.current_user_email()
 
 
 def _login_script() -> None:
-    from mayutils.interfaces.websites.streamlit import StreamlitManager  # noqa: PLC0415
+    from mayutils.interfaces.websites.streamlit import StreamlitManager
 
     StreamlitManager.login()
 
 
 def _logout_script() -> None:
-    import streamlit as st  # noqa: PLC0415
+    import streamlit as st
 
-    from mayutils.interfaces.websites.streamlit import StreamlitManager  # noqa: PLC0415
+    from mayutils.interfaces.websites.streamlit import StreamlitManager
 
     if not st.session_state.get("logged_out", False):
         st.session_state.logged_out = True
@@ -67,9 +67,9 @@ def _logout_script() -> None:
 
 
 def _gate_script() -> None:
-    import streamlit as st  # noqa: PLC0415
+    import streamlit as st
 
-    from mayutils.interfaces.websites.streamlit import StreamlitManager  # noqa: PLC0415
+    from mayutils.interfaces.websites.streamlit import StreamlitManager
 
     def home() -> None:
         st.write("home page body")
@@ -83,9 +83,9 @@ def _gate_script() -> None:
 
 
 def _setup_app_script() -> None:
-    import streamlit as st  # noqa: PLC0415
+    import streamlit as st
 
-    from mayutils.interfaces.websites.streamlit import StreamlitManager  # noqa: PLC0415
+    from mayutils.interfaces.websites.streamlit import StreamlitManager
 
     def home() -> None:
         st.write("home page body")

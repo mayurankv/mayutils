@@ -25,9 +25,6 @@ from functools import _CacheInfo as CacheInfo  # pyright: ignore[reportPrivateUs
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Protocol, cast, runtime_checkable
 
-import polars as pl
-from pandas import DataFrame
-
 from mayutils.core.extras import may_require_extras
 from mayutils.data import CACHE_FOLDER
 from mayutils.environment.filesystem import is_file_stale
@@ -38,12 +35,8 @@ from mayutils.objects.dataframes.backends import Backend, DataFrames, default_ba
 from mayutils.objects.dictionaries import flatten_dict
 from mayutils.objects.strings import String
 
-with may_require_extras():
-    import numpy as np
-    import pandas as pd
-    import polars as pl
-
 if TYPE_CHECKING:
+    import pandas as pd
     from numpy.typing import ArrayLike
 
     from mayutils.objects.datetime import Duration
@@ -434,6 +427,9 @@ class NumpySerialiser:
         >>> hasattr(s, "read")
         True
         """
+        with may_require_extras():
+            import numpy as np
+
         return np.load(file=str(path))
 
     def write(
@@ -467,6 +463,9 @@ class NumpySerialiser:
         >>> hasattr(s, "write")
         True
         """
+        with may_require_extras():
+            import numpy as np
+
         np.save(
             file=str(path),
             allow_pickle=True,
@@ -525,6 +524,9 @@ class NpzSerialiser:
         >>> hasattr(s, "read")
         True
         """
+        with may_require_extras():
+            import numpy as np
+
         return np.load(file=str(path))
 
     def write(
@@ -558,6 +560,9 @@ class NpzSerialiser:
         >>> hasattr(s, "write")
         True
         """
+        with may_require_extras():
+            import numpy as np
+
         np.savez(
             file=str(path),
             allow_pickle=True,
@@ -682,27 +687,39 @@ def infer_suffix(
     >>> infer_suffix({"a": 1})
     '.pkl'
     """
-    try:
+    with contextlib.suppress(ImportError):
+        from pandas import DataFrame
+
         if isinstance(obj, DataFrame):
             return ".parquet"
-    except ImportError:
-        pass
 
-    try:
+    with contextlib.suppress(ImportError):
+        import polars as pl
+
         if isinstance(obj, pl.DataFrame):
             return ".parquet"
-    except ImportError:
-        pass
 
-    if isinstance(obj, np.ndarray):
-        return ".npy"
+    with contextlib.suppress(ImportError):
+        import numpy as np
 
-    if isinstance(obj, Mapping):
-        mapping = cast("Mapping[object, object]", obj)
-        if all(isinstance(value, np.ndarray) for value in mapping.values()):
-            return ".npz"
+        if isinstance(obj, np.ndarray):
+            return ".npy"
+
+        if isinstance(obj, Mapping):
+            mapping = cast("Mapping[object, object]", obj)
+            if all(isinstance(value, np.ndarray) for value in mapping.values()):
+                return ".npz"
 
     return ".pkl"
+
+
+MAX_SECTION_LENGTH = 64
+"""Max length of an individual human-readable cache-stem section (e.g. kwargs)."""
+
+MAX_STEM_LENGTH = 150
+"""Max length of a cache stem. ``cache.func_key`` still appends the full content hash
+downstream, so truncating the readable prefix here never risks a collision; the bound keeps
+the eventual ``prefix--hash.suffix`` filename well under the macOS ``NAME_MAX`` of 255 bytes."""
 
 
 def make_cache_stem(
@@ -711,7 +728,7 @@ def make_cache_stem(
     *,
     cache_description: str | None,
     ttl: Duration | None,
-    format_kwargs: Mapping[str, object],
+    template_kwargs: Mapping[str, object],
     cache_extra: Mapping[str, object] | None,
     key: str,
 ) -> str:
@@ -731,7 +748,7 @@ def make_cache_stem(
         Explicit description overriding the auto-generated one.
     ttl
         Cache TTL, embedded in the filename when set.
-    format_kwargs
+    template_kwargs
         Template substitutions passed to the query.
     cache_extra
         Additional cache key values.
@@ -756,7 +773,7 @@ def make_cache_stem(
     ...     SQL("SELECT * FROM loans"),
     ...     cache_description=None,
     ...     ttl=None,
-    ...     format_kwargs={},
+    ...     template_kwargs={},
     ...     cache_extra=None,
     ...     key="abc123",
     ... )
@@ -771,18 +788,27 @@ def make_cache_stem(
     else:
         sections.append(String.to_slug(" ".join(query.split()[:3])))
 
-    if format_kwargs:
-        sections.append(String.to_slug("_".join(flatten_dict(format_kwargs))))
+    if template_kwargs:
+        sections.append(String.to_slug("_".join(flatten_dict(template_kwargs)))[:MAX_SECTION_LENGTH])
 
     if cache_extra:
-        sections.append(String.to_slug("_".join(flatten_dict(cache_extra))))
+        sections.append(String.to_slug("_".join(flatten_dict(cache_extra)))[:MAX_SECTION_LENGTH])
 
     if ttl is not None:
         sections.append(format_ttl(ttl))
 
     sections.append(key)
 
-    return "--".join(sections)
+    stem = "--".join(sections)
+
+    if len(stem) > MAX_STEM_LENGTH:
+        if key:
+            budget = max(MAX_STEM_LENGTH - len(key) - len("--"), 0)
+            stem = f"{'--'.join(sections[:-1])[:budget]}--{key}"
+        else:
+            stem = stem[:MAX_STEM_LENGTH]
+
+    return stem
 
 
 class FileStore[CacheObjectType: CacheObjects]:
@@ -1005,6 +1031,61 @@ class FileStore[CacheObjectType: CacheObjects]:
 
         return self.function_folder / f"{key}{self.suffix}"
 
+    def _resolve_from_disk(
+        self,
+    ) -> None:
+        """
+        Resolve an inferred suffix from an existing cache file, if present.
+
+        Inferred-suffix stores (``suffix=None``) set their serialiser only on the
+        first :meth:`put`, so a freshly constructed store — a new process, or the
+        fresh instance :func:`~mayutils.data.read.read_query` builds per call —
+        cannot read a previously written entry: :meth:`get` would short-circuit to
+        :data:`MISSING`. This recovers the suffix from any existing file in
+        :attr:`function_folder` (all entries for a function share one suffix) and
+        resolves the serialiser so those reads hit. A no-op once resolved, when a
+        suffix was given up front, or when the folder holds no cached files.
+
+        See Also
+        --------
+        FileStore.resolve : Object-based resolution used on the first put.
+        FileStore.get : Caller that invokes this before a lookup.
+
+        Examples
+        --------
+        >>> import tempfile
+        >>> import pandas as pd
+        >>> from mayutils.environment.memoisation.files import FileStore
+        >>> with tempfile.TemporaryDirectory() as tmp:
+        ...     FileStore("f", cache_folder=tmp).put("k", value=pd.DataFrame({"a": [1]}))
+        ...     FileStore("f", cache_folder=tmp).get("k")["a"].tolist()
+        [1]
+        """
+        if self._resolved or self.suffix is not None:
+            return
+
+        folder = self.function_folder
+        if not folder.is_dir():
+            return
+
+        existing = next(
+            (path for path in sorted(folder.iterdir()) if path.is_file() and path.suffix),
+            None,
+        )
+        if existing is None:
+            return
+
+        self.suffix = existing.suffix
+        register_datafile(self.suffix)
+        if self.backend is None:
+            self.backend = default_backend() if self.suffix in DataFile.registry else False
+
+        self.serialiser = get_serialiser(
+            self.suffix,
+            backend=self.backend if self.backend is not False else None,
+        )
+        self._resolved = True
+
     def get(
         self,
         key: str,
@@ -1043,6 +1124,9 @@ class FileStore[CacheObjectType: CacheObjects]:
         ...     store.get("k") is MISSING
         True
         """
+        if not self._resolved:
+            self._resolve_from_disk()
+
         if not self._resolved:
             self.misses += 1
             return MISSING

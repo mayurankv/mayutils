@@ -33,6 +33,8 @@ Examples
 1
 """
 
+from __future__ import annotations
+
 import inspect
 import sys
 from collections.abc import Callable

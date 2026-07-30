@@ -151,7 +151,7 @@ class TestGetModulePath:
 
     def test_subpackage(self) -> None:
         """A subpackage resolves to its nested directory."""
-        import mayutils.environment  # noqa: PLC0415
+        import mayutils.environment
 
         assert get_module_path(mayutils.environment).name == "environment"
 
@@ -167,7 +167,7 @@ class TestGetModulePath:
 
     def test_non_package_raises(self) -> None:
         """A plain module without ``__path__`` raises ``ValueError``."""
-        import math  # noqa: PLC0415
+        import math
 
         with pytest.raises(ValueError, match="does not have a __path__ attribute"):
             get_module_path(math)

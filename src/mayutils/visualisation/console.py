@@ -27,18 +27,21 @@ Examples
 True
 """
 
+from __future__ import annotations
+
 import builtins
 import sys
-from collections.abc import Callable, Generator
 from contextlib import contextmanager
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from mayutils.core.extras import may_require_extras
 
-with may_require_extras():
+if TYPE_CHECKING:
+    from collections.abc import Callable, Generator
+
     from rich.console import Console
-    from rich.pretty import install as install_pretty
-    from rich.traceback import install as install_traceback
+
+    CONSOLE: Console
 
 PRINT = builtins.print
 
@@ -83,12 +86,61 @@ def default_console(
     >>> isinstance(console, Console)
     True
     """
+    with may_require_extras():
+        from rich.console import Console
+
     defaults: dict[str, Any] = {}
 
     return Console(**(defaults | kwargs))
 
 
-CONSOLE: Console = default_console()
+def __getattr__(
+    name: str,
+) -> Console:
+    """
+    Materialise the lazily built module attributes on first access.
+
+    Currently only ``CONSOLE`` is served this way: constructing the
+    shared :class:`rich.console.Console` singleton requires Rich, so it
+    is built on first attribute access (and cached back into the module
+    globals) instead of at import time, keeping the module importable
+    without the optional Rich dependency.
+
+    Parameters
+    ----------
+    name
+        Attribute being looked up on the module.
+
+    Returns
+    -------
+        The shared console singleton when *name* is ``"CONSOLE"``.
+
+    Raises
+    ------
+    AttributeError
+        If *name* is not a lazily materialised attribute.
+
+    See Also
+    --------
+    default_console : Factory used to build the shared singleton.
+    rich.console.Console : Type of the materialised attribute.
+
+    Examples
+    --------
+    >>> from rich.console import Console
+    >>> from mayutils.visualisation.console import CONSOLE
+    >>> isinstance(CONSOLE, Console)
+    True
+    """
+    if name == "CONSOLE":
+        console = default_console()
+        globals()[name] = console
+
+        return console
+
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
+
 
 _state: dict[str, tuple[bool, Any]] = {
     "print": (False, None),
@@ -298,7 +350,16 @@ def setup_printing(
     >>> _state["print"][0]
     False
     """
-    active_console = console if console is not None else CONSOLE
+    with may_require_extras():
+        from rich.pretty import install as install_pretty
+        from rich.traceback import install as install_traceback
+
+    if console is None:
+        from mayutils.visualisation.console import CONSOLE
+
+        console = CONSOLE
+
+    active_console = console
 
     if printing and not _state["print"][0]:
         _state["print"] = (True, builtins.print)

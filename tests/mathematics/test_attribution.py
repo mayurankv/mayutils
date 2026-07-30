@@ -17,7 +17,10 @@ from mayutils.mathematics.analytics.attribution import (
     Attribution,
     AttributionMethod,
     naive_attribution,
+    product_metric,
     shapley_attribution,
+    weighted_mean_metric,
+    weighted_total_metric,
 )
 from mayutils.objects.dataframes.backends import Backend
 
@@ -278,4 +281,139 @@ class TestAttribution:
             Attribution(revenue).from_dataframe(
                 baseline=self.baseline_frame,
                 comparison=self.comparison_frame.iloc[:-1],
+            )
+
+
+class TestSegmentedAttribution:
+    """Tests for the segmented metric builders and :meth:`Attribution.from_segments`."""
+
+    segments = ("A", "B", "C")
+    baseline = pd.DataFrame(
+        {"volume": [100.0, 50.0, 80.0], "rate": [0.20, 0.40, 0.30]},
+        index=list(segments),
+    )
+    comparison = pd.DataFrame(
+        {"volume": [110.0, 60.0, 70.0], "rate": [0.25, 0.45, 0.28]},
+        index=list(segments),
+    )
+
+    def test_weighted_total_recovers_change(self) -> None:
+        """Total-metric contributions plus interaction equal the aggregate total change."""
+        metric = weighted_total_metric(weight="volume", rates=["rate"])
+        expected = float(
+            (self.comparison["volume"] * self.comparison["rate"]).sum() - (self.baseline["volume"] * self.baseline["rate"]).sum(),
+        )
+        for method in AttributionMethod:
+            result = Attribution(metric, method=method).from_segments(
+                baseline=self.baseline,
+                comparison=self.comparison,
+            )
+            assert np.isclose(result.total, expected)
+
+    def test_weighted_mean_recovers_change(self) -> None:
+        """Mean-rate contributions plus interaction equal the aggregate rate change."""
+        metric = weighted_mean_metric(weight="volume", rates=["rate"])
+        baseline_value = float((self.baseline["volume"] * self.baseline["rate"]).sum() / self.baseline["volume"].sum())
+        comparison_value = float((self.comparison["volume"] * self.comparison["rate"]).sum() / self.comparison["volume"].sum())
+        expected = comparison_value - baseline_value
+        for method in AttributionMethod:
+            result = Attribution(metric, method=method).from_segments(
+                baseline=self.baseline,
+                comparison=self.comparison,
+            )
+            assert np.isclose(result.total, expected)
+
+    def test_weighted_mean_mix_invariance(self) -> None:
+        """Uniformly scaling volumes leaves the mean rate and its attribution unchanged."""
+        metric = weighted_mean_metric(weight="volume", rates=["rate"])
+        attribution = Attribution(metric)
+        base = attribution.from_segments(baseline=self.baseline, comparison=self.comparison)
+        scaled = attribution.from_segments(
+            baseline=self.baseline.assign(volume=self.baseline["volume"] * 10),
+            comparison=self.comparison.assign(volume=self.comparison["volume"] * 10),
+        )
+        assert np.allclose(
+            list(base.contributions.values()),
+            list(scaled.contributions.values()),
+        )
+
+    def test_single_segment_rate_has_zero_volume_effect(self) -> None:
+        """With one segment the mean rate ignores volume, so its effect is zero."""
+        baseline = pd.DataFrame({"volume": [100.0], "rate": [0.20]}, index=["A"])
+        comparison = pd.DataFrame({"volume": [140.0], "rate": [0.25]}, index=["A"])
+        result = Attribution(weighted_mean_metric(weight="volume", rates=["rate"])).from_segments(
+            baseline=baseline,
+            comparison=comparison,
+        )
+        assert np.isclose(result.contributions["volume"], 0.0)
+        assert np.isclose(result.contributions["rate"], 0.05)
+
+    def test_single_segment_total_matches_revenue(self) -> None:
+        """A one-segment volume-weighted total reproduces the price-volume revenue split."""
+        baseline = pd.DataFrame({"volume": [100.0], "price": [10.0]}, index=["A"])
+        comparison = pd.DataFrame({"volume": [110.0], "price": [12.0]}, index=["A"])
+        result = Attribution(
+            weighted_total_metric(weight="volume", rates=["price"]),
+            method=AttributionMethod.SHAPLEY,
+        ).from_segments(baseline=baseline, comparison=comparison)
+        assert np.isclose(result.contributions["price"], 210.0)
+        assert np.isclose(result.contributions["volume"], 110.0)
+
+    def test_product_metric_matches_shapley(self) -> None:
+        """The product metric reproduces a manual multiplicative Shapley split."""
+        baseline = {"r1": 0.5, "r2": 0.4}
+        comparison = {"r1": 0.6, "r2": 0.5}
+        result = Attribution(product_metric, method=AttributionMethod.SHAPLEY).from_dict(
+            baseline=baseline,
+            comparison=comparison,
+        )
+        expected = shapley_attribution(product_metric, baseline=baseline, comparison=comparison)
+        assert np.allclose(list(result.contributions.values()), list(expected.values()))
+        assert np.isclose(result.total, product_metric(**comparison) - product_metric(**baseline))
+
+    def test_disjoint_segments_union_aligned(self) -> None:
+        """A segment present in only one period is zero-filled rather than dropped to NaN."""
+        baseline = pd.DataFrame({"volume": [100.0, 50.0], "rate": [0.20, 0.40]}, index=["A", "B"])
+        comparison = pd.DataFrame({"volume": [110.0, 80.0], "rate": [0.25, 0.30]}, index=["A", "C"])
+        result = Attribution(weighted_total_metric(weight="volume", rates=["rate"])).from_segments(
+            baseline=baseline,
+            comparison=comparison,
+        )
+        baseline_total = 100.0 * 0.20 + 50.0 * 0.40
+        comparison_total = 110.0 * 0.25 + 80.0 * 0.30
+        assert not np.isnan(list(result.contributions.values())).any()
+        assert np.isclose(result.total, comparison_total - baseline_total)
+
+    def test_from_segments_matches_from_dict(self) -> None:
+        """``from_segments`` equals a manual ``from_dict`` over the shared columns."""
+        attribution = Attribution(weighted_total_metric(weight="volume", rates=["rate"]))
+        segments_result = attribution.from_segments(baseline=self.baseline, comparison=self.comparison)
+        dict_result = attribution.from_dict(
+            baseline={column: self.baseline[column] for column in self.baseline.columns},
+            comparison={column: self.comparison[column] for column in self.comparison.columns},
+        )
+        assert np.allclose(
+            list(segments_result.contributions.values()),
+            list(dict_result.contributions.values()),
+        )
+
+    def test_from_segments_polars_matches_pandas(self) -> None:
+        """Polars frames decompose to the same contributions as pandas."""
+        attribution = Attribution(weighted_total_metric(weight="volume", rates=["rate"]))
+        pandas_result = attribution.from_segments(baseline=self.baseline, comparison=self.comparison)
+        polars_result = attribution.from_segments(
+            baseline=pl.from_pandas(self.baseline),
+            comparison=pl.from_pandas(self.comparison),
+        )
+        assert np.allclose(
+            list(polars_result.contributions.values()),
+            list(pandas_result.contributions.values()),
+        )
+
+    def test_mismatched_columns_rejected(self) -> None:
+        """Frames with differing columns raise a :class:`ValueError`."""
+        with pytest.raises(expected_exception=ValueError, match="same columns"):
+            Attribution(weighted_total_metric(weight="volume", rates=["rate"])).from_segments(
+                baseline=self.baseline,
+                comparison=self.comparison.rename(columns={"rate": "other"}),
             )

@@ -32,7 +32,7 @@ class TestOutsideNotebook:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """``get_shell`` raises ``RuntimeError`` even when IPython is importable but no shell exists."""
-        from IPython.core import getipython  # noqa: PLC0415
+        from IPython.core import getipython
 
         monkeypatch.setattr(target=getipython, name="get_ipython", value=lambda: None)
         with pytest.raises(RuntimeError, match="No active IPython shell"):
@@ -60,7 +60,7 @@ class TestOutsideNotebook:
 
     def test_mayutils_setup_swallows_no_shell(self) -> None:
         """:func:`mayutils.setup` skips the notebook bootstrap when no shell is active."""
-        import mayutils  # noqa: PLC0415
+        import mayutils
 
         mayutils.setup()
 

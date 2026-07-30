@@ -75,6 +75,7 @@ Examples
 '1 year'
 """
 
+
 FORMATTER = Formatter()
 """
 Expose a shared :class:`pendulum.Formatter` for token-based datetime I/O.
@@ -102,6 +103,7 @@ Examples
 >>> FORMATTER.format(dt, "YYYY-MM-DD HH:mm")
 '2026-04-22 09:30'
 """
+
 
 DIFFERENCE_FORMATTER = DifferenceFormatter()
 """

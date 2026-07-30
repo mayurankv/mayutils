@@ -24,7 +24,7 @@ Examples
 >>> "pdf" in list_formats()
 True
 >>> with patch("mayutils.export.nbconvert.subprocess.run") as run:
-...     with patch("mayutils.export.nbconvert.Progress") as progress:
+...     with patch("rich.progress.Progress") as progress:
 ...         run.return_value = MagicMock(returncode=0, stdout="", stderr="")
 ...         progress.return_value.__enter__.return_value = MagicMock()
 ...         result = export(Path("analysis.ipynb"), to="html")
@@ -39,12 +39,6 @@ from pathlib import Path
 
 from mayutils.core.extras import may_require_extras
 from mayutils.export import OUTPUT_FOLDER
-
-with may_require_extras():
-    from jupyter_core.paths import jupyter_path
-    from nbconvert.exporters import get_export_names  # pyright: ignore[reportUnknownVariableType]
-    from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
-
 
 FORMAT_EXTENSIONS: dict[str, str] = {
     "asciidoc": ".asciidoc",
@@ -188,6 +182,9 @@ def list_formats() -> tuple[str, ...]:
     >>> "html" in formats
     True
     """
+    with may_require_extras():
+        from nbconvert.exporters import get_export_names  # pyright: ignore[reportUnknownVariableType]
+
     exporters: list[str] = get_export_names()  # pyright: ignore[reportUnknownVariableType]
 
     return tuple(str(name) for name in exporters)
@@ -245,6 +242,9 @@ def list_templates(
     >>> isinstance(extended, tuple) and set(templates).issubset(set(extended))
     True
     """
+    with may_require_extras():
+        from jupyter_core.paths import jupyter_path
+
     search_dirs: list[Path] = [Path(path) for path in jupyter_path("nbconvert", "templates")]
     for basedir in extra_basedirs:
         search_dirs.extend((Path(basedir) / "nbconvert" / "templates", Path(basedir)))
@@ -361,7 +361,7 @@ def export(
     >>> with tempfile.TemporaryDirectory() as tmp:
     ...     out_dir = Path(tmp)
     ...     with patch("mayutils.export.nbconvert.subprocess.run") as run:
-    ...         with patch("mayutils.export.nbconvert.Progress") as progress:
+    ...         with patch("rich.progress.Progress") as progress:
     ...             run.return_value = MagicMock(returncode=0, stdout="", stderr="")
     ...             progress.return_value.__enter__.return_value = MagicMock()
     ...             result = export(
@@ -376,6 +376,9 @@ def export(
     >>> result.stem.startswith("weekly_")
     True
     """
+    with may_require_extras():
+        from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+
     jupyter = jupyter_bin()
 
     available_formats = list_formats()

@@ -238,7 +238,7 @@ class TestPptxInterop:
 
     def test_returns_rgbcolor(self) -> None:
         """The property returns a ``python-pptx`` colour carrying the RGB channels."""
-        from pptx.dml.color import RGBColor  # noqa: PLC0415
+        from pptx.dml.color import RGBColor
 
         colour = Colour(r=1, g=2, b=3, a=0.5)
         pptx = colour.pptx_colour

@@ -1,6 +1,8 @@
 """3-D mesh traces for cuboids and bar charts."""
 
-from typing import Any, ClassVar, Self
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 from mayutils.core.extras import may_require_extras
 from mayutils.visualisation.graphs.plotly.traces.types import TraceType
@@ -10,8 +12,9 @@ from mayutils.visualisation.graphs.plotly.utilities import (
 )
 
 with may_require_extras():
-    import numpy as np
     import plotly.graph_objects as go
+
+if TYPE_CHECKING:
     from numpy.typing import ArrayLike
     from pandas import DataFrame
 
@@ -261,6 +264,9 @@ class Bar3d(go.Mesh3d):
         --------
         >>> trace = Bar3d(x=[0], y=[0], z=[5])
         """
+        with may_require_extras():
+            import numpy as np
+
         if "meta" in kwargs:
             msg = "The 'meta' argument is reserved for internal use and cannot be set by the user."
             raise ValueError(msg)
@@ -399,6 +405,9 @@ class Bar3d(go.Mesh3d):
         >>> import pandas as pd
         >>> trace = Bar3d.from_dataframe(pd.DataFrame({"a": [1, 2]}))
         """
+        with may_require_extras():
+            import numpy as np
+
         if not df.columns.is_unique:
             msg = "Dataframe columns are not unique"
             raise ValueError(msg)
@@ -454,6 +463,9 @@ def merge_cuboids(
     >>> c3 = Cuboid(x=(0, 1), y=(1, 2), z=(0, 1))
     >>> merged = merge_cuboids(c1, c2, c3)
     """
+    with may_require_extras():
+        import numpy as np
+
     x = np.zeros(len(cuboids) * 8)
     y = np.zeros(len(cuboids) * 8)
     z = np.zeros(len(cuboids) * 8)

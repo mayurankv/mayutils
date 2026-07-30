@@ -72,7 +72,7 @@ def get_root() -> Path:
     True
     """
     try:
-        from git import InvalidGitRepositoryError, Repo  # noqa: PLC0415
+        from git import InvalidGitRepositoryError, Repo
     except ImportError:
         return Path.cwd()
 

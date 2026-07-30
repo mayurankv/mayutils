@@ -35,17 +35,10 @@ from mayutils.core.extras import may_require_extras
 with may_require_extras():
     from pendulum import (
         FixedTimezone,
-        get_locale,
-        local_timezone,
-        locale,
-        set_local_timezone,
-        set_locale,
-        test_local_timezone,
     )
     from pendulum import (
         Timezone as PendulumTimezone,
     )
-    from pendulum.tz import fixed_timezone, timezones
 
 if TYPE_CHECKING:
     from contextlib import _GeneratorContextManager  # pyright: ignore[reportPrivateUsage]
@@ -189,6 +182,9 @@ class Tz(PendulumTimezone):
         >>> Tz.spawn(name="utc").name
         'UTC'
         """
+        with may_require_extras():
+            from pendulum.tz import fixed_timezone
+
         if isinstance(name, int):
             return fixed_timezone(offset=name)
 
@@ -233,6 +229,9 @@ class Tz(PendulumTimezone):
         >>> "UTC" in Tz.list()
         True
         """
+        with may_require_extras():
+            from pendulum.tz import timezones
+
         return timezones()
 
     @staticmethod
@@ -274,6 +273,9 @@ class Tz(PendulumTimezone):
         ...     isinstance(Tz.local(), PendulumTimezone)
         True
         """
+        with may_require_extras():
+            from pendulum import local_timezone
+
         return local_timezone()
 
     def set_local(
@@ -312,6 +314,9 @@ class Tz(PendulumTimezone):
         ...     set_local_timezone()
         'Europe/London'
         """
+        with may_require_extras():
+            from pendulum import set_local_timezone
+
         return set_local_timezone(mock=self)
 
     def test_local(
@@ -351,6 +356,9 @@ class Tz(PendulumTimezone):
         ...     Tz.local().name
         'America/New_York'
         """
+        with may_require_extras():
+            from pendulum import test_local_timezone
+
         return test_local_timezone(mock=self)
 
     @staticmethod
@@ -392,6 +400,9 @@ class Tz(PendulumTimezone):
         >>> second
         'fr'
         """
+        with may_require_extras():
+            from pendulum import get_locale
+
         return get_locale()
 
     @staticmethod
@@ -440,6 +451,9 @@ class Tz(PendulumTimezone):
         >>> active
         'en_gb'
         """
+        with may_require_extras():
+            from pendulum import set_locale
+
         return set_locale(name=name)
 
     @staticmethod
@@ -481,6 +495,9 @@ class Tz(PendulumTimezone):
         >>> isinstance(fr, object)
         True
         """
+        with may_require_extras():
+            from pendulum import locale
+
         return locale(name=name)
 
 

@@ -23,7 +23,7 @@ from mayutils.data import CACHE_FOLDER
 from mayutils.environment.memoisation.clearing import clear_cache
 
 with may_require_extras():
-    from typer import Argument, Exit, Option, Typer, confirm
+    from typer import Argument, Option, Typer
 
 app = Typer()
 
@@ -101,6 +101,9 @@ def clean(
         $ python -m mayutils.scripts.clear_cache --dry-run
         $ python -m mayutils.scripts.clear_cache --prefix model_ --force
     """
+    with may_require_extras():
+        from typer import Exit, confirm
+
     if not force and not dry_run and not confirm(text=f"Delete cache files in {folder}?", default=False):
         raise Exit
 

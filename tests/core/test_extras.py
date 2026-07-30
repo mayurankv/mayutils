@@ -192,7 +192,7 @@ class TestRequiresExtras:
     def test_reraises_with_hint(self) -> None:
         """A failing real import inside the context manager is re-raised with the hint."""
         with pytest.raises(expected_exception=ImportError, match="mayutils\\[plotting\\]") as exc_info, requires_extras("plotting"):
-            import nonexistent_module_abc  # pyright: ignore[reportUnusedImport, reportMissingImports] # ty:ignore[unresolved-import]  # noqa: F401, PLC0415
+            import nonexistent_module_abc  # pyright: ignore[reportUnusedImport, reportMissingImports] # ty:ignore[unresolved-import]  # noqa: F401
         assert exc_info.value.__cause__ is not None
         assert isinstance(exc_info.value.__cause__, ImportError)
 

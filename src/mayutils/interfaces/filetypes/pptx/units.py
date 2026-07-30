@@ -34,7 +34,6 @@ from __future__ import annotations
 from mayutils.core.extras import may_require_extras
 
 with may_require_extras():
-    import numpy as np
     from pptx.util import Length as BaseLength
 
 
@@ -118,6 +117,9 @@ class Length(BaseLength):
         >>> Length.from_float(914400.9).emu
         914400
         """
+        with may_require_extras():
+            import numpy as np
+
         return cls(emu=np.floor(value))
 
     @classmethod

@@ -14,13 +14,14 @@ explicit values rather than ``secrets.toml``) and a master-password
 fallback verified against a pre-computed bcrypt hash — and route
 unauthenticated or non-whitelisted users to packaged login/forbidden
 views through :meth:`StreamlitManager.check_authorisation`. The heavy
-``streamlit`` and ``bcrypt`` dependencies are imported lazily under
-:func:`mayutils.core.extras.may_require_extras` so importing this
-module without the optional extra installed surfaces an actionable
-install hint rather than a raw :class:`ModuleNotFoundError`. Importing
-streamlit normally hijacks the global Plotly default template with its
-own ``"streamlit"`` theme; this module reasserts whichever Plotly
-default was active beforehand (for example ``"base"`` from
+``streamlit`` and ``bcrypt`` dependencies are imported lazily inside
+the helpers under :func:`mayutils.core.extras.may_require_extras`, so
+this module imports cleanly without the optional extra installed and a
+missing install surfaces an actionable hint at call time rather than a
+raw :class:`ModuleNotFoundError`. Importing streamlit normally hijacks
+the global Plotly default template with its own ``"streamlit"`` theme;
+:func:`import_streamlit` reasserts whichever Plotly default was active
+beforehand (for example ``"base"`` from
 :mod:`mayutils.visualisation.graphs.plotly.templates`) so registered
 mayutils templates keep winning.
 
@@ -50,37 +51,71 @@ Examples
 ... )
 """
 
+from __future__ import annotations
+
 import os
 import subprocess
 import sys
-from collections.abc import Callable, Collection, Mapping, Sequence
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from mayutils.core.extras import may_require_extras
 
-plotly_templates = getattr(sys.modules.get("plotly.io"), "templates", None)
-plotly_template_default = getattr(plotly_templates, "default", None)
+if TYPE_CHECKING:
+    from collections.abc import Callable, Collection, Mapping, Sequence
 
-with may_require_extras():
-    import bcrypt
-    import streamlit as st
-    from streamlit import session_state as ss
     from streamlit.navigation.page import StreamlitPage
-    from streamlit.runtime.secrets import secrets_singleton
-
-# Importing streamlit registers its own Plotly template and silently makes it
-# the global default (streamlit/elements/lib/streamlit_plotly_theme.py),
-# overriding any default already chosen — e.g. "base" as set by
-# mayutils.visualisation.graphs.plotly.templates at import. Reassert the
-# default that was active before the streamlit import.
-if plotly_templates is not None:
-    plotly_templates.default = plotly_template_default
 
 MODULE_PATH = Path(__file__).parent
 CSS_PATH = MODULE_PATH / "css"
 IMAGES_PATH = MODULE_PATH / "images"
 VIEWS_PATH = MODULE_PATH / "views"
+
+
+def import_streamlit() -> None:
+    """
+    Import ``streamlit`` while preserving the active Plotly default template.
+
+    Importing streamlit registers its own Plotly template and silently
+    makes it the global default
+    (``streamlit/elements/lib/streamlit_plotly_theme.py``), overriding
+    any default already chosen — e.g. ``"base"`` as set by
+    :mod:`mayutils.visualisation.graphs.plotly.templates` at import.
+    Snapshot whichever Plotly default is active, perform the guarded
+    streamlit import, and reassert the snapshot so registered mayutils
+    templates keep winning. When streamlit is already imported the
+    import is a no-op and the reassert harmlessly rewrites the current
+    default. Every :class:`StreamlitManager` helper calls this before
+    importing streamlit itself, so the heavy dependency stays lazy and a
+    missing install surfaces an actionable extras hint instead of a raw
+    :class:`ModuleNotFoundError`.
+
+    See Also
+    --------
+    streamlit : Upstream library whose import is wrapped here.
+    mayutils.core.extras.may_require_extras : Guard that converts a
+        missing streamlit install into an actionable hint.
+    mayutils.visualisation.graphs.plotly.templates : Module whose
+        ``"base"`` default this helper protects.
+    StreamlitManager : Facade whose helpers call this before touching
+        streamlit.
+
+    Examples
+    --------
+    >>> import sys
+    >>> from mayutils.interfaces.websites.streamlit import import_streamlit
+    >>> import_streamlit()
+    >>> "streamlit" in sys.modules
+    True
+    """
+    plotly_templates = getattr(sys.modules.get("plotly.io"), "templates", None)
+    plotly_template_default = getattr(plotly_templates, "default", None)
+
+    with may_require_extras():
+        import streamlit  # pyright: ignore[reportUnusedImport] # noqa: F401
+
+    if plotly_templates is not None:
+        plotly_templates.default = plotly_template_default
 
 
 class StreamlitManager:
@@ -178,6 +213,9 @@ class StreamlitManager:
         ...     filters={"region": "uk"},
         ... )  # doctest: +SKIP
         """
+        import_streamlit()
+        from streamlit import session_state as ss
+
         for key, value in kwargs.items():
             if key not in ss:
                 setattr(ss, key, value)
@@ -224,6 +262,9 @@ class StreamlitManager:
         ...     ".stApp { background-color: #0f172a; color: #f8fafc; }",
         ... )  # doctest: +SKIP
         """
+        import_streamlit()
+        import streamlit as st
+
         st.markdown(
             body=f"<style>{css}</style>",
             unsafe_allow_html=True,
@@ -391,6 +432,9 @@ class StreamlitManager:
         ...     },
         ... )
         """
+        import_streamlit()
+        from streamlit.runtime.secrets import secrets_singleton
+
         # TODO(@mayurankv): Remove when streamlit can pass auth config to st.login directly
         # https://github.com/streamlit/streamlit/issues/10543
         secrets_singleton._secrets = {  # noqa: SLF001 # pyright: ignore[reportPrivateUsage]
@@ -440,6 +484,10 @@ class StreamlitManager:
         >>> StreamlitManager.current_user_email() is None
         True
         """
+        import_streamlit()
+        import streamlit as st
+        from streamlit import session_state as ss
+
         if "user_email" in ss:
             email = ss.user_email
         elif st.user.get("is_logged_in"):
@@ -571,6 +619,13 @@ class StreamlitManager:
         ...     provider="google",
         ... )
         """
+        import_streamlit()
+        import streamlit as st
+        from streamlit import session_state as ss
+
+        with may_require_extras():
+            import bcrypt
+
         application_name = ss.application_name if "application_name" in ss else "this application"
         if contact is None:
             contact = ss.application_contact if "application_contact" in ss else "the application owner"
@@ -661,6 +716,10 @@ class StreamlitManager:
         ...     "[Jane Doe](mailto:jane.doe@example.com)",
         ... )
         """
+        import_streamlit()
+        import streamlit as st
+        from streamlit import session_state as ss
+
         application_name = ss.application_name if "application_name" in ss else "this application"
         if contact is None:
             contact = ss.application_contact if "application_contact" in ss else "the application owner"
@@ -718,6 +777,10 @@ class StreamlitManager:
         >>> if st.button("Log Out"):  # doctest: +SKIP
         ...     StreamlitManager.log_out()
         """
+        import_streamlit()
+        import streamlit as st
+        from streamlit import session_state as ss
+
         ss.welcomed = False
 
         if "user_email" in ss:
@@ -800,6 +863,10 @@ class StreamlitManager:
         ... )
         >>> page.run()  # doctest: +SKIP
         """
+        import_streamlit()
+        import streamlit as st
+        from streamlit import session_state as ss
+
         authorised = False
         email = StreamlitManager.current_user_email()
 
@@ -964,6 +1031,9 @@ class StreamlitManager:
         ...     help_url="mailto:jane.doe@example.com",
         ... )
         """
+        import_streamlit()
+        import streamlit as st
+
         st.set_page_config(
             page_title=application_name,
             page_icon=f":material/{tab_icon}:",

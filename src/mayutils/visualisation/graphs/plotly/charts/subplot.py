@@ -1,13 +1,10 @@
 """Multi-panel subplot chart built on :class:`Plot`."""
 
-from collections.abc import Mapping
-from typing import Any, cast
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, cast
 
 from mayutils.core.extras import may_require_extras
-
-with may_require_extras():
-    from plotly.subplots import make_subplots
-
 from mayutils.visualisation.graphs.plotly.charts import (
     PlotConfig,
     SubPlotConfig,
@@ -24,6 +21,9 @@ from mayutils.visualisation.graphs.plotly.traces import (
     Null,
     is_trace_3d,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping, MutableMapping
 
 
 class SubPlot(Plot):
@@ -125,6 +125,9 @@ class SubPlot(Plot):
         >>> config = SubPlotConfig(plots=((PlotConfig.empty(),),))
         >>> plot = SubPlot(config, description="grid")
         """
+        with may_require_extras():
+            from plotly.subplots import make_subplots
+
         if layout is None:
             layout = {}
 
@@ -214,9 +217,9 @@ class SubPlot(Plot):
         if line_title_offsets is None:
             line_title_offsets = (22.5, 22.5)
 
-        xaxis_title = pop_axis_config_title(self._config.main_axis_configs.xaxis.config)
+        xaxis_title = pop_axis_config_title(cast("MutableMapping[str, Any]", self._config.main_axis_configs.xaxis.config))
         yaxes_titles = [
-            pop_axis_config_title(self._config.main_axis_configs.yaxes[idx].config)
+            pop_axis_config_title(cast("MutableMapping[str, Any]", self._config.main_axis_configs.yaxes[idx].config))
             for idx in range(len(self._config.main_axis_configs.yaxes))
         ]
 

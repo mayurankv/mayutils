@@ -2,6 +2,14 @@
 
 Organised by package layout (`src/mayutils/*`). Priority tags: `#critical`, `#high`, `#medium`, `#low`; difficulty tags: `#hard`.
 
+## `core`
+
+### Lazy imports (PEP 810)
+
+Priority: #low
+
+- [ ] Adopt [PEP 810 – Lazy imports](https://peps.python.org/pep-0810/) once it lands in CPython. PEP 810 proposes a stdlib `importlib.lazy` mechanism (building on the earlier `importlib.util.LazyLoader` and the `lazy-loader` / `slothy` ecosystem) that defers execution of a module's body until one of its attributes is accessed. This would let `mayutils` drop the `may_require_extras` guard boilerplate for optional extras and instead rely on the interpreter to defer the import cost — only loading a heavy dependency (e.g. `snowflake-connector`, `plotly`) when the caller first touches it. Track the PEP status; revisit when the reference implementation ships.
+
 ## `data`
 
 ### Async reading and streaming
@@ -21,6 +29,13 @@ Priority: #critical
 - [ ] Surface `logger.name` in the rich handler output ([rich#850](https://github.com/Textualize/rich/issues/850)).
 
 ## `interfaces.data`
+
+### `snowflake`
+
+Priority: #medium
+
+- [ ] Stream management via the Snowflake Python API (`snowflake.core`) — add the `snowflake.core` dependency to the `snowflake` extra (wired through `may_require_extras`), a `to_root()` adapter on `SnowflakeConfig` / `SnowparkExtendedSession` following the existing `to_connection()` / `to_snowpark_session()` pattern, and a thin streams helper module (build `StreamSourceTable` / `StreamSourceView` / `StreamSourceStage` + `PointOfTime` from plain typed arguments; resolve `db.schema.name` to `StreamResource` / `StreamCollection` with defaults from the config). `Root` also unlocks tasks, dynamic tables, warehouses, etc. for later.
+    - Reference: [Managing streams (Snowflake Python API)](https://docs.snowflake.com/en/developer-guide/snowflake-python-api/snowflake-python-managing-streams)
 
 ### `dbt`
 
@@ -194,12 +209,22 @@ Priority: #low
 - [ ] Fix Chrome webdriver #hard — fix all Chromium variants.
 - [ ] Fix Firefox webdriver #hard.
 
+## `interfaces.code.tui`
+
+Priority: #low
+
+- [ ] `tuiplot` fixes
+    - [ ] App name sometimes obscured with a black bar when out of focus.
+    - [ ] Ideally, half the Plotly chart wouldn't be squished.
+
 ## Apps
 
 Priority: #low
 
 - [ ] [Typer](https://typer.tiangolo.com)
 - [ ] Streamlit exploration
+    - Reference: [SQL connection (`st.connections.SQLConnection`)](https://docs.streamlit.io/develop/api-reference/connections/st.connections.sqlconnection)
+    - Reference: [Connecting to data](https://docs.streamlit.io/develop/concepts/connections/connecting-to-data)
 
 ## Research / understand
 

@@ -36,14 +36,11 @@ from mayutils.core.extras import may_require_extras
 from mayutils.interfaces.filetypes import DataFile
 from mayutils.objects.dataframes.backends import DataFrames
 
-with may_require_extras():
-    import pandas as pd
-    import polars as pl
-    import pyarrow as pa
-    import pyarrow.parquet as pq
-
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+    import pandas as pd
+    import polars as pl
 
 
 class Parquet[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType]):
@@ -129,12 +126,18 @@ class Parquet[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType])
         (3, 1)
         """
         if self.backend.name == "pandas":
+            with may_require_extras():
+                import pandas as pd
+
             return self.backend.cast(
                 pd.read_parquet(
                     path=self.path,
                     **kwargs,
                 ),
             )
+
+        with may_require_extras():
+            import polars as pl
 
         return self.backend.cast(
             pl.read_parquet(
@@ -207,6 +210,9 @@ class Parquet[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType])
         True
         """
         if self.backend.name == "pandas":
+            with may_require_extras():
+                import pandas as pd
+
             if not isinstance(df, pd.DataFrame):
                 msg = f"Expected pandas DataFrame, got {type(df)}"
                 raise TypeError(msg)
@@ -218,6 +224,9 @@ class Parquet[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType])
             )
 
         else:
+            with may_require_extras():
+                import polars as pl
+
             if not isinstance(df, pl.DataFrame):
                 msg = f"Expected polars DataFrame, got {type(df)}"
                 raise TypeError(msg)
@@ -267,6 +276,9 @@ class Parquet[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType])
         ...     list(Parquet(path).schema())
         ['id', 'ts']
         """
+        with may_require_extras():
+            import pyarrow.parquet as pq
+
         arrow_schema = pq.ParquetFile(source=self.path).schema_arrow
 
         return {name: arrow_schema.field(name).type for name in arrow_schema.names}  # pyright: ignore[reportUnknownMemberType]
@@ -309,6 +321,9 @@ class Parquet[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType])
         ...     Parquet(path).row_count()
         7
         """
+        with may_require_extras():
+            import pyarrow.parquet as pq
+
         return pq.ParquetFile(source=self.path).metadata.num_rows
 
     def iter_chunks(
@@ -369,6 +384,10 @@ class Parquet[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType])
         ...     sum(sizes)
         5
         """
+        with may_require_extras():
+            import pyarrow as pa
+            import pyarrow.parquet as pq
+
         parquet_file = pq.ParquetFile(source=self.path)
 
         for batch in parquet_file.iter_batches(  # pyright: ignore[reportUnknownMemberType]
@@ -378,6 +397,9 @@ class Parquet[DataFrameType: DataFrames = pd.DataFrame](DataFile[DataFrameType])
             table = pa.Table.from_batches(batches=[batch])
 
             if self.backend.name == "polars":
+                with may_require_extras():
+                    import polars as pl
+
                 yield self.backend.cast(cast("pl.DataFrame", pl.from_arrow(data=table)))  # pyright: ignore[reportUnknownMemberType]
 
             yield self.backend.cast(table.to_pandas())  # pyright: ignore[reportUnknownMemberType]

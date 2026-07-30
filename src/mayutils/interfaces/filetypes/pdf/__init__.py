@@ -39,10 +39,6 @@ from pathlib import Path
 
 from mayutils.core.extras import may_require_extras
 
-with may_require_extras():
-    import fitz
-    from PIL import Image
-
 
 class Pdf:
     """
@@ -239,6 +235,10 @@ class Pdf:
         ...     result is None
         True
         """
+        with may_require_extras():
+            import fitz
+            from PIL import Image
+
         doc = fitz.open(filename=str(self.pdf_path))
 
         for page_idx in range(doc.page_count):  # pyright: ignore[reportUnknownArgumentType, reportUnknownMemberType]
@@ -248,7 +248,7 @@ class Pdf:
             img = Image.open(io.BytesIO(initial_bytes=pix.tobytes(output="png")))  # pyright: ignore[reportUnknownArgumentType]
 
             try:
-                from IPython.display import display  # pyright: ignore[reportUnknownVariableType] # noqa: PLC0415
+                from IPython.display import display  # pyright: ignore[reportUnknownVariableType]
 
                 display(img)
 

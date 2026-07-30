@@ -33,20 +33,26 @@ Examples
 True
 """
 
-from collections.abc import Callable
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from mayutils.core.extras import may_require_extras
 
 with may_require_extras():
     import numpy as np
     from numba import njit  # pyright: ignore[reportUnknownVariableType, reportAttributeAccessIssue]
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from numpy.typing import NDArray
 
 
 @njit(cache=True)  # pyright: ignore[reportUntypedFunctionDecorator]
 def _choice_replacement_uniform(
     arr: NDArray[np.float64],
-    rng: "np.random.Generator",
+    rng: np.random.Generator,
     size: tuple[int, ...],
 ) -> NDArray[np.float64]:
     """
@@ -93,7 +99,7 @@ def _choice_replacement_uniform(
 def _choice_replacement_weighted(
     arr: NDArray[np.float64],
     p: NDArray[np.float64],
-    rng: "np.random.Generator",
+    rng: np.random.Generator,
     size: tuple[int, ...],
 ) -> NDArray[np.float64]:
     """

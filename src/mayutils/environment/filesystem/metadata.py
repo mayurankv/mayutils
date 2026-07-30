@@ -37,8 +37,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from mayutils.objects.datetime import DateTime
-
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -105,6 +103,9 @@ def is_file_stale(
     """
     if ttl is None:
         return False
+
+    from mayutils.objects.datetime import DateTime
+
     mtime = DateTime.from_timestamp(path.stat().st_mtime)
     return (DateTime.now() - mtime) > ttl
 

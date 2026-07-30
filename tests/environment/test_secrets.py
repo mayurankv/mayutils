@@ -73,7 +73,7 @@ class TestLoadSecretsValues:
         env_file = write_env(tmp_path / ".env", "FROM_FILE=value\n")
 
         load_secrets(env_file=env_file)
-        import os  # noqa: PLC0415
+        import os
 
         assert os.environ["FROM_FILE"] == "value"
 
@@ -99,7 +99,7 @@ class TestLoadSecretsValues:
         env_file = write_env(tmp_path / ".env", f"{line}\n")
 
         load_secrets(env_file=env_file)
-        import os  # noqa: PLC0415
+        import os
 
         assert os.environ[key] == expected
 
@@ -117,7 +117,7 @@ class TestLoadSecretsPrecedence:
         env_file = write_env(tmp_path / ".env", "PRECEDENCE=from-file\n")
 
         load_secrets(env_file=env_file)
-        import os  # noqa: PLC0415
+        import os
 
         assert os.environ["PRECEDENCE"] == "from-shell"
 
@@ -132,7 +132,7 @@ class TestLoadSecretsPrecedence:
         env_file = write_env(tmp_path / ".env", "KEEP=file\nFRESH=file\n")
 
         load_secrets(env_file=env_file)
-        import os  # noqa: PLC0415
+        import os
 
         assert os.environ["KEEP"] == "shell"
         assert os.environ["FRESH"] == "file"
@@ -149,10 +149,10 @@ class TestLoadSecretsDiscovery:
         """With ``env_file=None`` the path is resolved via :func:`dotenv.find_dotenv`."""
         monkeypatch.delenv("DISCOVERED", raising=False)
         discovered = write_env(tmp_path / ".env", "DISCOVERED=yes\n")
-        monkeypatch.setattr(secrets, "find_dotenv", lambda: str(discovered))
+        monkeypatch.setattr("dotenv.find_dotenv", lambda: str(discovered))
 
         assert load_secrets() is True
-        import os  # noqa: PLC0415
+        import os
 
         assert os.environ["DISCOVERED"] == "yes"
 
@@ -161,6 +161,6 @@ class TestLoadSecretsDiscovery:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """When discovery finds nothing the loader degrades to a ``False`` no-op."""
-        monkeypatch.setattr(secrets, "find_dotenv", lambda: "")
+        monkeypatch.setattr("dotenv.find_dotenv", lambda: "")
 
         assert load_secrets() is False

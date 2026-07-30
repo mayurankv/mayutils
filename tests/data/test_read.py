@@ -4,27 +4,38 @@ from __future__ import annotations
 
 import warnings
 from pathlib import Path
+from typing import TYPE_CHECKING, cast
 from unittest.mock import patch
 
+import pandas as pd
 import pytest
+from jinja2.exceptions import UndefinedError
 from pendulum import Duration
 
 from mayutils.data.read import (
     QueryInputWarning,
     looks_like_sql_path,
+    read_query,
     render_query,
+    stream_query,
 )
 from mayutils.environment.memoisation.clearing import clear_cache
 from mayutils.environment.memoisation.files import make_cache_stem
+from mayutils.objects.dataframes.backends import DataFrames
 from mayutils.objects.types import SQL
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from mayutils.objects.dataframes.backends import Backend
 
 
 class TestRenderQuery:
     """Tests for :func:`render_query`."""
 
-    def test_inline_sql_with_format_kwargs(self) -> None:
-        """Format kwargs are interpolated into the inline SQL template."""
-        result = render_query(SQL("SELECT * FROM {table}"), table="loans")
+    def test_inline_sql_with_template_kwargs(self) -> None:
+        """Jinja kwargs are interpolated into the inline SQL template."""
+        result = render_query(SQL("SELECT * FROM {{ table }}"), template_kwargs={"table": "loans"})
         assert result == "SELECT * FROM loans"
 
     def test_inline_sql_no_kwargs(self) -> None:
@@ -33,11 +44,24 @@ class TestRenderQuery:
         assert result == "SELECT 1"
 
     def test_path_dispatches_to_format_query(self) -> None:
-        """A Path argument is resolved via format_query, not str.format."""
+        """A Path argument is resolved via format_query, not inline rendering."""
         with patch("mayutils.data.read.format_query", return_value="mocked") as mock:
             result = render_query(Path("loans_summary"))
         mock.assert_called_once()
         assert result == "mocked"
+
+    def test_missing_variable_raises_undefined_error(self) -> None:
+        """A template variable absent from template_kwargs raises UndefinedError."""
+        with pytest.raises(UndefinedError):
+            render_query(SQL("SELECT * FROM {{ table }}"))
+
+    def test_inline_for_loop_expansion(self) -> None:
+        """A Jinja for loop in an inline template expands to the exact SQL string."""
+        result = render_query(
+            SQL("SELECT {% for col in cols %}{{ col }}{% if not loop.last %}, {% endif %}{% endfor %} FROM loans"),
+            template_kwargs={"cols": ("loan_id", "amount")},
+        )
+        assert result == "SELECT loan_id, amount FROM loans"
 
 
 class TestQueryInputWarning:
@@ -166,7 +190,7 @@ class TestMakeCacheStem:
             SQL("SELECT * FROM loans WHERE x = 1"),
             cache_description=None,
             ttl=None,
-            format_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key="abcdef123456789",
         )
@@ -178,7 +202,7 @@ class TestMakeCacheStem:
             Path("loans/by_region"),
             cache_description=None,
             ttl=None,
-            format_kwargs={"region": "London"},
+            template_kwargs={"region": "London"},
             cache_extra=None,
             key="abcdef123456789",
         )
@@ -191,7 +215,7 @@ class TestMakeCacheStem:
             SQL("SELECT 1"),
             cache_description="daily volume snapshot",
             ttl=None,
-            format_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key="abcdef123456789",
         )
@@ -203,7 +227,7 @@ class TestMakeCacheStem:
             SQL("SELECT 1"),
             cache_description=None,
             ttl=Duration(hours=6),
-            format_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key="abcdef123456789",
         )
@@ -215,7 +239,7 @@ class TestMakeCacheStem:
             SQL("SELECT 1"),
             cache_description=None,
             ttl=Duration(minutes=30),
-            format_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key="abcdef123456789",
         )
@@ -227,7 +251,7 @@ class TestMakeCacheStem:
             SQL("SELECT 1"),
             cache_description=None,
             ttl=Duration(days=2),
-            format_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key="abcdef123456789",
         )
@@ -239,7 +263,7 @@ class TestMakeCacheStem:
             SQL("SELECT 1"),
             cache_description=None,
             ttl=None,
-            format_kwargs={},
+            template_kwargs={},
             cache_extra={"warehouse": "analytics_m"},
             key="abcdef123456789",
         )
@@ -252,7 +276,7 @@ class TestMakeCacheStem:
             SQL("SELECT 1"),
             cache_description=None,
             ttl=None,
-            format_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key=key,
         )
@@ -264,7 +288,7 @@ class TestClearCache:
 
     def test_clears_memory_stores(self) -> None:
         """Cache registry stores passed to clear_cache are flushed."""
-        from mayutils.environment.memoisation.memory import MemoryStore  # noqa: PLC0415
+        from mayutils.environment.memoisation.memory import MemoryStore
 
         store: MemoryStore[int] = MemoryStore()
         store.put("test_key", value=42)
@@ -302,3 +326,74 @@ class TestClearCache:
 
         deleted = clear_cache(ttl=None, cache_folder=tmp_path)
         assert len(deleted) == 1
+
+
+class TestTemporalParsing:
+    """Tests for automatic temporal parsing in :func:`read_query` and :func:`stream_query`."""
+
+    def test_read_query_parses_temporal_columns(self) -> None:
+        """String date columns from the reader come back as datetime64."""
+
+        def reader[DataFrameType: DataFrames = pd.DataFrame](
+            query: str,
+            /,
+            *,
+            backend: Backend[DataFrameType] | None = None,
+        ) -> DataFrameType:
+            assert "SELECT" in query
+            assert backend is not None
+            return cast("DataFrameType", pd.DataFrame({"d": ["2026-01-01", "2026-06-11"]}))
+
+        result = read_query(SQL("SELECT 1"), reader=reader, persist=None)
+        assert result["d"].dtype == "datetime64[ns]"
+
+    def test_read_query_parse_temporal_opt_out(self) -> None:
+        """parse_temporal=False preserves raw string columns."""
+
+        def reader[DataFrameType: DataFrames = pd.DataFrame](
+            query: str,
+            /,
+            *,
+            backend: Backend[DataFrameType] | None = None,
+        ) -> DataFrameType:
+            assert "SELECT" in query
+            assert backend is not None
+            return cast("DataFrameType", pd.DataFrame({"d": ["2026-01-01"]}))
+
+        result = read_query(SQL("SELECT 1"), reader=reader, persist=None, parse_temporal=False)
+        assert result["d"].dtype == object
+
+    def test_read_query_parses_temporal_columns_with_cache(self) -> None:
+        """The in-memory cached path also returns parsed frames."""
+
+        def reader[DataFrameType: DataFrames = pd.DataFrame](
+            query: str,
+            /,
+            *,
+            backend: Backend[DataFrameType] | None = None,
+        ) -> DataFrameType:
+            assert "SELECT" in query
+            assert backend is not None
+            return cast("DataFrameType", pd.DataFrame({"d": ["2026-01-01", "2026-06-11"]}))
+
+        first = read_query(SQL("SELECT 1 AS c1"), reader=reader, persist=False)
+        second = read_query(SQL("SELECT 1 AS c1"), reader=reader, persist=False)
+        assert first["d"].dtype == "datetime64[ns]"
+        assert second["d"].dtype == "datetime64[ns]"
+
+    def test_stream_query_parses_each_chunk(self) -> None:
+        """Every streamed chunk is temporally parsed."""
+
+        def streamer[DataFrameType: DataFrames = pd.DataFrame](
+            query: str,
+            /,
+            *,
+            backend: Backend[DataFrameType] | None = None,
+        ) -> Iterator[DataFrameType]:
+            assert "SELECT" in query
+            assert backend is not None
+            yield cast("DataFrameType", pd.DataFrame({"d": ["2026-01-01"]}))
+            yield cast("DataFrameType", pd.DataFrame({"d": ["2026-06-11"]}))
+
+        chunks = list(stream_query(SQL("SELECT 1"), streamer=streamer))
+        assert all(chunk["d"].dtype == "datetime64[ns]" for chunk in chunks)

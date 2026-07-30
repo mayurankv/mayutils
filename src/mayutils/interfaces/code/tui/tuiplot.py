@@ -47,45 +47,35 @@ from mayutils.interfaces.filetypes import DataFile
 from mayutils.visualisation.graphs.plotly import Line, Plot, Scatter, set_template
 
 with may_require_extras():
-    import kaleido
-    import pandas as pd
-    import plotly.graph_objects as go
-    import textual_image.renderable  # pyright: ignore[reportUnusedImport] # noqa: F401
-    import typer
-    import yaml
-    from PIL import Image as PILImage
     from rich.console import Console
-    from rich.traceback import install as rich_traceback_install
     from textual import work
     from textual.binding import Binding
-    from textual.containers import Horizontal, Vertical, VerticalScroll
     from textual.widgets import (
-        Button,
         DataTable,
-        Header,
         Input,
-        Label,
-        Rule,
         Select,
         Switch,
-        TabbedContent,
-        TabPane,
         TextArea,
     )
     from textual_image.widget import Image
+    from typer import Exit, Option, Typer
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
+    import pandas as pd
+    import plotly.graph_objects as go
+    from PIL import Image as PILImage
     from textual.app import ComposeResult
     from textual.binding import BindingType
+    from textual.widgets import Button
 
     from mayutils.data.read import QueryReader
 
 
 console = Console(stderr=True)
 
-app = typer.Typer(
+app = Typer(
     add_completion=False,
     pretty_exceptions_enable=False,
 )
@@ -165,7 +155,7 @@ def die(
     """
     console.print(f"[bold red]error:[/bold red] {message}")
 
-    raise typer.Exit(code)
+    raise Exit(code)
 
 
 def load_spec(
@@ -204,10 +194,13 @@ def load_spec(
     >>> load_spec(None)
     {}
     """
+    with may_require_extras():
+        import yaml
+
     if path is None:
         return {}
 
-    data = cast("object", yaml.safe_load(path.read_text(encoding="utf-8")))
+    data = cast("object", yaml.safe_load(stream=path.read_text(encoding="utf-8")))
     if data is None:
         return {}
 
@@ -261,6 +254,9 @@ def eval_transform(
     >>> eval_transform(df, expression="df.head(2)")["a"].tolist()
     [1, 2]
     """
+    with may_require_extras():
+        import pandas as pd
+
     result = eval(expression, {"__builtins__": {}}, {"df": df.copy(), "pd": pd})  # noqa: S307
 
     if isinstance(result, pd.Series):
@@ -382,6 +378,9 @@ def make_figure(
     >>> type(make_figure(df, plot=PlotType.line, x="x")).__name__
     'Plot'
     """
+    with may_require_extras():
+        import plotly.graph_objects as go
+
     df = data.copy()
 
     if x == "index" or (x is None and df.index.name is not None):
@@ -460,6 +459,9 @@ def render_png(
     >>> from mayutils.interfaces.code.tui.tuiplot import render_png
     >>> png = render_png(figure, width=800, height=600, scale=2.0)  # doctest: +SKIP
     """
+    with may_require_extras():
+        import kaleido
+
     kaleido.get_chrome_sync()
 
     return figure.to_image(
@@ -745,6 +747,10 @@ class TuiPlotApp(TransparentApp[None]):
         >>> from mayutils.interfaces.code.tui.tuiplot import TuiPlotApp
         >>> widgets = list(TuiPlotApp().compose())  # doctest: +SKIP
         """
+        with may_require_extras():
+            from textual.containers import Horizontal, Vertical, VerticalScroll
+            from textual.widgets import Button, Header, Label, Rule, TabbedContent, TabPane
+
         yield Header()
         with VerticalScroll(id="controls-panel"), Vertical(id="main-content"), TabbedContent():
             with TabPane("Query", id="query-tab"):
@@ -1122,6 +1128,9 @@ class TuiPlotApp(TransparentApp[None]):
         >>> from mayutils.interfaces.code.tui.tuiplot import TuiPlotApp
         >>> TuiPlotApp().action_run_query()  # doctest: +SKIP
         """
+        with may_require_extras():
+            from PIL import Image as PILImage
+
         try:
             self.call_from_thread(self.set_status, "Loading data...")
             df = load_data(
@@ -1211,67 +1220,67 @@ def tui(
 @app.command()
 def main(
     *,
-    sql: str | None = typer.Option(
+    sql: str | None = Option(
         None,
         "--sql",
         help="SQL query string.",
     ),
-    source: Path | None = typer.Option(  # noqa: B008
+    source: Path | None = Option(  # noqa: B008
         None,
         "--file",
         help="Path to a .sql query file or a data file (.csv, .parquet, ...).",
     ),
-    spec: Path | None = typer.Option(  # noqa: B008
+    spec: Path | None = Option(  # noqa: B008
         None,
         "--spec",
         help="Path to a YAML spec file.",
     ),
-    transform: str | None = typer.Option(
+    transform: str | None = Option(
         None,
         "--transform",
         help="Python expression using df, returning DataFrame/Series.",
     ),
-    plot: PlotType | None = typer.Option(  # noqa: B008
+    plot: PlotType | None = Option(  # noqa: B008
         None,
         "--plot",
         help="Plot type.",
     ),
-    x: str | None = typer.Option(
+    x: str | None = Option(
         None,
         "--x",
         help='X column name, or "index".',
     ),
-    width: int | None = typer.Option(
+    width: int | None = Option(
         None,
         "--width",
         help="Image width in pixels (default: terminal width).",
     ),
-    height: int | None = typer.Option(
+    height: int | None = Option(
         None,
         "--height",
         help="Image height in pixels.",
     ),
-    scale: float | None = typer.Option(
+    scale: float | None = Option(
         None,
         "--scale",
         help="Image scale factor.",
     ),
-    env_file: Path | None = typer.Option(  # noqa: B008
+    env_file: Path | None = Option(  # noqa: B008
         None,
         "--env-file",
         help="Dotenv file used to build the environment reader.",
     ),
-    reader_args: str | None = typer.Option(
+    reader_args: str | None = Option(
         None,
         "--reader-args",
         help="YAML/JSON mapping of overrides forwarded to get_env_reader.",
     ),
-    print_head: bool = typer.Option(
+    print_head: bool = Option(
         False,  # noqa: FBT003
         "--print-head",
         help="Print df.head().",
     ),
-    print_cols: bool = typer.Option(
+    print_cols: bool = Option(
         False,  # noqa: FBT003
         "--print-cols",
         help="Print column names.",
@@ -1327,10 +1336,14 @@ def main(
     >>> from mayutils.interfaces.code.tui.tuiplot import main
     >>> main(sql="SELECT 1 AS one", print_head=True)  # doctest: +SKIP
     """
+    with may_require_extras():
+        import yaml
+        from rich.traceback import install as rich_traceback_install
+
     rich_traceback_install(show_locals=True, extra_lines=3)
     set_template(template="base")
 
-    reader_kwargs_data: object = yaml.safe_load(reader_args) if reader_args else {}
+    reader_kwargs_data: object = yaml.safe_load(stream=reader_args) if reader_args else {}
     if not isinstance(reader_kwargs_data, dict):
         die("--reader-args must be a YAML/JSON mapping")
     reader_kwargs = cast("dict[str, Any]", reader_kwargs_data)

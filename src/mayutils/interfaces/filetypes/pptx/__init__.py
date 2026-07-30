@@ -48,12 +48,6 @@ from mayutils.interfaces.filetypes.pptx.markdown import add_markdown_to_text_fra
 from mayutils.interfaces.filetypes.pptx.units import Length
 from mayutils.objects.colours import Colour
 
-with may_require_extras():
-    import six
-    from pptx import Presentation as Init
-    from pptx.dml.color import RGBColor
-    from pptx.util import Pt
-
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
     from types import TracebackType
@@ -375,6 +369,9 @@ class Presentation:
         ...     pres.template.suffix
         '.pptx'
         """
+        with may_require_extras():
+            from pptx import Presentation as Init
+
         self.template = Path(template)
         if not self.template.exists():
             msg = f"Template file {self.template} does not exist."
@@ -757,7 +754,7 @@ class Presentation:
         1
         """
         with may_require_extras():
-            from pymupdf import Document, Matrix  # noqa: PLC0415
+            from pymupdf import Document, Matrix
 
         requested = list(slide_numbers) if slide_numbers is not None else list(range(1, len(self.slides) + 1))
 
@@ -1500,6 +1497,10 @@ class Presentation:
         """
         msg = f"Copying slides is not implemented yet. Can't copy slide {slide_number}"
         raise NotImplementedError(msg)
+
+        with may_require_extras():
+            import six
+
         slide_idx = slide_number - 1
         template_slide = self.slides[slide_idx]
 
@@ -1923,6 +1924,10 @@ class Presentation:
         ...     pres.insert_text("Hello", textbox=box, bold=True) is pres
         True
         """
+        with may_require_extras():
+            from pptx.dml.color import RGBColor
+            from pptx.util import Pt
+
         if colour is not None and not isinstance(colour, Colour):
             colour = Colour.parse(colour)
         if background_colour is not None and not isinstance(background_colour, Colour):
@@ -1959,7 +1964,7 @@ class Presentation:
         if link is not None:
             msg = "Hyperlinks are not implemented yet."
             raise NotImplementedError(msg)
-            from pptx.util import URI  # noqa: PLC0415
+            from pptx.util import URI
 
             textbox.text_frame.paragraphs[0].hyperlink.address = URI(link)
 

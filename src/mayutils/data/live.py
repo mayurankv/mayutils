@@ -4,22 +4,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Self, cast
 
-from mayutils.core.extras import may_require_extras
 from mayutils.data.queries import QUERIES_FOLDERS
 from mayutils.data.read import render_query
 from mayutils.environment.logging import Logger
 from mayutils.objects.dataframes.backends import Backend, BackendOperations, DataFrames, default_backend
-from mayutils.objects.datetime import DateTime, Interval
-
-with may_require_extras():
-    import pandas as pd
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from pathlib import Path
 
+    import pandas as pd
+
     from mayutils.data.read import QueryReader
-    from mayutils.objects.datetime import Duration
-    from mayutils.objects.types import SQL, SupportsStr
+    from mayutils.objects.datetime import DateTime, Duration, Interval
+    from mayutils.objects.types import SQL
 
 
 logger = Logger.spawn()
@@ -29,14 +27,19 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
     """
     Incrementally pull rows by tracking ``max(cursor_column)``.
 
-    The query template must contain a ``{cursor}`` placeholder. On each
-    update the cursor is formatted into the template and only rows past
-    the previous cursor are fetched.
+    The query template must contain a ``{{ cursor }}`` placeholder. On
+    each update the cursor is rendered into the template and only rows
+    past the previous cursor are fetched. Results are returned exactly
+    as the *reader* produces them: unlike
+    :func:`mayutils.data.read.read_query`, no automatic temporal column
+    parsing is applied, keeping the schema stable across incremental
+    fetches that are concatenated together.
 
     Parameters
     ----------
     query
-        SQL string or path to a ``.sql`` template containing ``{cursor}``.
+        SQL string or path to a ``.sql`` template containing
+        ``{{ cursor }}``.
     cursor_column
         Column whose maximum is tracked as the cursor.
     initial_cursor
@@ -55,9 +58,10 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         :meth:`~datetime.datetime.strftime` format for datetime cursors.
     queries_folders
         Directories searched when *query* is a filename.
-    **fixed_format_kwargs
-        Extra keyword arguments substituted into the query template on
-        every call.
+    template_kwargs
+        Jinja2 template variables rendered into the query template on
+        every call.  The key ``cursor`` is injected per-call by
+        :meth:`fetch` and overrides any value stored here.
 
     See Also
     --------
@@ -82,7 +86,7 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         update_frequency: Duration | None = None,
         time_format: str = "%Y-%m-%d %H:%M:%S",
         queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
-        **fixed_format_kwargs: SupportsStr,
+        template_kwargs: Mapping[str, object] | None = None,
     ) -> None:
         """
         Initialise the streaming query and perform the first fetch.
@@ -94,7 +98,7 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         ----------
         query
             SQL string or path to a ``.sql`` template containing
-            ``{cursor}``.
+            ``{{ cursor }}``.
         cursor_column
             Column whose maximum is tracked as the cursor.
         initial_cursor
@@ -115,9 +119,10 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
             cursors.
         queries_folders
             Directories searched when *query* is a filename.
-        **fixed_format_kwargs
-            Extra keyword arguments substituted into the query template
-            on every call.
+        template_kwargs
+            Jinja2 template variables rendered into the query template
+            on every call.  The key ``cursor`` is injected per-call by
+            :meth:`fetch` and overrides any value stored here.
 
         See Also
         --------
@@ -127,7 +132,7 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         --------
         >>> from mayutils.data.live import StreamingQuery  # doctest: +SKIP
         >>> sq = StreamingQuery(  # doctest: +SKIP
-        ...     "SELECT * FROM t WHERE id > {cursor}",
+        ...     "SELECT * FROM t WHERE id > {{ cursor }}",
         ...     cursor_column="id",
         ...     initial_cursor=0,
         ...     reader=my_reader,
@@ -142,10 +147,12 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         self.update_frequency = update_frequency
         self.time_format = time_format
         self.queries_folders = queries_folders
-        self.fixed_format_kwargs = fixed_format_kwargs
+        self.template_kwargs: dict[str, object] = dict(template_kwargs or {})
         self.initial_cursor = initial_cursor
 
         self.validate_retention()
+
+        from mayutils.objects.datetime import DateTime
 
         self.cursor_value: Any = initial_cursor
         self.cursor_is_datetime: bool = hasattr(initial_cursor, "strftime")
@@ -208,6 +215,8 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         if not self.should_update(force=force):
             return self
 
+        from mayutils.objects.datetime import DateTime
+
         snapshot = self.data
         try:
             delta = self.fetch()
@@ -248,6 +257,8 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         --------
         >>> sq.reset()  # doctest: +SKIP
         """
+        from mayutils.objects.datetime import DateTime
+
         self._data = self.fetch()
         self.last_updated = DateTime.now()
 
@@ -274,7 +285,7 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         --------
         >>> delta = sq.fetch()  # doctest: +SKIP
         """
-        data = self.read_query(cursor=self.cursor)
+        data = self.read_query(template_kwargs={"cursor": self.cursor})
 
         if len(data) != 0:
             self.cursor_value = BackendOperations.max(data, self.cursor_column, backend=self.backend)
@@ -313,21 +324,23 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         self,
         *,
         default_suffix: str = "sql",
-        **extra_kwargs: SupportsStr,
+        template_kwargs: Mapping[str, object] | None = None,
     ) -> DataFrameType:
         """
         Render and execute the SQL query template.
 
-        Combines *fixed_format_kwargs* with any additional keyword
-        arguments, renders the template, and passes it to *reader*.
+        Merges the per-call *template_kwargs* over the mapping stored at
+        construction (per-call keys win), renders the template, and
+        passes it to *reader*.
 
         Parameters
         ----------
         default_suffix
             File extension appended when *query* is a filename without
             one.
-        **extra_kwargs
-            Additional format arguments merged into the template.
+        template_kwargs
+            Per-call Jinja2 template variables merged over the stored
+            mapping.
 
         Returns
         -------
@@ -339,14 +352,13 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
 
         Examples
         --------
-        >>> df = sq.read_query(cursor="0")  # doctest: +SKIP
+        >>> df = sq.read_query(template_kwargs={"cursor": "0"})  # doctest: +SKIP
         """
         rendered = render_query(
             self.query,
             queries_folders=self.queries_folders,
             default_suffix=default_suffix,
-            **self.fixed_format_kwargs,
-            **extra_kwargs,
+            template_kwargs={**self.template_kwargs, **(template_kwargs or {})},
         )
 
         return self.reader(
@@ -387,6 +399,8 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         if force or self.update_frequency is None:
             return True
 
+        from mayutils.objects.datetime import DateTime
+
         return (DateTime.now() - self.last_updated) > self.update_frequency
 
     def apply_retention(
@@ -409,6 +423,8 @@ class StreamingQuery[DataFrameType: DataFrames = pd.DataFrame]:
         if self.max_age is not None and len(self.data) > 0:
             newest = BackendOperations.max(self.data, self.cursor_column, backend=self.backend)
             if hasattr(newest, "strftime"):
+                from mayutils.objects.datetime import DateTime
+
                 try:
                     cutoff = DateTime.parse(cast("DateTime", newest).strftime(self.time_format)) - self.max_age
 
@@ -464,9 +480,13 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
     """
     Manage a sliding or expanding time window over a SQL query.
 
-    The query template must contain ``{start_timestamp}`` and
-    ``{end_timestamp}`` placeholders. On each update, only the delta
-    since the previous window end is fetched.
+    The query template must contain ``{{ start_timestamp }}`` and
+    ``{{ end_timestamp }}`` placeholders. On each update, only the
+    delta since the previous window end is fetched. Results are
+    returned exactly as the *reader* produces them: unlike
+    :func:`mayutils.data.read.read_query`, no automatic temporal column
+    parsing is applied, keeping the schema stable across windowed
+    fetches that are concatenated together.
 
     When *deduplicate* is ``True``, rows are deduped on *index_column*
     after each concat (keeps last), which handles re-fetched open
@@ -476,7 +496,7 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
     ----------
     query
         SQL string or path to a ``.sql`` template containing
-        ``{start_timestamp}`` and ``{end_timestamp}``.
+        ``{{ start_timestamp }}`` and ``{{ end_timestamp }}``.
     index_column
         Column used for deduplication and rolling-window filtering.
     start_timestamp
@@ -499,9 +519,11 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         :meth:`~datetime.datetime.strftime` format for window boundaries.
     queries_folders
         Directories searched when *query* is a filename.
-    **fixed_format_kwargs
-        Extra keyword arguments substituted into the query template on
-        every call.
+    template_kwargs
+        Jinja2 template variables rendered into the query template on
+        every call.  The keys ``start_timestamp`` and ``end_timestamp``
+        are injected per-call by :meth:`fetch` and override any values
+        stored here.
 
     See Also
     --------
@@ -528,7 +550,7 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         update_frequency: Duration | None = None,
         time_format: str = "%Y-%m-%d",
         queries_folders: tuple[Path, ...] = QUERIES_FOLDERS,
-        **fixed_format_kwargs: SupportsStr,
+        template_kwargs: Mapping[str, object] | None = None,
     ) -> None:
         """
         Initialise the windowed query and perform the first fetch.
@@ -540,7 +562,7 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         ----------
         query
             SQL string or path to a ``.sql`` template containing
-            ``{start_timestamp}`` and ``{end_timestamp}``.
+            ``{{ start_timestamp }}`` and ``{{ end_timestamp }}``.
         index_column
             Column used for deduplication and rolling-window filtering.
         start_timestamp
@@ -565,9 +587,11 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
             boundaries.
         queries_folders
             Directories searched when *query* is a filename.
-        **fixed_format_kwargs
-            Extra keyword arguments substituted into the query template
-            on every call.
+        template_kwargs
+            Jinja2 template variables rendered into the query template
+            on every call.  The keys ``start_timestamp`` and
+            ``end_timestamp`` are injected per-call by :meth:`fetch`
+            and override any values stored here.
 
         See Also
         --------
@@ -577,7 +601,7 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         --------
         >>> from mayutils.data.live import WindowedQuery  # doctest: +SKIP
         >>> wq = WindowedQuery(  # doctest: +SKIP
-        ...     "SELECT * FROM t WHERE ts BETWEEN '{start_timestamp}' AND '{end_timestamp}'",
+        ...     "SELECT * FROM t WHERE ts BETWEEN '{{ start_timestamp }}' AND '{{ end_timestamp }}'",
         ...     index_column="ts",
         ...     start_timestamp=DateTime.now(),
         ...     reader=my_reader,
@@ -594,10 +618,12 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         self.update_frequency = update_frequency
         self.time_format = time_format
         self.queries_folders = queries_folders
-        self.fixed_format_kwargs = fixed_format_kwargs
+        self.template_kwargs: dict[str, object] = dict(template_kwargs or {})
         self.start_timestamp = start_timestamp
 
         self.validate_retention()
+
+        from mayutils.objects.datetime import DateTime, Interval
 
         self._interval: Interval[DateTime] = Interval(
             start=start_timestamp,
@@ -738,6 +764,8 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         if not self.should_update(force=force):
             return self
 
+        from mayutils.objects.datetime import DateTime
+
         snapshot = self.data
         snapshot_interval = self.interval
         try:
@@ -794,6 +822,8 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         --------
         >>> wq.reset()  # doctest: +SKIP
         """
+        from mayutils.objects.datetime import DateTime, Interval
+
         if start_timestamp is not None:
             self.start_timestamp = start_timestamp
 
@@ -840,9 +870,13 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         """
         if initial:
             return self.read_query(
-                start_timestamp=self._interval.start.strftime(format=self.time_format),
-                end_timestamp=self._interval.end.strftime(format=self.time_format),
+                template_kwargs={
+                    "start_timestamp": self._interval.start.strftime(format=self.time_format),
+                    "end_timestamp": self._interval.end.strftime(format=self.time_format),
+                },
             )
+
+        from mayutils.objects.datetime import DateTime, Interval
 
         now = DateTime.now()
         previous_end = self._interval.end
@@ -858,8 +892,10 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
             )
 
         delta = self.read_query(
-            start_timestamp=previous_end.strftime(format=self.time_format),
-            end_timestamp=now.strftime(format=self.time_format),
+            template_kwargs={
+                "start_timestamp": previous_end.strftime(format=self.time_format),
+                "end_timestamp": now.strftime(format=self.time_format),
+            },
         )
 
         self._interval = Interval(start=new_start, end=now, absolute=True)
@@ -871,21 +907,23 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         /,
         *,
         default_suffix: str = "sql",
-        **extra_kwargs: SupportsStr,
+        template_kwargs: Mapping[str, object] | None = None,
     ) -> DataFrameType:
         """
         Render and execute the SQL query template.
 
-        Combines *fixed_format_kwargs* with any additional keyword
-        arguments, renders the template, and passes it to *reader*.
+        Merges the per-call *template_kwargs* over the mapping stored at
+        construction (per-call keys win), renders the template, and
+        passes it to *reader*.
 
         Parameters
         ----------
         default_suffix
             File extension appended when *query* is a filename without
             one.
-        **extra_kwargs
-            Additional format arguments merged into the template.
+        template_kwargs
+            Per-call Jinja2 template variables merged over the stored
+            mapping.
 
         Returns
         -------
@@ -898,16 +936,17 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         Examples
         --------
         >>> df = wq.read_query(  # doctest: +SKIP
-        ...     start_timestamp="2024-01-01",
-        ...     end_timestamp="2024-01-02",
+        ...     template_kwargs={
+        ...         "start_timestamp": "2024-01-01",
+        ...         "end_timestamp": "2024-01-02",
+        ...     },
         ... )
         """
         rendered = render_query(
             self.query,
             queries_folders=self.queries_folders,
             default_suffix=default_suffix,
-            **self.fixed_format_kwargs,
-            **extra_kwargs,
+            template_kwargs={**self.template_kwargs, **(template_kwargs or {})},
         )
 
         return self.reader(
@@ -948,6 +987,8 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         if force or self.update_frequency is None:
             return True
 
+        from mayutils.objects.datetime import DateTime
+
         return (DateTime.now() - self.last_updated) > self.update_frequency
 
     def apply_retention(
@@ -970,6 +1011,8 @@ class WindowedQuery[DataFrameType: DataFrames = pd.DataFrame]:
         if self.max_age is not None and len(self.data) > 0:
             newest = BackendOperations.max(self.data, self.index_column, backend=self.backend)
             if hasattr(newest, "strftime"):
+                from mayutils.objects.datetime import DateTime
+
                 try:
                     cutoff = DateTime.parse(cast("DateTime", newest).strftime(self.time_format)) - self.max_age
 

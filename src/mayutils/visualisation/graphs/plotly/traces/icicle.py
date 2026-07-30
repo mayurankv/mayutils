@@ -1,10 +1,14 @@
 """Icicle chart trace built from nested dictionaries."""
 
+from __future__ import annotations
+
 from collections.abc import Mapping
-from typing import Any, Self
+from typing import TYPE_CHECKING, Any, Self
 
 from mayutils.core.extras import may_require_extras
-from mayutils.objects.types import RecursiveMapping
+
+if TYPE_CHECKING:
+    from mayutils.objects.types import RecursiveMapping
 
 with may_require_extras():
     import plotly.graph_objects as go

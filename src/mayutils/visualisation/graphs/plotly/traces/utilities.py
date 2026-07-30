@@ -1,8 +1,11 @@
 """Provide trace-type inspection utilities."""
 
-from typing import cast
+from __future__ import annotations
 
-from mayutils.visualisation.graphs.plotly.charts import Trace
+from typing import TYPE_CHECKING, cast
+
+if TYPE_CHECKING:
+    from mayutils.visualisation.graphs.plotly.charts import Trace
 
 
 def is_trace_3d(

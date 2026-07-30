@@ -37,14 +37,11 @@ from typing import TYPE_CHECKING, Any, Self
 
 from mayutils.core.extras import may_require_extras
 
-with may_require_extras():
-    from googleapiclient.discovery import build  # pyright: ignore[reportUnknownVariableType]
-    from googleapiclient.http import MediaFileUpload
-
 if TYPE_CHECKING:
     from google.oauth2.credentials import Credentials
     from googleapiclient._apis.drive.v3.resources import DriveResource  # pyright: ignore[reportMissingModuleSource]
     from googleapiclient._apis.drive.v3.schemas import File  # pyright: ignore[reportMissingModuleSource]
+    from googleapiclient.http import MediaFileUpload
 
 
 class Drive:
@@ -225,6 +222,9 @@ class Drive:
         >>> isinstance(drive, Drive)  # doctest: +SKIP
         True
         """
+        with may_require_extras():
+            from googleapiclient.discovery import build  # pyright: ignore[reportUnknownVariableType]
+
         drive_service = build(
             serviceName="drive",
             version="v3",
@@ -625,6 +625,9 @@ class Drive:
         >>> meta["mimeType"]  # doctest: +SKIP
         'application/pdf'
         """
+        with may_require_extras():
+            from googleapiclient.http import MediaFileUpload
+
         if not file_path.exists():
             msg = f"File not found: {file_path}"
             raise FileNotFoundError(msg)
@@ -793,7 +796,7 @@ class Drive:
         ... )
         '1a2b3c4d'
         """
-        media, _file_metadata = self._create_media(
+        media, _ = self._create_media(
             file_path,
             folder_id=folder_id,
         )
@@ -802,6 +805,7 @@ class Drive:
             self.files()
             .update(
                 fileId=file_id,
+                body={},
                 supportsAllDrives=True,
                 media_body=media,
             )

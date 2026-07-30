@@ -22,7 +22,7 @@ Examples
 >>> from unittest.mock import MagicMock, patch
 >>> from mayutils.interfaces.filetypes.slides import Slides
 >>> with patch("mayutils.interfaces.filetypes.slides.Drive"):
-...     with patch("mayutils.interfaces.filetypes.slides.build") as mock_build:
+...     with patch("googleapiclient.discovery.build") as mock_build:
 ...         mock_service = MagicMock()
 ...         mock_build.return_value = mock_service
 ...         mock_service.presentations().get().execute.return_value = {
@@ -51,9 +51,6 @@ from typing import TYPE_CHECKING, Any, Self, cast
 from mayutils.core.extras import may_require_extras
 from mayutils.interfaces.cloud.google import Drive
 from mayutils.objects.colours import Colour
-
-with may_require_extras():
-    from googleapiclient.discovery import build  # pyright: ignore[reportUnknownVariableType]
 
 if TYPE_CHECKING:
     from google.oauth2.credentials import Credentials
@@ -694,8 +691,8 @@ class Slides:
             url = self.get_thumbnail_url(slide_number=slide_number)
 
             try:
-                from IPython.core.display import Image  # noqa: PLC0415
-                from IPython.display import display  # pyright: ignore[reportUnknownVariableType] # noqa: PLC0415
+                from IPython.core.display import Image
+                from IPython.display import display  # pyright: ignore[reportUnknownVariableType]
 
                 display(
                     Image(
@@ -866,12 +863,15 @@ class Slides:
         Examples
         --------
         >>> from unittest.mock import MagicMock, patch
-        >>> with patch("mayutils.interfaces.filetypes.slides.build") as mock_build:
+        >>> with patch("googleapiclient.discovery.build") as mock_build:
         ...     mock_build.return_value = MagicMock()
         ...     service = Slides.service_from_creds(MagicMock())
         >>> mock_build.called
         True
         """
+        with may_require_extras():
+            from googleapiclient.discovery import build  # pyright: ignore[reportUnknownVariableType]
+
         slides_service: SlidesResource = build(  # pyright: ignore[reportUnknownVariableType]
             serviceName="slides",
             version="v1",
@@ -926,7 +926,7 @@ class Slides:
         --------
         >>> from unittest.mock import MagicMock, patch
         >>> with patch("mayutils.interfaces.filetypes.slides.Drive"):
-        ...     with patch("mayutils.interfaces.filetypes.slides.build") as mock_build:
+        ...     with patch("googleapiclient.discovery.build") as mock_build:
         ...         mock_service = MagicMock()
         ...         mock_build.return_value = mock_service
         ...         mock_service.presentations().get().execute.return_value = {

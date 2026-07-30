@@ -24,7 +24,7 @@ from pathlib import Path
 from mayutils.core.extras import may_require_extras
 
 with may_require_extras():
-    from typer import Argument, Exit, Option, Typer
+    from typer import Argument, Option, Typer
 
 from mayutils.visualisation.console import CONSOLE
 
@@ -1447,7 +1447,9 @@ def extract_class_own_methods(  # noqa: C901
     for node in ast.iter_child_nodes(tree):
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             import_texts.append(_collect_import_text(node))
-        elif isinstance(node, ast.With):
+        elif isinstance(node, ast.With) or (
+            isinstance(node, ast.If) and isinstance(node.test, ast.Name) and node.test.id == "TYPE_CHECKING"
+        ):
             import_texts.extend(_collect_import_text(child) for child in ast.walk(node) if isinstance(child, (ast.Import, ast.ImportFrom)))
 
     cleaned_imports: list[str] = []
@@ -2737,6 +2739,9 @@ def generate(
     --------
     >>> generate()  # doctest: +SKIP
     """
+    with may_require_extras():
+        from typer import Exit
+
     if generate_stubs(traces_dir=traces_dir, dry_run=dry_run) == 0:
         raise Exit
 

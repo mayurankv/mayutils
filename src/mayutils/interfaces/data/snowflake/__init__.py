@@ -3,9 +3,9 @@ Configure Snowflake connections and expose them to the ``mayutils`` data layer.
 
 This module is the Snowflake adapter within
 :mod:`mayutils.interfaces.data`. It centralises connection identity and
-authentication in a :class:`SnowflakeConfig` model — built directly from
+authentication in a :class:`SnowflakeConfig` model u2014 built directly from
 explicit values or, via :meth:`SnowflakeConfig.from_env`, from
-``SNOWFLAKE_*`` environment variables — and bridges that configuration
+``SNOWFLAKE_*`` environment variables u2014 and bridges that configuration
 into the rest of the library: :meth:`SnowflakeConfig.to_engine_wrapper`
 hands back a :class:`~mayutils.environment.databases.EngineWrapper` built
 through ``snowflake.sqlalchemy.URL``, while :meth:`SnowflakeConfig.reader`
@@ -17,7 +17,7 @@ Snowpark and Modin direct-table helpers (:meth:`SnowflakeConfig.create_snowpark_
 :func:`get_table`, :class:`Table`) are also provided; their heavy,
 optional dependencies are imported lazily so the module stays importable
 without them. No account, warehouse, role or database default is baked
-in — every connection parameter comes from the caller, explicitly or
+in u2014 every connection parameter comes from the caller, explicitly or
 through :meth:`SnowflakeConfig.from_env`.
 
 See Also
@@ -55,20 +55,19 @@ from mayutils.environment.secrets import load_secrets
 from mayutils.objects.dataframes.backends import Backend, DataFrames, default_backend
 
 with may_require_extras():
-    import modin.pandas as mpd
-    import pandas as pd
-    import polars as pl
-    from cryptography.hazmat.backends.openssl import backend
-    from cryptography.hazmat.primitives import serialization
-    from pyarrow import Table as ArrowTable  # pyright: ignore[reportMissingModuleSource]
     from snowflake.connector import SnowflakeConnection
     from snowflake.snowpark.session import Session as SnowparkSession
-    from snowflake.sqlalchemy import URL  # pyright: ignore[reportUnknownVariableType, reportAttributeAccessIssue]
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterator, Mapping, Sequence
 
+    import modin.pandas as mpd
+    import pandas as pd
+    import polars as pl
     from polars._typing import SchemaDict
+    from pyarrow import (
+        Table as ArrowTable,
+    )  # pyright: ignore[reportMissingModuleSource]
     from snowflake.connector.cursor import SnowflakeCursor
 
     from mayutils.data.read import QueryReader, QueryStreamer
@@ -181,6 +180,8 @@ class SnowflakeConfig(BaseModel):
 
     DEFAULT_CONNECTION_ARGUMENTS: ClassVar[dict[str, Any]] = {
         "disable_ocsp_checks": True,
+        "client_session_keep_alive": True,
+        "client_store_temporary_credential": True,
         "session_parameters": {
             "QUERY_TAG": json.dumps({}),
         },
@@ -203,14 +204,15 @@ class SnowflakeConfig(BaseModel):
     def from_env(
         cls,
         *,
-        env_file: Path | str | None | Literal[False] = ".env",
+        env_file: Path | str | Literal[False] | None = ".env",
+        **overrides: Any,  # noqa: ANN401
     ) -> Self:
         """
         Build a configuration from ``SNOWFLAKE_*`` environment variables.
 
         Loads *env_file* into the process environment (when given) and then
         reads one variable per field, prefixed with ``SNOWFLAKE_`` and
-        upper-cased — so ``account`` is read from ``SNOWFLAKE_ACCOUNT`` and
+        upper-cased u2014 so ``account`` is read from ``SNOWFLAKE_ACCOUNT`` and
         ``schema`` (the ``schema_`` alias) from ``SNOWFLAKE_SCHEMA``. Empty
         or unset variables are skipped, leaving field defaults in place, and
         the same validation as direct construction applies, so a missing
@@ -221,6 +223,9 @@ class SnowflakeConfig(BaseModel):
         env_file
             Dotenv file loaded before reading the environment. ``None``
             reads the existing environment without loading a file.
+        **overrides
+            Extra field values, keyed by field name or alias, overriding those
+            read from the environment.
 
         Returns
         -------
@@ -248,7 +253,7 @@ class SnowflakeConfig(BaseModel):
 
         logger.debug(f"Loaded Snowflake settings {sorted(values)} from the environment")
 
-        return cls.model_validate(values)
+        return cls.model_validate(values).update(**overrides)
 
     def update(
         self,
@@ -300,8 +305,8 @@ class SnowflakeConfig(BaseModel):
         """
         Decrypt and normalise the configured private key.
 
-        Reads the key material from :attr:`private_key` — inline or from a
-        file path — decrypts it with :attr:`private_key_password` according
+        Reads the key material from :attr:`private_key` u2014 inline or from a
+        file path u2014 decrypts it with :attr:`private_key_password` according
         to the configured :class:`Authentication` member, and re-serialises
         it as unencrypted PKCS#8 DER, the form the Snowflake connector
         expects. When no private key is configured, as under browser
@@ -329,6 +334,10 @@ class SnowflakeConfig(BaseModel):
         >>> config.unencrypted_private_key is None
         True
         """
+        with may_require_extras():
+            from cryptography.hazmat.backends.openssl import backend
+            from cryptography.hazmat.primitives import serialization
+
         if self.private_key is None:
             return None
 
@@ -443,11 +452,11 @@ class SnowflakeConfig(BaseModel):
         >>> config.url.startswith("snowflake://")
         True
         """
-        return cast(
-            "str",
-            URL(
-                **self.connection_parameters,
-            ),
+        with may_require_extras():
+            from snowflake.sqlalchemy import URL  # pyright: ignore[reportUnknownVariableType, reportAttributeAccessIssue]
+
+        return URL(  # pyright: ignore[reportUnknownVariableType]
+            **self.connection_parameters,
         )
 
     def get_connection_arguments(
@@ -487,9 +496,11 @@ class SnowflakeConfig(BaseModel):
         """
         kwargs = self.DEFAULT_CONNECTION_ARGUMENTS | kwargs
 
-        if self.authentication in (Authentication.private_key_pem, Authentication.private_key_der):
+        if self.authentication in (
+            Authentication.private_key_pem,
+            Authentication.private_key_der,
+        ):
             kwargs["private_key"] = self.unencrypted_private_key
-            kwargs["client_session_keep_alive"] = True
 
         return kwargs
 
@@ -635,7 +646,7 @@ class SnowflakeConfig(BaseModel):
         >>> session = SnowflakeConfig.from_env().to_snowpark_session()  # doctest: +SKIP
         """
         with may_require_extras():
-            import snowflake.snowpark.modin.plugin  # pyright: ignore[reportUnusedImport] # noqa: F401, PLC0415
+            import snowflake.snowpark.modin.plugin  # pyright: ignore[reportUnusedImport] # noqa: F401
 
         default_session_kwargs = {
             "telemetry_enabled": False,
@@ -787,7 +798,7 @@ class SnowflakeExtendedConnection(SnowflakeConnection):
 
         Creates the instance with ``__new__`` and copies the base
         connection's state across, so the already-open connection is reused
-        as-is — no new session, login or network round-trip occurs. The
+        as-is u2014 no new session, login or network round-trip occurs. The
         recorded construction keyword arguments are set from ``kwargs``
         rather than recovered from the base connection.
 
@@ -1067,6 +1078,10 @@ class SnowflakeExtendedConnection(SnowflakeConnection):
         >>> connection = SnowflakeConfig.from_env().to_connection()  # doctest: +SKIP
         >>> table = connection.read_arrow("SELECT 1 AS one")  # doctest: +SKIP
         """
+        with may_require_extras():
+            from pyarrow import (
+                Table as ArrowTable,
+            )  # pyright: ignore[reportUnknownVariableType]
         default_read_kwargs: dict[str, Any] = {
             "force_return_table": True,
         }
@@ -1134,6 +1149,9 @@ class SnowflakeExtendedConnection(SnowflakeConnection):
         >>> connection = SnowflakeConfig.from_env().to_connection()  # doctest: +SKIP
         >>> df = connection.read_polars("SELECT 1 AS one")  # doctest: +SKIP
         """
+        with may_require_extras():
+            import polars as pl
+
         table = self.read_arrow(
             query,
             lower_case=lower_case,
@@ -1481,6 +1499,9 @@ class SnowflakeExtendedConnection(SnowflakeConnection):
         >>> for df in connection.stream_polars("SELECT 1 AS one"):  # doctest: +SKIP
         ...     print(df.shape)
         """
+        with may_require_extras():
+            import polars as pl
+
         for table in self.stream_arrow(
             query,
             lower_case=lower_case,
@@ -1634,9 +1655,10 @@ class SnowparkExtendedSession(SnowparkSession):
     queries and tables (:meth:`query_to_dataframe`,
     :meth:`table_to_dataframe`), concurrent fan-out of multiple reads
     (:meth:`read_concurrent_queries`), temporary switching of role,
-    warehouse, database and schema (:meth:`using`) and bridges back to the
-    connector and configuration layers (:meth:`to_connection`,
-    :meth:`to_config`). Instances are normally produced by
+    warehouse, database and schema (:meth:`using`), bridges into the shared
+    ``read``/``stream`` data layer (:meth:`to_reader`, :meth:`to_streamer`)
+    and bridges back to the connector and configuration layers
+    (:meth:`to_connection`, :meth:`to_config`). Instances are normally produced by
     :meth:`SnowflakeConfig.to_snowpark_session`, which retypes the session
     built by the Snowpark builder via :meth:`from_base`.
 
@@ -1662,8 +1684,8 @@ class SnowparkExtendedSession(SnowparkSession):
         Wrap an existing base Snowpark session in the extended subclass.
 
         Creates the instance with ``__new__`` and copies the base session's
-        state across, so the live session — including its underlying
-        connection — is reused as-is and no new session is established.
+        state across, so the live session u2014 including its underlying
+        connection u2014 is reused as-is and no new session is established.
         This is how :meth:`SnowflakeConfig.to_snowpark_session` retypes the
         session produced by the Snowpark builder.
 
@@ -1766,6 +1788,9 @@ class SnowparkExtendedSession(SnowparkSession):
         /,
         *,
         lower_case: bool = True,
+        index_col: str | Sequence[str] | None = None,
+        columns: Sequence[str] | None = None,
+        enforce_ordering: bool = True,
     ) -> mpd.DataFrame:
         """
         Run a query and return the result as a Modin dataframe.
@@ -1782,6 +1807,14 @@ class SnowparkExtendedSession(SnowparkSession):
             SQL text, or a bare table name, to read.
         lower_case
             Whether to lower-case the returned column names.
+        index_col
+            Column name or names to use as the dataframe index; ``None``
+            leaves the default integer index in place.
+        columns
+            Subset of column names to include in the result; ``None``
+            returns all columns.
+        enforce_ordering
+            Whether to enforce the result ordering from Snowflake.
 
         Returns
         -------
@@ -1798,7 +1831,23 @@ class SnowparkExtendedSession(SnowparkSession):
         >>> session = SnowflakeConfig.from_env().to_snowpark_session()  # doctest: +SKIP
         >>> df = session.query_to_dataframe("SELECT 1 AS one")  # doctest: +SKIP
         """
-        df = cast("mpd.DataFrame", mpd.read_snowflake(query))  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
+        with may_require_extras():
+            import modin.pandas as mpd
+
+        if index_col is not None and not isinstance(index_col, str):
+            index_col = list(map(str.lower, index_col)) if lower_case else list(index_col)
+        if columns is not None:
+            columns = list(map(str.lower, columns)) if lower_case else list(columns)
+
+        df = cast(
+            "mpd.DataFrame",
+            mpd.read_snowflake(  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
+                query,
+                index_col=index_col,
+                columns=columns,
+                enforce_ordering=enforce_ordering,
+            ),
+        )
 
         if lower_case:
             df.columns = df.columns.str.lower()
@@ -1811,6 +1860,9 @@ class SnowparkExtendedSession(SnowparkSession):
         /,
         *,
         lower_case: bool = True,
+        index_col: str | Sequence[str] | None = None,
+        columns: Sequence[str] | None = None,
+        enforce_ordering: bool = True,
     ) -> mpd.DataFrame:
         """
         Read a whole table as a Modin dataframe.
@@ -1826,6 +1878,14 @@ class SnowparkExtendedSession(SnowparkSession):
             Name of the table to read.
         lower_case
             Whether to lower-case the returned column names.
+        index_col
+            Column name or names to use as the dataframe index; ``None``
+            leaves the default integer index in place.
+        columns
+            Subset of column names to include in the result; ``None``
+            returns all columns.
+        enforce_ordering
+            Whether to enforce the result ordering from Snowflake.
 
         Returns
         -------
@@ -1844,6 +1904,123 @@ class SnowparkExtendedSession(SnowparkSession):
         return self.query_to_dataframe(
             table,
             lower_case=lower_case,
+            index_col=index_col,
+            columns=columns,
+            enforce_ordering=enforce_ordering,
+        )
+
+    def to_reader(
+        self,
+        /,
+        *,
+        lower_case: bool = True,
+        read_kwargs: Mapping[str, Any] | None = None,
+        execute_kwargs: Mapping[str, Any] | None = None,
+        **kwargs: Any,  # noqa: ANN401
+    ) -> QueryReader:
+        """
+        Build a backend-aware query reader bound to this session.
+
+        Delegates to the session's underlying connection via
+        :meth:`to_connection`, returning the reader built by
+        :meth:`SnowflakeExtendedConnection.to_reader`. Because the wrapped
+        connection shares this session's live connection, reads honour any
+        role, warehouse, database or schema set inside a :meth:`using`
+        block, and the reader plugs straight into
+        :func:`mayutils.data.read.read_query`. Results come back as pandas
+        or polars frames — the flavours the shared reader supports — so
+        reach for :meth:`query_to_dataframe` when a Modin frame is wanted.
+
+        Parameters
+        ----------
+        lower_case
+            Whether to lower-case the column names of returned frames.
+        read_kwargs
+            Extra keyword arguments forwarded to the underlying fetches.
+        execute_kwargs
+            Extra keyword arguments forwarded to the cursor's ``execute``.
+        **kwargs
+            Backend-specific options such as ``schema_overrides`` for Polars.
+
+        Returns
+        -------
+            A reader executing queries on this session's connection.
+
+        See Also
+        --------
+        SnowflakeExtendedConnection.to_reader : Underlying reader factory delegated to.
+        SnowparkExtendedSession.to_streamer : Streaming counterpart of this method.
+        mayutils.data.read.read_query : Cached query execution consuming the reader.
+
+        Examples
+        --------
+        >>> from mayutils.interfaces.data.snowflake import SnowflakeConfig
+        >>> reader = SnowflakeConfig.from_env().to_snowpark_session().to_reader()  # doctest: +SKIP
+        >>> df = reader("SELECT 1")  # doctest: +SKIP
+        """
+        return self.to_connection().to_reader(
+            lower_case=lower_case,
+            read_kwargs=read_kwargs,
+            execute_kwargs=execute_kwargs,
+            **kwargs,
+        )
+
+    def to_streamer(
+        self,
+        /,
+        *,
+        lower_case: bool = True,
+        read_kwargs: Mapping[str, Any] | None = None,
+        execute_kwargs: Mapping[str, Any] | None = None,
+        **kwargs: Any,  # noqa: ANN401
+    ) -> QueryStreamer:
+        """
+        Build a backend-aware query streamer bound to this session.
+
+        Streaming sibling of :meth:`to_reader`: delegates to the session's
+        underlying connection via :meth:`to_connection` and returns the
+        streamer built by :meth:`SnowflakeExtendedConnection.to_streamer`.
+        Because the wrapped connection shares this session's live
+        connection, streamed reads honour any role, warehouse, database or
+        schema set inside a :meth:`using` block, and the streamer feeds
+        incremental consumers such as
+        :class:`mayutils.data.live.StreamingQuery`. Batches come back as
+        pandas or polars frames — the flavours the shared streamer
+        supports — rather than Modin.
+
+        Parameters
+        ----------
+        lower_case
+            Whether to lower-case the column names of streamed frames.
+        read_kwargs
+            Extra keyword arguments forwarded to the underlying fetches.
+        execute_kwargs
+            Extra keyword arguments forwarded to the cursor's ``execute``.
+        **kwargs
+            Backend-specific options such as ``schema_overrides`` for Polars.
+
+        Returns
+        -------
+            A streamer yielding dataframe batches for a query.
+
+        See Also
+        --------
+        SnowflakeExtendedConnection.to_streamer : Underlying streamer factory delegated to.
+        SnowparkExtendedSession.to_reader : Eager counterpart of this method.
+        mayutils.data.live.StreamingQuery : Incremental consumer of the streamer.
+
+        Examples
+        --------
+        >>> from mayutils.interfaces.data.snowflake import SnowflakeConfig
+        >>> streamer = SnowflakeConfig.from_env().to_snowpark_session().to_streamer()  # doctest: +SKIP
+        >>> for df in streamer("SELECT 1"):  # doctest: +SKIP
+        ...     print(df.shape)
+        """
+        return self.to_connection().to_streamer(
+            lower_case=lower_case,
+            read_kwargs=read_kwargs,
+            execute_kwargs=execute_kwargs,
+            **kwargs,
         )
 
     def read_concurrent_queries(

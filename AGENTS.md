@@ -38,12 +38,12 @@ Entry point: `import mayutils; mayutils.setup()` configures logging, Plotly temp
 - `core/` — foundational, dependency-light. `constants`; `extras` houses the `may_require_extras()` / `requires_extras()` machinery (see Dependency Groups below).
 - `objects/` — general-purpose helpers with no heavy deps by default: `classes`, `colours`, `decorators`, `dictionaries`, `functions`, `hashing`, `numbers`, `paths`, `strings`, `types`, `versions`.
     - `objects/dataframes/` — the `Backend` type token (`backends.py`) plus per-engine adapters: `pandas/`, `polars/`, `dask/`, `modin/`, `pyarrow/`, `snowflake/`.
-    - `objects/datetime/` — `datetime`, `interval`, `timezone`, `traveller`, `constants`.
+    - `objects/datetime/` — `datetime`, `interval`, `timezone`, `traveller`, `constants`, `numpy` (numpy `datetime64` coercion and Pydantic-compatible annotated type; requires `numerics`).
 - `data/` — data access. **`read` is the canonical reader — use it for reading data.** Also `live` and `queries/`.
 - `environment/` — runtime and environment glue: `logging` (Rich console + rotating file handlers), `secrets`, `oauth`, `databases`, `benchmarking`, `webdrivers`, `filesystem/`, `memoisation/`.
 - `export/` — rendering and export: `html`, `images`, `nbconvert`, `quarto`.
 - `interfaces/` — external-system and file-format adapters: `cloud/google`, `streamlit`, and `filetypes/` (csv, docs, docx, feather, markdown, parquet, pdf, pptx, sheets, slides, tex, xlsx).
-- `mathematics/` — `numpy`, `numba`, `statistics/`, `machine_learning/`.
+- `mathematics/` — `numpy` (array helpers), `numba`, `experiments` (deterministic hash-based experiment assignment; requires `numerics`), `statistics/`, `machine_learning/`.
 - `visualisation/` — `console`, `notebook` (IPython display setup), and `graphs/`: **`graphs/plotly/` is the canonical plotting entry point — use it for charts**, alongside `matplotlib/` and `combine`.
 - `scripts/` — console entry points declared in `[project.scripts]`: `clear_cache`, `refresh_stubs`, `generate_plotly_stubs`.
 - `testing/` — shared test helpers and utilities.

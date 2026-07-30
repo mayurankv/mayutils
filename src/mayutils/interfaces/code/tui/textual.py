@@ -40,18 +40,16 @@ from typing import TYPE_CHECKING, Any
 from mayutils.core.extras import may_require_extras
 
 with may_require_extras():
-    from rich.style import Style
-    from rich.text import Text
+    import textual_image.renderable  # pyright: ignore[reportUnusedImport] # noqa: F401
     from textual.app import App
     from textual.theme import Theme
     from textual.widgets import Footer
     from textual.widgets._footer import (  # pyright: ignore[reportPrivateImportUsage]
         FooterKey,
-        FooterLabel,
-        KeyGroup,
     )
 
 if TYPE_CHECKING:
+    from rich.text import Text
     from textual import getters
     from textual.app import ComposeResult
     from textual.binding import Binding
@@ -353,6 +351,10 @@ class TransparentFooterKey(FooterKey):
         >>> key = TransparentFooterKey(key="q", key_display="q", description="Quit", action="quit")  # doctest: +SKIP
         >>> key.render()  # doctest: +SKIP
         """
+        with may_require_extras():
+            from rich.style import Style
+            from rich.text import Text
+
         key_style = self.get_component_rich_style("footer-key--key")
         description_style = self.get_component_rich_style("footer-key--description")
         key_style = Style(color=key_style.color, bold=key_style.bold)
@@ -437,6 +439,12 @@ class TransparentFooter(Footer):
         >>> footer = TransparentFooter()  # doctest: +SKIP
         >>> list(footer.compose())  # doctest: +SKIP
         """
+        with may_require_extras():
+            from textual.widgets._footer import (  # pyright: ignore[reportPrivateImportUsage]
+                FooterLabel,
+                KeyGroup,
+            )
+
         if self._bindings_ready:
             active_bindings = self.screen.active_bindings
             bindings = [(binding, enabled, tooltip) for (_, binding, enabled, tooltip) in active_bindings.values() if binding.show]
@@ -562,7 +570,7 @@ class TransparentApp[ReturnType](App[ReturnType]):
         kwargs.setdefault("ansi_color", True)
         super().__init__(*args, **kwargs)
 
-        self.register_theme(ANSI_DARK_THEME)
+        self.register_theme(theme=ANSI_DARK_THEME)
         self.theme = ANSI_DARK_THEME.name
 
 

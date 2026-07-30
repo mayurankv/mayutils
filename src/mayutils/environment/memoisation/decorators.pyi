@@ -53,6 +53,7 @@ class cache[CacheObjectType]:  # noqa: N801
         maxsize: int | None = None,
         key_prefix: str | None = None,
         backend: Backend[Any] | None = None,
+        shared: bool = False,
     ) -> Callable[[Callable[..., CacheObjectType]], cache[CacheObjectType]]: ...
     @property
     def persist_path(self) -> Path | None: ...

@@ -33,11 +33,6 @@ from mayutils.core.extras import may_require_extras
 from mayutils.interfaces.cloud.google import Drive
 from mayutils.interfaces.filetypes.xlsx import Xlsx
 
-with may_require_extras():
-    import numpy as np
-    from googleapiclient.discovery import build  # pyright: ignore[reportUnknownVariableType]
-    from pandas import DataFrame
-
 if TYPE_CHECKING:
     import polars as pl
     from google.oauth2.credentials import Credentials
@@ -53,6 +48,7 @@ if TYPE_CHECKING:
         Spreadsheet,
     )
     from numpy.typing import ArrayLike
+    from pandas import DataFrame
 
 
 class Sheet:
@@ -530,6 +526,9 @@ class Sheet:
         >>> isinstance(sheet.to_pandas(sheet_range="A1:B2"), DataFrame)
         True
         """
+        with may_require_extras():
+            from pandas import DataFrame
+
         return DataFrame(data=self.to_arrays(sheet_range=sheet_range))
 
     def to_polars(
@@ -1904,6 +1903,9 @@ class Sheets:
         if isinstance(values, list):
             rows = cast("list[list[Any]]", values)
         else:
+            with may_require_extras():
+                import numpy as np
+
             arr = np.asarray(values)
             if arr.ndim != 2:  # noqa: PLR2004
                 msg = f"values must be 2-dimensional, got {arr.ndim}-dimensional array"
@@ -1955,12 +1957,15 @@ class Sheets:
         --------
         >>> from unittest.mock import MagicMock, patch
         >>> from mayutils.interfaces.filetypes.sheets import Sheets
-        >>> with patch("mayutils.interfaces.filetypes.sheets.build") as mock_build:
+        >>> with patch("googleapiclient.discovery.build") as mock_build:
         ...     mock_build.return_value = MagicMock()
         ...     service = Sheets.service_from_creds(MagicMock())
         ...     mock_build.called
         True
         """
+        with may_require_extras():
+            from googleapiclient.discovery import build  # pyright: ignore[reportUnknownVariableType]
+
         sheets_service: SheetsResource = build(  # pyright: ignore[reportUnknownVariableType]
             serviceName="sheets",
             version="v4",
@@ -2018,7 +2023,7 @@ class Sheets:
         ...     "sheets": [],
         ... }
         >>> with patch("mayutils.interfaces.filetypes.sheets.Drive") as MockDrive:
-        ...     with patch("mayutils.interfaces.filetypes.sheets.build") as mock_build:
+        ...     with patch("googleapiclient.discovery.build") as mock_build:
         ...         drive = MagicMock()
         ...         drive.find_file_id.return_value = "abc"
         ...         MockDrive.from_creds.return_value = drive

@@ -28,6 +28,8 @@ Examples
 >>> snippet = markdown_to_html("**hello**\\nworld")
 """
 
+from __future__ import annotations
+
 import time
 from pathlib import Path
 
@@ -36,10 +38,11 @@ from mayutils.environment.logging import Logger
 
 with may_require_extras():
     from html2image import Html2Image
-    from markdown import markdown
+
+logger = Logger.spawn()
+
 
 H2I = Html2Image()
-logger = Logger.spawn()
 
 
 def markdown_to_html(
@@ -91,6 +94,9 @@ def markdown_to_html(
     >>> markdown_to_html("**bold**\ntext")
     '<p><strong>bold</strong><br>text</p>'
     """
+    with may_require_extras():
+        from markdown import markdown
+
     return markdown(
         text=text,
     ).replace(

@@ -164,7 +164,7 @@ class TestMakeCacheStem:
             SQL("SELECT * FROM loans"),
             cache_description=None,
             ttl=None,
-            format_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key="abc123",
         )
@@ -172,13 +172,13 @@ class TestMakeCacheStem:
 
     def test_path_query_uses_stem_without_suffix(self) -> None:
         """A Path query slugs its suffix-stripped path."""
-        from pathlib import Path  # noqa: PLC0415
+        from pathlib import Path
 
         stem = make_cache_stem(
             Path("queries/loans.sql"),
             cache_description=None,
             ttl=None,
-            format_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key="k",
         )
@@ -190,7 +190,7 @@ class TestMakeCacheStem:
             SQL("SELECT a FROM b"),
             cache_description="My Report",
             ttl=None,
-            format_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key="deadbeef",
         )
@@ -203,7 +203,7 @@ class TestMakeCacheStem:
             SQL("SELECT a FROM b"),
             cache_description="report",
             ttl=Duration(hours=6),
-            format_kwargs={"region": "london"},
+            template_kwargs={"region": "london"},
             cache_extra={"version": 2},
             key="deadbeef",
         )
@@ -215,7 +215,7 @@ class TestMakeCacheStem:
             SQL("SELECT 1"),
             cache_description=None,
             ttl=None,
-            format_kwargs={},
+            template_kwargs={},
             cache_extra=None,
             key="thehash",
         )
@@ -367,3 +367,22 @@ class TestFileStoreDeleteClear:
         store.put("a", value={"v": 1})
         store.put("b", value={"v": 2})
         assert store.cache_info().currsize == 2  # noqa: PLR2004
+
+
+class TestFileStoreInferredSuffixReadback:
+    """Tests that inferred-suffix stores read back across fresh instances (Bug D)."""
+
+    def test_fresh_instance_reads_back(self, tmp_path: Path) -> None:
+        """A fresh store with no explicit suffix reads an entry a prior store wrote."""
+        writer = FileStore[pd.DataFrame]("fn", cache_folder=tmp_path)
+        writer.put("k", value=pd.DataFrame({"a": [1]}))
+
+        result = FileStore[pd.DataFrame]("fn", cache_folder=tmp_path).get("k")
+
+        assert isinstance(result, pd.DataFrame)
+        assert result["a"].tolist() == [1]
+
+    def test_empty_folder_misses(self, tmp_path: Path) -> None:
+        """With nothing cached, an inferred-suffix store still returns MISSING."""
+        store = FileStore[pd.DataFrame]("fn", cache_folder=tmp_path)
+        assert store.get("k") is MISSING
