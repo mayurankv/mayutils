@@ -796,7 +796,7 @@ class Drive:
         ... )
         '1a2b3c4d'
         """
-        media, _file_metadata = self._create_media(
+        media, _ = self._create_media(
             file_path,
             folder_id=folder_id,
         )
@@ -805,6 +805,7 @@ class Drive:
             self.files()
             .update(
                 fileId=file_id,
+                body={},
                 supportsAllDrives=True,
                 media_body=media,
             )

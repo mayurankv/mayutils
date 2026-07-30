@@ -62,7 +62,7 @@ class TestReadOnlyClassOnlyProperty:
                 return 1
 
         with pytest.raises(expected_exception=AttributeError, match="read-only"):
-            Foo().version = 2
+            Foo().version = 2  # ty:ignore[invalid-assignment]
 
 
 class TestBaseClass:

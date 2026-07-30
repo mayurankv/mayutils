@@ -204,7 +204,7 @@ class SnowflakeConfig(BaseModel):
     def from_env(
         cls,
         *,
-        env_file: Path | str | None | Literal[False] = ".env",
+        env_file: Path | str | Literal[False] | None = ".env",
         **overrides: Any,  # noqa: ANN401
     ) -> Self:
         """
@@ -455,11 +455,8 @@ class SnowflakeConfig(BaseModel):
         with may_require_extras():
             from snowflake.sqlalchemy import URL  # pyright: ignore[reportUnknownVariableType, reportAttributeAccessIssue]
 
-        return cast(
-            "str",
-            URL(
-                **self.connection_parameters,
-            ),
+        return URL(  # pyright: ignore[reportUnknownVariableType]
+            **self.connection_parameters,
         )
 
     def get_connection_arguments(

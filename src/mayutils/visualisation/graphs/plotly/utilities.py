@@ -118,7 +118,10 @@ def map_categorical_array(
         mapping_arr = arr[sorted(np.unique(arr, return_index=True)[1])]
 
     mapping_dict = {value: idx for idx, value in enumerate(mapping_arr)}
-    arr_numerical = np.asarray([mapping_dict.get(value, -1) for value in arr])
+    arr_numerical = np.asarray(
+        [mapping_dict.get(value, -1) for value in arr],
+        dtype=np.int64,
+    )
 
     if arr_numerical.min() != 0:
         msg = "Mapping is not complete"
