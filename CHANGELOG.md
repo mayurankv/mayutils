@@ -4,6 +4,13 @@ All notable changes to `mayutils` will be documented here.
 
 This project follows [Semantic Versioning](https://semver.org/) and the [Keep a Changelog](https://keepachangelog.com/) conventions. Releases are produced by [commitizen](https://commitizen-tools.github.io/commitizen/) from [Conventional Commits](https://www.conventionalcommits.org/) — `feat` bumps the minor version, `fix` bumps the patch, and a `!` or `BREAKING CHANGE:` footer bumps the major.
 
+## v3.10.1 (2026-07-30)
+
+### Fix
+
+- **ty**: Fix type errors
+- **plot.py**: Fixing set_visible_range method
+
 ## v3.10.0 (2026-07-16)
 
 ### Feat

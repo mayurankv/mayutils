@@ -2343,6 +2343,36 @@ class Plot(go.Figure):
         ...     description="demo",
         ... )
         >>> plot = plot.set_visible_y_range(y_padding=0.1)
+
+        Traces indexed by :class:`pandas.Timestamp` (rather than plain
+        :class:`datetime.date`) are normalised the same way, since a
+        ``Timestamp`` is a :class:`datetime.datetime` subclass and is not
+        directly comparable to the ``date``-typed axis range.
+
+        >>> import pandas as pd
+        >>> plot = Plot.from_traces(
+        ...     go.Scatter(
+        ...         x=[pd.Timestamp(2020, 1, 1), pd.Timestamp(2020, 1, 2), pd.Timestamp(2020, 1, 3), pd.Timestamp(2020, 1, 4)],
+        ...         y=[10, 20, 30, 40],
+        ...     ),
+        ...     layout={"xaxis_range": [datetime.date(2020, 1, 2), datetime.date(2020, 1, 3)]},
+        ...     description="demo-timestamp",
+        ... )
+        >>> plot = plot.set_visible_y_range(y_padding=0.1)
+
+        A trace whose ``x`` and ``y`` arrays have mismatched lengths cannot
+        contribute to the visible range and is skipped rather than raising.
+
+        >>> plot = Plot.from_traces(
+        ...     go.Scatter(x=[datetime.date(2020, 1, 1)], y=[]),
+        ...     go.Scatter(
+        ...         x=[datetime.date(2020, 1, 1), datetime.date(2020, 1, 2)],
+        ...         y=[5, 10],
+        ...     ),
+        ...     layout={"xaxis_range": [datetime.date(2019, 1, 1), datetime.date(2021, 1, 1)]},
+        ...     description="demo-mismatched-lengths",
+        ... )
+        >>> plot = plot.set_visible_y_range(y_padding=0.1)
         """
         with may_require_extras():
             from pandas import Series
@@ -2392,11 +2422,9 @@ class Plot(go.Figure):
                     continue
 
                 x = np.asarray(
-                    trace.x
-                    if len(trace.x) > 0 and isinstance(trace.x[0], (datetime.date, datetime.datetime))
-                    else cast("Series", to_pandas_datetime(trace.x)).date
+                    trace.x if len(trace.x) > 0 and type(trace.x[0]) is datetime.date else cast("Series", to_pandas_datetime(trace.x)).date
                 )
-                if len(x) == 0:
+                if len(x) == 0 or y is None or len(x) != len(y):
                     observed_idxs.add(idx)
                     continue
 
@@ -2405,7 +2433,7 @@ class Plot(go.Figure):
                     observed_idxs.add(idx)
                     continue
 
-                y_visible = cast("NDArray[np.float64]", y)[visible_mask]
+                y_visible = y[visible_mask]
                 if y_visible.shape == (0,) or np.isnan(y_visible).all():
                     observed_idxs.add(idx)
                     continue

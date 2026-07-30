@@ -84,7 +84,7 @@ Examples
 True
 """
 
-type JsonValue = str | int | float | bool | None | Sequence[JsonValue] | Mapping[str, JsonValue]
+type JsonValue = str | int | float | bool | Sequence[JsonValue] | Mapping[str, JsonValue] | None
 """
 Represent any value that a JSON document may contain.
 

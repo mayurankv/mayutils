@@ -50,7 +50,7 @@ logger = Logger.spawn()
 
 def get_env_reader(
     *,
-    env_file: Path | str | None | Literal[False] = ".env",
+    env_file: Path | str | Literal[False] | None = ".env",
     env_overrides: Mapping[str, Any] | None = None,
     platform: Literal["snowflake"] | None = None,
     connection_arguments: Mapping[str, Any] | None = None,
@@ -144,7 +144,7 @@ def get_env_reader(
 
 def get_env_streamer(
     *,
-    env_file: Path | str | None | Literal[False] = ".env",
+    env_file: Path | str | Literal[False] | None = ".env",
     platform: Literal["snowflake"] | None = None,
     connection_arguments: Mapping[str, Any] | None = None,
     lower_case: bool = True,
