@@ -339,6 +339,7 @@ class SubPlot(Plot):
         >>> subplot.add_plots()  # doctest: +SKIP
         """
         x_datetime = self._config.infer_x_datetime()
+        x_sample, y_samples = self._config.sample_anchor_data()
 
         scene_count = 0
         for row_idx, (row_plot_configs, row_specs) in enumerate(zip(self._config.plots, self._specs, strict=False)):
@@ -347,7 +348,7 @@ class SubPlot(Plot):
                     PlotConfig(
                         yaxes_configs=(
                             TracesConfig.from_trace(
-                                Null(x_datetime=x_datetime),
+                                Null(x_datetime=x_datetime, x=x_sample, y=y_samples[0]),
                                 yaxis_config={},
                             ),
                         ),
@@ -432,6 +433,8 @@ class SubPlot(Plot):
                             (
                                 Null(
                                     x_datetime=x_datetime,
+                                    x=x_sample,
+                                    y=y_samples[axis_idx],
                                 ),
                             )
                             if fill_nulls and not is_scene

@@ -852,6 +852,62 @@ class SubPlotConfig:
 
         return False
 
+    def sample_anchor_data(
+        self,
+    ) -> tuple[Sequence[Any] | None, list[Sequence[Any] | None]]:
+        """
+        Find real x/y sample data to safely anchor placeholder axes.
+
+        Scans every populated cell for one representative ``x`` array and,
+        per y-axis index, one representative ``y`` array. These are reused
+        verbatim (never invented) so an empty cell's placeholder trace can
+        share a real, harmless data point with a ``matches``-linked axis
+        without expanding its autorange.
+
+        Returns
+        -------
+            ``(x_sample, y_samples)`` where ``x_sample`` is the first ``x``
+            array found anywhere in the grid (or ``None`` if the grid has
+            no real data), and ``y_samples`` has one entry per y-axis
+            index, each the first ``y`` array found at that index (or
+            ``None``).
+
+        See Also
+        --------
+        SubPlotConfig.infer_x_datetime : Companion scan for x-axis type.
+
+        Examples
+        --------
+        >>> import plotly.graph_objects as go
+        >>> from mayutils.visualisation.graphs.plotly.charts import SubPlotConfig, PlotConfig
+        >>> config = SubPlotConfig(plots=((PlotConfig.from_trace(go.Scatter(x=(1, 2), y=(3, 4))),),))
+        >>> x_sample, y_samples = config.sample_anchor_data()
+        >>> list(x_sample)
+        [1, 2]
+        >>> list(y_samples[0])
+        [3, 4]
+        """
+        x_sample: Sequence[Any] | None = None
+        y_samples: list[Sequence[Any] | None] = [None] * self.max_yaxis
+
+        for row_configs in self.plots:
+            for plot_config in row_configs:
+                if plot_config is None:
+                    continue
+                for axis_idx, traces_config in enumerate(plot_config.yaxes_configs):
+                    for trace in traces_config.traces:
+                        if x_sample is None:
+                            x = getattr(trace, "x", None)
+                            if x is not None and len(x) > 0:
+                                x_sample = x
+
+                        if y_samples[axis_idx] is None:
+                            y = getattr(trace, "y", None)
+                            if y is not None and len(y) > 0:
+                                y_samples[axis_idx] = y
+
+        return x_sample, y_samples
+
 
 def pop_axis_config_title(
     config: MutableMapping[str, Any],
