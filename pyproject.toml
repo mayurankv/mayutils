@@ -148,7 +148,7 @@ snowflake = [
   "snowflake-sqlalchemy>=1.7.6"
 ]
 sql = [
-  "sqlalchemy>=2.0.43,<2.1"
+  "sqlalchemy>=2.1.1,<2.2"
 ]
 statistics = [
   "mayutils[numerics]",
