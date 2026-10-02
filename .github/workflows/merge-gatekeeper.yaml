@@ -14,6 +14,6 @@ jobs:
       statuses: read
     steps:
       - name: Run Merge Gatekeeper
-        uses: upsidr/merge-gatekeeper@1af00c73a346f8f9d40e2052bc6d4f0710748b0d # main
+        uses: upsidr/merge-gatekeeper@2c9e7a64481c1a5ab6aa1ac7aac77823b67c1ee4 # main
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
